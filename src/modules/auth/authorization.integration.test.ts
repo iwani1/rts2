@@ -150,8 +150,8 @@ describe('role-based authorization with PostgreSQL persistence', () => {
     await expect(requirePermission({
       userId: targetId,
       companyId: companyA,
-      permission: 'trip:dispatch',
-      assignedUserId: targetId,
+      permission: 'driver:manage',
+      ownerUserId: targetId,
     })).rejects.toBeInstanceOf(PermissionDeniedError);
   });
 });
