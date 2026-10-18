@@ -84,6 +84,17 @@ export async function requirePermission(request: PermissionRequest): Promise<Per
   return decision;
 }
 
+export async function isActiveSuperAdmin(userId: string): Promise<boolean> {
+  const prisma = getPrisma();
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { status: true } });
+  if (user?.status !== 'ACTIVE') return false;
+  const assignment = await prisma.userRoleAssignment.findFirst({
+    where: { userId, roleCode: 'SUPER_ADMIN', companyId: null, revokedAt: null },
+    select: { id: true },
+  });
+  return Boolean(assignment);
+}
+
 export interface AssignRoleInput {
   actorId: string;
   targetUserId: string;
