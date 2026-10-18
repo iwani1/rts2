@@ -3,7 +3,7 @@
 No business defaults have been invented. Items marked **Phase 1A blocker** prevent dependent actions. The owner should answer and approve before the relevant feature is implemented.
 
 ## Business and hosting context (Phase 0 gate)
-- Fleet count, categories, seats, vehicle status and ownership; driver count; current corporate clients and approximate staff numbers.
+- Fleet count, categories, seats and ownership; driver count; current corporate clients and approximate staff numbers.
 - Shift names/local start/end times; current operating process; role/user counts.
 - Hosting provider/plan and confirmation of Node.js, PostgreSQL 15+, `btree_gist`, persistent jobs, WebSockets, backups, restore and storage support.
 - Third-party-service budget; logo/brand colors/assets; existing-data files/formats.
@@ -34,7 +34,7 @@ No business defaults have been invented. Items marked **Phase 1A blocker** preve
 
 ## Other required policies
 - Named approvers for financial approvals; who can release safety-blocked vehicles and whether inspector must differ from technician. Finance quotation approval remains gated on a specific delegated-approval policy.
-- Vehicle state rules, assignment active statuses, time buffers between jobs, and conflict horizon.
+- Vehicle status transitions: permitted actors and transition-specific preconditions; how to handle active assignments when a safety-blocking status is applied; maintenance/inspection release authority. The seven status names and safety-blocking principle are approved in D-016. Assignment active statuses, time buffers between jobs, and conflict horizon also remain open.
 - Booking cutoff, duplicate-journey identity, capacity/waitlist and no-show rules.
 - Exact shift/route recurrence and local-time behavior; contract approval, suspension and renewal rules.
 - Corporate billing frequency and payment terms; chargeable trip definition and duplicate-billing event key.

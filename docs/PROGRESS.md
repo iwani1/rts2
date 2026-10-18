@@ -26,7 +26,7 @@ Phase 0 foundation plus the first Phase 1A authentication slice. Backlog status 
 | WEB-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FLT-01 | In Progress | Vehicle register schema/API/UI supports core factual fields and a manager-only usual-driver link to an active same-company driver. Photo storage, document records/files, and browser vehicle edit/save with the link remain. |
 | FLT-04 | In Progress | Driver register schema/API/UI supports company-scoped searchable records with only brief-listed details and full fleet-manager create/edit/archive; active drivers can be linked as vehicles' usual drivers by managers with both grants. Browser verification, dispatcher field-level scope decision, account-to-driver linking, and policy-defined status/availability workflows remain. Dispatcher and Driver OWN_PROFILE listing fail closed until the field projection and verified account-link behavior are implemented. |
-| FLT-02 | Not Started | No feature implementation; Phase 1+ approval required. |
+| FLT-02 | Not Started | Owner approved the seven status names, no-default/manual-edit boundary, derived Reserved/Assigned/On Trip states, and safety-blocking principle in D-016. Transition actors, active-assignment handling and maintenance/inspection release rules remain undefined; no status implementation yet. |
 | FLT-03 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FLT-05 | Not Started | No feature implementation; Phase 1+ approval required. |
 | MNT-01 | Not Started | No feature implementation; Phase 1+ approval required. |
@@ -221,3 +221,8 @@ The owner approved the role/permission matrix. The first-admin method is now exp
 - Owner pulled `23be783`, regenerated Prisma Client 6.19.3, and applied `20261018200000_vehicle_usual_driver` to the local `richie_tms` PostgreSQL database successfully.
 - Owner-confirmed `npm run typecheck`, `npm run lint`, and `npm test` all pass; unit suite is **51/51**. This verifies schema/client generation and migration deployment on Fedora.
 - The PostgreSQL integration tests for same-company linkage/database constraints and the browser link/clear flow have not yet been reported; FLT-01/FLT-04 remain In Progress pending those checks and existing vehicle edit/save verification.
+
+## Owner decision — vehicle status safety boundary (D-016; 2026-10-18)
+
+- Owner approved the recommendation: retain the seven vehicle status names from the brief; no default status and no manual status control in the current register; Reserved/Assigned/On Trip are to derive from authoritative reservation/assignment/trip records; Under Maintenance/Out of Service/Pending Inspection block assignments and may return to Available only after the required maintenance/inspection workflow is complete. The unrequested `Retired` status is excluded.
+- Recorded in `docs/DECISIONS.md`, `docs/STATE_MACHINES.md`, and `docs/OPEN_QUESTIONS.md`. FLT-02 remains Not Started because exact transition actors/preconditions, active-assignment handling, and release authority remain open. Do not code a state transition UI or assign status defaults until these dependent rules exist.

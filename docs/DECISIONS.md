@@ -68,3 +68,9 @@
 ## D-007 — Dependency audit findings deferred to explicit upgrade review
 - **Decision:** Keep the compatible Next.js 15 / ESLint 9 / Vitest 3 baseline for this foundation rather than applying automatic major upgrades during Phase 0.
 - **Evidence:** `npm audit` reports 13 vulnerabilities in the resolved dependency tree (2 moderate, 9 high, 2 critical), with recommended fixes including major upgrades (Next 16 and Vitest 5; eslint-config-next major downgrade suggestion). This is not acceptable for production; resolve and rerun audit before any production release, and assess migration compatibility rather than using `--force` blindly.
+
+## D-016 — Vehicle status vocabulary and safe implementation boundary
+- **Decision:** Use only the seven vehicle status names in the brief: Available, Reserved, Assigned, On Trip, Under Maintenance, Out of Service, and Pending Inspection. Do not add `Retired`. Do not assign a default vehicle status or expose manual status editing in the current register.
+- **Derivation and safety:** Reserved, Assigned, and On Trip should be derived from authoritative reservation/assignment/trip records rather than independently edited status choices. Under Maintenance, Out of Service, and Pending Inspection are safety-blocking; assignment must be prevented, and a vehicle must not return to Available until the required maintenance and inspection workflow is complete.
+- **Source:** Owner approved the recommended direction on 2026-10-18.
+- **Limits:** FLT-02 remains unimplemented. Exact actors, transition-by-transition preconditions, handling of active assignments when a safety block is applied, and maintenance/inspection release authority must be specified before implementing the workflows. No status value is added to existing or new vehicle records by this decision.

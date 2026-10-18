@@ -1,6 +1,6 @@
-# State machines — proposed Phase 0 tables
+# State machines — approved and proposed tables
 
-Transition tables below are proposals inferred from feature requirements. Management must confirm business rules. `*` means any nonterminal state; all changes require service permission, preconditions, reason where stated, and append-only status history. No transition implementation exists yet.
+Approval is tracked per entity: the vehicle status vocabulary and safety/derivation principles are owner-approved in D-016; detailed vehicle transitions and the other entity tables remain proposed until their required workflows and business rules are confirmed. `*` means any nonterminal state. Any implemented change must be service-authorized, enforce preconditions, and preserve status history/audit evidence. No vehicle status transition implementation exists yet.
 
 | Entity | From → To | Actor | Preconditions |
 |---|---|---|---|
@@ -25,11 +25,9 @@ Transition tables below are proposals inferred from feature requirements. Manage
 | | Planned/Ready → Cancelled | dispatcher/manager | reason; no forbidden started state |
 | | Dispatched/In Progress → Delayed/Interrupted → In Progress/Completed | dispatcher/driver/manager | reason; incident as needed |
 | | Interrupted → Cancelled/Completed | manager | resolution and reason |
-| Vehicle | Available ↔ Reserved/Assigned/On Trip | service/dispatcher | valid non-overlap assignment |
-| | Available/Reserved/Assigned → Pending Inspection/Under Maintenance/Out of Service | fleet/technician | maintenance/defect record; assignments safely handled |
-| | Under Maintenance → Pending Inspection → Available | authorized inspector/releaser | completed work and recorded inspection; technician cannot self-release where prohibited |
-| | Out of Service → Pending Inspection → Available | authorized manager | defect clearance and approval |
-| | * → Retired | fleet manager | no active assignment; archive only |
+| Vehicle | Reserved, Assigned, On Trip | system, through future reservation/assignment/trip modules | derive from authoritative linked records; not manual status choices |
+| | Available | not implemented; no manual edit or default | rules for deriving/entering Available remain to be specified |
+| | Under Maintenance, Out of Service, Pending Inspection | entry/release actors remain to be defined | safety-blocking: prevent assignments; return to Available only after required maintenance and inspection workflow is complete |
 | Work order | Reported → Awaiting Inspection → Approved → In Progress → Awaiting Parts/In Progress → Awaiting Review → Completed → Closed | technician/manager/reviewer | assigned work; safety status; costs/inspection supplied; approval separation as policy requires |
 | | Reported/Awaiting Inspection → Closed/Cancelled | authorized manager | reason and no unsafe release |
 | Contract | Draft → Pending Approval → Active | preparer/approver | dates, client and agreed terms; approval |
@@ -42,5 +40,7 @@ Transition tables below are proposals inferred from feature requirements. Manage
 | Incident | Reported → Acknowledged → Investigating → Resolved → Closed | driver/dispatcher/manager | description and severity; affected parties access-controlled |
 | | * → Escalated | dispatcher/manager | severity/response criteria configured; reason |
 | | Resolved → Investigating | authorized manager | reopening reason |
+
+**D-016 approved vehicle boundary:** use only the seven vehicle status names in the standing brief. Do not add `Retired`. New vehicle records receive no status default, and the current vehicle register must not expose manual status editing. Exact actors, transition-by-transition preconditions, handling of active assignments when a safety block is applied, and maintenance/inspection release authority remain to be specified before FLT-02 is implemented.
 
 Actor names are roles, not a substitute for resource/action permission checks. Management must approve the full from-to matrices and ambiguous transitions before implementation. Terminal states cannot be changed without explicit audited exceptional transition and reason.
