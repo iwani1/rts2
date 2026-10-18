@@ -17,6 +17,7 @@ model Company {
   auditEvents     AuditEvent[]
   roleAssignments UserRoleAssignment[]
   vehicles        Vehicle[]
+  drivers         Driver[]
 }
 
 model User {
@@ -181,4 +182,22 @@ model Vehicle {
   @@unique([companyId, registrationNumber])
   @@index([companyId, archivedAt, registrationNumber])
   @@index([companyId, category])
+}
+
+model Driver {
+  id                String    @id @default(cuid())
+  companyId         String
+  fullName          String
+  licenceClass      String?
+  licenceExpiresAt  DateTime? @db.Date
+  qualifications    String?
+  availability      String?
+  status            String?
+  archivedAt        DateTime? @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @db.Timestamptz(6)
+  company           Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, archivedAt, fullName])
+  @@index([companyId, licenceExpiresAt])
 }

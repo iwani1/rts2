@@ -142,8 +142,8 @@ button:disabled { opacity: .65; cursor: wait; }
   .fleet-search { width: 100%; }
 }
 @media (max-width: 600px) {
-  .fleet-page-header { min-height: 60px; padding: 10px 16px; }
-  .fleet-page-header nav { gap: 12px; font-size: 12px; }
+  .fleet-page-header { min-height: 60px; padding: 10px 16px; flex-wrap: wrap; gap: 10px; }
+  .fleet-page-header nav { flex-wrap: wrap; justify-content: flex-end; gap: 8px 12px; font-size: 12px; }
   .fleet-content { width: min(100% - 32px, 1440px); margin-top: 24px; }
   .fleet-title-row, .vehicle-editor-heading { align-items: start; flex-direction: column; }
   .vehicle-form-grid { grid-template-columns: 1fr; }

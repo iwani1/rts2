@@ -19,6 +19,7 @@ No business defaults have been invented. Items marked **Phase 1A blocker** preve
 - VAT registration and accountant-confirmed VAT/levy lines and rates; is GRA e-VAT required?
 - Payment methods currently accepted, including cash, bank transfer, MTN MoMo, Telecel Cash, AT Money; verification/reconciliation process.
 - Vehicle categories and capacity definitions; driver licence/qualification requirements.
+- Driver status/availability vocabulary and allowed transitions; which operational driver fields Dispatchers may see; account-to-driver identity verification/linking; personal-data field justification and retention.
 - Document types, expiry reminder lead times, service intervals, retention periods.
 - On-time threshold and exact pickup performance definition.
 - Boarding-code policy, validity and single-use requirement.

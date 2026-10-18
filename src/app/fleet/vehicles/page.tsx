@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { FleetCompanyNotFoundError, getVehicle, listVehicles, VehicleNotFoundError } from '@/modules/fleet/vehicles';
 import type { VehicleRecord } from '@/modules/fleet/vehicles';
-import { PermissionDeniedError } from '@/modules/auth/permissions';
+import { PermissionDeniedError, resolvePermission } from '@/modules/auth/permissions';
 import { mayStartSession } from '@/modules/auth/policy';
 import { getAuth } from '@/server/auth';
 import { getPrisma } from '@/server/prisma';
@@ -43,10 +43,13 @@ export default async function VehiclesPage({ searchParams }: PageProps) {
     }
   }
 
+  const driverAccess = await resolvePermission({ userId: session.user.id, companyId: companies[0].id, permission: 'driver:manage' });
+  const canReadDriverRegister = driverAccess.allowed && driverAccess.scopes.some((scope) => ['GLOBAL', 'COMPANY'].includes(scope));
+
   return <main className="fleet-page">
     <header className="fleet-page-header">
       <Link className="wordmark fleet-wordmark" href="/" aria-label="Richie TMS home">R<span>.</span>TS</Link>
-      <nav aria-label="Fleet navigation"><Link href="/">Workspace</Link><span aria-current="page">Vehicle register</span></nav>
+      <nav aria-label="Fleet navigation"><Link href="/">Workspace</Link>{canReadDriverRegister && <Link href="/fleet/drivers">Driver register</Link>}<span aria-current="page">Vehicle register</span></nav>
     </header>
     <div className="fleet-content">
       <div className="fleet-title-row">
