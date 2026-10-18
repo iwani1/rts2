@@ -73,7 +73,7 @@
 - **Decision:** Use only the seven vehicle status names in the brief: Available, Reserved, Assigned, On Trip, Under Maintenance, Out of Service, and Pending Inspection. Do not add `Retired`. Do not assign a default vehicle status or expose manual status editing in the current register.
 - **Derivation and safety:** Reserved, Assigned, and On Trip should be derived from authoritative reservation/assignment/trip records rather than independently edited status choices. Under Maintenance, Out of Service, and Pending Inspection are safety-blocking; assignment must be prevented, and a vehicle must not return to Available until the required maintenance and inspection workflow is complete.
 - **Source:** Owner approved the recommended direction on 2026-10-18.
-- **Limits:** FLT-02 remains unimplemented. Exact actors, transition-by-transition preconditions, handling of active assignments when a safety block is applied, and maintenance/inspection release authority must be specified before implementing the workflows. No status value is added to existing or new vehicle records by this decision.
+- **Limits:** FLT-02 remains unimplemented. D-018 and D-019 record safety-block conflict handling, release authority, and entry actors; transition-by-transition preconditions remain open. No status value is added to existing or new vehicle records by this decision.
 
 ## D-017 — Vehicle document upload and expiry policy boundary
 - **Decision:** Defer photo/document file uploads until the hosting and production storage provider are selected. For the initial vehicle-document scope, support only Insurance, Roadworthiness, and Vehicle Registration document types. Keep current date fields manually entered/viewed; do not send automatic expiry reminders or automatically delete uploaded files until reminder and retention rules are approved.
@@ -84,4 +84,9 @@
 ## D-018 — Vehicle safety-block conflicts and release authority
 - **Decision:** Apply a safety block immediately and prevent new assignments. Flag future assignments for dispatcher resolution; do not silently cancel or reassign them. An already active trip follows the incident/replacement workflow. A Fleet Manager/authorized releaser may return the vehicle to Available after work completion and an inspection record; a separate inspector role is not required.
 - **Source:** Owner selected the recommended options on 2026-10-18.
-- **Limits:** The actor allowed to enter each safety-blocking state, transition-specific preconditions, and operational conflict/replacement workflows remain undefined. The state machine and assignment/maintenance/incident modules are not implemented; do not expose status controls or claim these protections are active yet.
+- **Limits:** D-019 specifies who may apply safety blocks. Transition-specific preconditions and operational conflict/replacement workflows remain undefined. The state machine and assignment/maintenance/incident modules are not implemented; do not expose status controls or claim these protections are active yet.
+
+## D-019 — Actors allowed to apply vehicle safety blocks
+- **Decision:** Ops Managers, Fleet Managers, and Super Administrators may apply Under Maintenance, Out of Service, and Pending Inspection safety blocks. Drivers and Technicians may report defects but may not set or clear these vehicle statuses; Dispatchers may view availability but may not change status.
+- **Source:** Owner selected the recommended role boundary on 2026-10-18, consistent with the approved permission matrix.
+- **Limits:** This defines who may apply safety blocks, not each transition's preconditions. FLT-02 status controls remain unimplemented; reasons, linked work/defect records, transition-specific checks and any active assignment workflows still need implementation and tests.
