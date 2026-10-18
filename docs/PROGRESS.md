@@ -226,3 +226,9 @@ The owner approved the role/permission matrix. The first-admin method is now exp
 
 - Owner approved the recommendation: retain the seven vehicle status names from the brief; no default status and no manual status control in the current register; Reserved/Assigned/On Trip are to derive from authoritative reservation/assignment/trip records; Under Maintenance/Out of Service/Pending Inspection block assignments and may return to Available only after the required maintenance/inspection workflow is complete. The unrequested `Retired` status is excluded.
 - Recorded in `docs/DECISIONS.md`, `docs/STATE_MACHINES.md`, and `docs/OPEN_QUESTIONS.md`. FLT-02 remains Not Started because exact transition actors/preconditions, active-assignment handling, and release authority remain open. Do not code a state transition UI or assign status defaults until these dependent rules exist.
+
+## Owner decision — vehicle document scope and storage boundary (D-017; 2026-10-18)
+
+- Owner approved deferring photo/document uploads until a production hosting/storage provider is selected. Initial document categories are limited to Insurance, Roadworthiness, and Vehicle Registration.
+- Existing expiry dates remain manually entered/viewed. No automatic reminders or automatic file deletion will be implemented until lead times, recipients/channel, and retention periods are approved. No file records, storage provider, or fixture were added by this decision; service/maintenance records remain separate.
+- Recorded in `docs/DECISIONS.md` and `docs/OPEN_QUESTIONS.md`. FLT-01/FLT-03 remain In Progress/Not Started as shown in the feature table until the relevant workflows can be safely implemented.

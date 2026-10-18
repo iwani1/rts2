@@ -20,7 +20,7 @@ No business defaults have been invented. Items marked **Phase 1A blocker** preve
 - Payment methods currently accepted, including cash, bank transfer, MTN MoMo, Telecel Cash, AT Money; verification/reconciliation process.
 - Vehicle categories and capacity definitions; driver licence/qualification requirements.
 - Driver status/availability vocabulary and allowed transitions; which operational driver fields Dispatchers may see; account-to-driver identity verification/linking; personal-data field justification and retention.
-- Document types, expiry reminder lead times, service intervals, retention periods.
+- **Resolved 2026-10-18:** initial vehicle-document types are limited to Insurance, Roadworthiness, and Vehicle Registration. Production file-storage provider/hosting remains unselected. Expiry reminder lead times, recipients and delivery channel; service intervals; and document/file retention period remain unresolved. No uploads, automatic reminders, or automatic deletion until those decisions are made.
 - On-time threshold and exact pickup performance definition.
 - Boarding-code policy, validity and single-use requirement.
 - Are bookings allowed under expired or suspended contracts?

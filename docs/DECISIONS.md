@@ -74,3 +74,9 @@
 - **Derivation and safety:** Reserved, Assigned, and On Trip should be derived from authoritative reservation/assignment/trip records rather than independently edited status choices. Under Maintenance, Out of Service, and Pending Inspection are safety-blocking; assignment must be prevented, and a vehicle must not return to Available until the required maintenance and inspection workflow is complete.
 - **Source:** Owner approved the recommended direction on 2026-10-18.
 - **Limits:** FLT-02 remains unimplemented. Exact actors, transition-by-transition preconditions, handling of active assignments when a safety block is applied, and maintenance/inspection release authority must be specified before implementing the workflows. No status value is added to existing or new vehicle records by this decision.
+
+## D-017 — Vehicle document upload and expiry policy boundary
+- **Decision:** Defer photo/document file uploads until the hosting and production storage provider are selected. For the initial vehicle-document scope, support only Insurance, Roadworthiness, and Vehicle Registration document types. Keep current date fields manually entered/viewed; do not send automatic expiry reminders or automatically delete uploaded files until reminder and retention rules are approved.
+- **Reason:** Production file storage is not selected, and reminder recipients, channels, lead times, and retention periods are not defined. Local disk is not approved as production storage.
+- **Source:** Owner approved this recommendation on 2026-10-18.
+- **Limits:** This decision adds no file-upload feature, storage provider, notification, retention period, or new operational data. Existing vehicle expiry-date fields remain as implemented; service/maintenance records remain separate and are not added to the document-type list by implication.
