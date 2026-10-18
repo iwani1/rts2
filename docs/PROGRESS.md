@@ -7,11 +7,11 @@ Phase 0 foundation plus the first Phase 1A authentication slice. Backlog status 
 | AUTH-01 | In Progress | Better Auth login/logout, expiring PostgreSQL sessions, DB-backed rate limit, account-active gate and login UI; direct DB integration and HTTP smoke pass. Needs clean CI standard-engine generation/migration verification and remaining workflow hardening. |
 | AUTH-02 | Not Started | Invitation, activation, suspension/reactivation UI and services not implemented; invitation delivery and expiry/revocation policy still need owner decision. One-time first-admin method is selected and implemented as a local CLI. |
 | AUTH-03 | Not Started | Password reset not implemented; delivery/verification channel requires approval. |
-| AUTH-04 | In Progress | Owner-approved role/grant schema, company-scoped authorization resolver, audited role service and one-time bootstrap added. Super Administrator-only role-directory/assign/revoke APIs now exist with actor identity from the session; UI, domain repository filtering, and PostgreSQL route-level tests remain. |
+| AUTH-04 | In Progress | Owner-approved role/grant schema, company-scoped authorization resolver, audited role service and first-admin bootstrap added. Super Administrator-only role-directory/assign/revoke APIs and a one-time single-operator company bootstrap CLI exist; UI, domain repository filtering, and PostgreSQL route-level tests remain. |
 | AUTH-05 | Not Started | Profile and login-history UI not implemented. |
 | AUTH-06 | Not Started | Phase 2. |
 | AUD-01 | In Progress | Auth session and role assignment/revocation/initial-bootstrap events are persisted; append-only trigger verified against real PostgreSQL. A Super Administrator-only paginated API and responsive read-only viewer exist; broader event coverage and browser/PostgreSQL route verification remain. |
-| SET-01 | In Progress | Added a no-default policy catalogue, required-setting reader and global Super Administrator write service with transactional audit, unconfigured blocking and JSON input checks. Per-setting role authorization, API/UI, typed policy schemas and PostgreSQL verification remain. |
+| SET-01 | In Progress | No-default policy catalogue, required-setting reader, globally authorized write service and Super Administrator settings-status/update API now exist; writes are audited transactionally. Per-setting role scopes, typed policy schemas, configuration UI and PostgreSQL verification remain. |
 | MIG-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | CUS-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | RNT-01 | Not Started | No feature implementation; Phase 1+ approval required. |
@@ -128,7 +128,7 @@ The owner approved the role/permission matrix. The first-admin method is now exp
 - Added seven unit route tests for unauthenticated access, administrator gating, assignment listing, session-derived actor, denied changes, request spoofing and revocation; all pass. Real PostgreSQL route-level tests remain. Sandbox TypeScript checking is blocked by the ungenerated Prisma Client; the user's Fedora setup generated it successfully.
 - User confirmed on Fedora that migrations applied, the first-admin bootstrap completed with hidden password input, and the authenticated workspace rendered. This verifies the local login path, not the unfinished role API or Phase 1A exit criteria.
 - The Fedora Compose issue was fixed by using the fully-qualified Docker Hub PostgreSQL image and removing the SELinux-blocked init-file mount; `btree_gist` is created by the baseline migration.
-- Current check: AUTH-04 remains in progress; role UI, route-level PostgreSQL tests, domain repository filtering, audit viewer, settings registry, invitation/reset/profile flows, and remaining Phase 1A features still need implementation/validation. Do not proceed to Phase 1B until Phase 1A exit criteria pass and are approved.
+- At this record's point, the role UI, route APIs, audit viewer and settings registry were still outstanding. Later continuations below have added the role APIs, audit viewer and settings foundations; PostgreSQL route-level verification, remaining auth workflows, role/settings UI and all other Phase 1A exit criteria remain. Do not proceed to Phase 1B until all exit criteria pass and are approved.
 
 ## Phase 1A continuation — audit API foundation (2026-10-18)
 
@@ -152,4 +152,11 @@ The owner approved the role/permission matrix. The first-admin method is now exp
 ## Phase 1A continuation — audited setting writes (2026-10-18)
 
 - Added a write service for registered setting keys. Until management defines per-key role scopes, writes require an active global Super Administrator. The service accepts JSON values only, requires a reason, verifies the company exists, and atomically upserts the setting plus a `SETTING_UPDATED` audit event. The audit record stores the setting key/reason, not the value. It creates no default or company record.
-- Added unit tests for successful audited write, denial for non-Super Administrators, nonexistent companies, and rejected null/invalid values. Per-key shape validation, settings API/UI, real PostgreSQL transaction tests, and a company bootstrap/selection path remain open. Settings values must stay unset until approved and explicitly entered.
+- Added unit tests for successful audited write, denial for non-Super Administrators, nonexistent companies, and rejected null/invalid values. At this record's point the settings API and company bootstrap remained open; the owner later confirmed the single-operator tenant and both were implemented in the continuation below. Per-key shape validation, configuration UI and real PostgreSQL transaction tests remain. Settings values stay unset until approved and explicitly entered.
+
+## Phase 1A continuation — company bootstrap and settings API (2026-10-18)
+
+- Owner confirmed a single tenant named Richie Transport Services; corporate customers remain domain records, not separate system tenants. Recorded in D-014 and `OPEN_QUESTIONS.md`.
+- Added `npm run bootstrap:company -- --confirm`, which requires an active global Super Administrator email, refuses if any `Company` row exists, creates only the approved company row, and appends an audit event transactionally. It creates no policy or operational records and requires no schema migration.
+- Added `GET/PUT /api/admin/companies/{companyId}/settings`. Only an active global Super Administrator can access it. GET returns registered-key status without values; PUT requires explicit JSON value and reason and uses the audited writer. No browser settings UI, per-key role policy or per-key semantic schema is implemented.
+- Added API and CLI unit tests. Latest sandbox quality checks: lint passes and `npm test` passes 32 tests. User must run `npm run typecheck` after pulling, using the locally generated Prisma Client; sandbox client is unavailable.

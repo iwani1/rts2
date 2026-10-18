@@ -43,7 +43,10 @@ describe('company settings registry', () => {
 
   it('lists unconfigured settings without creating database rows', async () => {
     const findMany = vi.fn().mockResolvedValue([]);
-    mocks.getPrisma.mockReturnValue({ setting: { findMany } });
+    mocks.getPrisma.mockReturnValue({
+      company: { findUnique: vi.fn().mockResolvedValue({ id: 'company-a' }) },
+      setting: { findMany },
+    });
     const status = await listCompanySettingStatus('company-a');
     expect(status).toHaveLength(settingRegistry.length);
     expect(status.every((setting) => !setting.configured && setting.updatedAt === null)).toBe(true);
@@ -53,6 +56,7 @@ describe('company settings registry', () => {
 
   it('treats a row with configured=true but no value as unconfigured', async () => {
     mocks.getPrisma.mockReturnValue({
+      company: { findUnique: vi.fn().mockResolvedValue({ id: 'company-a' }) },
       setting: {
         findMany: vi.fn().mockResolvedValue([{
           key: 'finance.tax_lines', configured: true, value: null, updatedAt: new Date(),

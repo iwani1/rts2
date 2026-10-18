@@ -49,7 +49,10 @@ export class SettingNotConfiguredError extends Error {
 /** Lists registry status only; this function never creates rows or supplies defaults. */
 export async function listCompanySettingStatus(companyIdInput: string) {
   const companyId = companyIdSchema.parse(companyIdInput);
-  const rows = await getPrisma().setting.findMany({
+  const prisma = getPrisma();
+  const company = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true } });
+  if (!company) throw new CompanyNotFoundError();
+  const rows = await prisma.setting.findMany({
     where: { companyId, key: { in: settingRegistry.map(({ key }) => key) } },
     select: { key: true, configured: true, value: true, updatedAt: true },
   });

@@ -27,7 +27,7 @@ No business defaults have been invented. Items marked **Phase 1A blocker** preve
 
 ## Phase 1A authentication/authorization blockers
 - **Resolved 2026-10-18:** owner approved the `PERMISSIONS.md` matrix. First Super Administrator will use the one-time audited local CLI bootstrap; public self-registration stays disabled.
-- Before company-scoped settings or user-role management can be operated, confirm whether this installation has one `Company` tenant (Richie Transport Services) or multiple tenants, and how the initial `Company` record should be provisioned. No company row is seeded or fabricated.
+- **Resolved 2026-10-18:** this installation has one `Company` tenant, Richie Transport Services. Separate corporate customers remain customer/client records, not tenants. A one-time audited local CLI provisions the company record; no settings or operational records are seeded.
 - What account invitation delivery channel and expiry/revocation policy should be used? Email is not configured.
 - Password-reset delivery channel, account recovery verification, session revocation policy and login-history retention require approval.
 
