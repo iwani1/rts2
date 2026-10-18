@@ -1,0 +1,23 @@
+# Setup and deployment (foundation only)
+
+## Prerequisites
+Node.js 22+, npm 10+, Docker with Compose for local PostgreSQL. Production hosting must be selected and verified for Node runtime, PostgreSQL 15+, `btree_gist`, persistent worker/scheduled job support, TLS, backups and persistent file storage. No production host is configured.
+
+## Local setup
+1. `cp .env.example .env` and replace placeholders locally; never commit `.env`.
+2. `docker compose up -d db` (PostgreSQL 16; init script enables `btree_gist`).
+3. `npm ci`.
+4. `npm run db:generate` (uses Prisma's standard engine; network access to the Prisma engine host may be required).
+5. `npm run db:migrate:deploy`.
+6. Set `AUTH_SECRET` to a cryptographically random secret of at least 32 characters and `APP_URL` to the exact application origin.
+7. For a fresh, controlled environment only, run `npm run bootstrap:super-admin -- --confirm` from an interactive local terminal. It refuses non-TTY use and refuses if any active Super Administrator already exists; enter a strong password when prompted (input is hidden). This creates the user, credential, global role and audit event in one transaction. Treat the database credentials and local shell as privileged; public sign-up remains disabled.
+8. `npm run dev`.
+9. Verify `GET /api/health` returns `{ "status": "ok", "service": "richie-tms" }`.
+
+The current migrations contain auth, audit, company/settings scaffolding and the owner-approved role/grant catalog; they do not seed users or operational/business data. Do not run a fabricated operational seed.
+
+## Quality gates
+`npm run typecheck`, `npm run lint`, `npm test`, `npm run build`. For database-backed tests, use a disposable local database ending in `_test`: `TMS_TEST_DATABASE_URL=... npm run db:test:migrate`, then run `DATABASE_URL=... APP_URL=http://localhost:3000 AUTH_SECRET=<test-secret> npm run test:integration`. The raw-SQL migration helper refuses remote hosts and database names without the `_test` suffix; it is test-only and does not write Prisma migration history. CI uses PostgreSQL 16 and Prisma's native `migrate deploy`, then runs integration tests.
+
+## Production notes
+Do not deploy until secrets, auth, monitoring, backups/restore, migrations, hosting capabilities, privacy policy and owner-approved business configuration are in place. Build with `npm ci && npx prisma generate && npm run build`; run the Node server with `npm start`. Configure `DATABASE_URL`, `AUTH_SECRET`, and `APP_URL` from the deployment secret manager. This is a scaffold, not a deployable operational TMS.

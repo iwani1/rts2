@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id              String               @id @default(cuid())
+  name            String
+  status          String               @default("ACTIVE")
+  createdAt       DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime             @updatedAt @db.Timestamptz(6)
+  settings        Setting[]
+  auditEvents     AuditEvent[]
+  roleAssignments UserRoleAssignment[]
+}
+
+model User {
+  id                  String               @id @default(cuid())
+  name                String
+  email               String               @unique
+  emailVerified       Boolean              @default(false)
+  image               String?
+  status              String               @default("ACTIVE")
+  createdAt           DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime             @updatedAt @db.Timestamptz(6)
+  sessions            Session[]
+  accounts            Account[]
+  auditEvents         AuditEvent[]
+  roleAssignments     UserRoleAssignment[] @relation("RoleAssignee")
+  assignedRoleChanges UserRoleAssignment[] @relation("RoleAssignmentActor")
+}
+
+model Role {
+  code        String               @id
+  name        String
+  assignments UserRoleAssignment[]
+  grants      RolePermission[]
+}
+
+model RolePermission {
+  roleCode   String
+  permission String
+  scope      String
+  role       Role   @relation(fields: [roleCode], references: [code], onDelete: Restrict)
+
+  @@id([roleCode, permission, scope])
+  @@index([permission, scope])
+}
+
+model UserRoleAssignment {
+  id           String    @id @default(cuid())
+  userId       String
+  companyId    String?
+  roleCode     String
+  assignedById String?
+  reason       String
+  createdAt    DateTime  @default(now()) @db.Timestamptz(6)
+  revokedAt    DateTime? @db.Timestamptz(6)
+  user         User      @relation("RoleAssignee", fields: [userId], references: [id], onDelete: Restrict)
+  company      Company?  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  role         Role      @relation(fields: [roleCode], references: [code], onDelete: Restrict)
+  assignedBy   User?     @relation("RoleAssignmentActor", fields: [assignedById], references: [id], onDelete: SetNull)
+
+  @@index([userId, revokedAt])
+  @@index([companyId, roleCode, revokedAt])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime @db.Timestamptz(6)
+  token     String   @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime? @db.Timestamptz(6)
+  refreshTokenExpiresAt DateTime? @db.Timestamptz(6)
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(6)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime @db.Timestamptz(6)
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([identifier])
+}
+
+model AuditEvent {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  companyId  String?
+  company    Company? @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  action     String
+  entityType String
+  entityId   String
+  summary    Json
+  ipAddress  String?
+  requestId  String?
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([companyId, createdAt])
+  @@index([entityType, entityId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model RateLimit {
+  id          String @id @default(cuid())
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+}
+
+model Setting {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  key         String
+  value       Json?
+  configured  Boolean  @default(false)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+  updatedById String?
+
+  @@unique([companyId, key])
+  @@index([companyId, configured])
+}
