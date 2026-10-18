@@ -29,6 +29,7 @@ export function VehicleManager({ companyId, vehicle, canAssignUsualDriver }: {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [archiveReason, setArchiveReason] = useState('');
+  const [pickerResetKey, setPickerResetKey] = useState(0);
   const values: VehicleFormValues = vehicle ? {
     registrationNumber: vehicle.registrationNumber,
     make: vehicle.make,
@@ -48,6 +49,7 @@ export function VehicleManager({ companyId, vehicle, canAssignUsualDriver }: {
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const targetForm = event.currentTarget;
     setSaving(true);
     setError('');
     setNotice('');
@@ -85,7 +87,10 @@ export function VehicleManager({ companyId, vehicle, canAssignUsualDriver }: {
       if (!response.ok) throw new Error(body.error || 'Unable to save this vehicle.');
       setNotice('Vehicle record saved.');
       router.refresh();
-      if (!vehicle) (event.currentTarget as HTMLFormElement).reset();
+      if (!vehicle) {
+        targetForm.reset();
+        setPickerResetKey((key) => key + 1);
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Unable to save this vehicle.');
     } finally {
@@ -134,6 +139,7 @@ export function VehicleManager({ companyId, vehicle, canAssignUsualDriver }: {
         {canAssignUsualDriver && <fieldset className="usual-driver-field">
           <legend>Usual driver</legend>
           <UsualDriverPicker
+            key={pickerResetKey}
             companyId={companyId}
             current={vehicle?.usualDriverId && vehicle.usualDriverName ? {
               id: vehicle.usualDriverId,

@@ -222,6 +222,11 @@ The owner approved the role/permission matrix. The first-admin method is now exp
 - Owner-confirmed `npm run typecheck`, `npm run lint`, and `npm test` all pass; unit suite is **51/51**. This verifies schema/client generation and migration deployment on Fedora.
 - The PostgreSQL integration tests for same-company linkage/database constraints and the browser link/clear flow have not yet been reported; FLT-01/FLT-04 remain In Progress pending those checks and existing vehicle edit/save verification.
 
+## Vehicle create-form reset follow-up (2026-10-18)
+
+- Fixed the vehicle-create success path to retain the form element reference across the asynchronous save before resetting it. Also remounts the controlled usual-driver picker after a successful create so the visible selection and hidden submitted driver ID both clear with the rest of the form.
+- `npm test` passes (51/51), `npm run lint` and `git diff --check` pass. Sandbox `npm run typecheck` remains blocked by stale generated Prisma Client types (implicit-any Prisma callbacks and missing generated Prisma exports in unrelated modules); the owner previously confirmed regeneration/typecheck on Fedora for the earlier usual-driver slice. No browser test was available here, so the updated UI behavior still needs local browser verification.
+
 ## Owner decision — vehicle status safety boundary (D-016; 2026-10-18)
 
 - Owner approved the recommendation: retain the seven vehicle status names from the brief; no default status and no manual status control in the current register; Reserved/Assigned/On Trip are to derive from authoritative reservation/assignment/trip records; Under Maintenance/Out of Service/Pending Inspection block assignments and may return to Available only after the required maintenance/inspection workflow is complete. The unrequested `Retired` status is excluded.
