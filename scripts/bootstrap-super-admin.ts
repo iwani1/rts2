@@ -9,7 +9,6 @@ function readHidden(prompt: string): Promise<string> {
   if (!stdin.isTTY || typeof stdin.setRawMode !== 'function') {
     throw new Error('Bootstrap requires an interactive terminal so the password is not echoed.');
   }
-  stdout.write(prompt);
   return new Promise((resolve, reject) => {
     let answer = '';
     const onData = (chunk: Buffer) => {
@@ -37,6 +36,7 @@ function readHidden(prompt: string): Promise<string> {
       stdin.setRawMode(false);
     };
     stdin.setRawMode(true);
+    stdout.write(prompt);
     stdin.resume();
     stdin.on('data', onData);
   });
@@ -54,6 +54,8 @@ async function main() {
   try {
     const name = await terminal.question('Administrator full name: ');
     const email = await terminal.question('Administrator email: ');
+    // Close readline before raw-mode input so its terminal echo cannot expose passwords.
+    terminal.close();
     const password = await readHidden('Password (minimum 12 characters; input hidden): ');
     const confirmation = await readHidden('Confirm password: ');
     if (password !== confirmation) throw new Error('Passwords do not match.');
@@ -65,7 +67,7 @@ async function main() {
     const passwordHash = await hashPassword(details.password);
 
     await prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('richie_tms_super_admin_bootstrap'))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('richie_tms_super_admin_bootstrap'))`;
       const existingAdmin = await tx.userRoleAssignment.count({
         where: { roleCode: 'SUPER_ADMIN', companyId: null, revokedAt: null },
       });
