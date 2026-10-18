@@ -157,3 +157,8 @@ button:disabled { opacity: .65; cursor: wait; }
   .vehicle-form-grid { grid-template-columns: 1fr; }
   .fleet-pagination { flex-wrap: wrap; }
 }
+.customer-history-list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.customer-history-list li { display: grid; gap: 5px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.customer-history-list li:last-child { border-bottom: 0; }
+.customer-history-list strong { color: var(--navy-800); font-size: 13px; text-transform: capitalize; }
+.customer-history-list span, .customer-history-list p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
