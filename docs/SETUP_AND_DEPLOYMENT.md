@@ -5,7 +5,7 @@ Node.js 22+, npm 10+, Docker with Compose for local PostgreSQL. Production hosti
 
 ## Local setup
 1. `cp .env.example .env` and replace placeholders locally; never commit `.env`.
-2. `docker compose up -d db` (PostgreSQL 16; init script enables `btree_gist`).
+2. `docker compose up -d db` (PostgreSQL 16). The baseline Prisma migration enables the required `btree_gist` extension.
 3. `npm ci`.
 4. `npm run db:generate` (uses Prisma's standard engine; network access to the Prisma engine host may be required).
 5. `npm run db:migrate:deploy`.
