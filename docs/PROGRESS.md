@@ -225,7 +225,7 @@ The owner approved the role/permission matrix. The first-admin method is now exp
 ## Vehicle create-form reset follow-up (2026-10-18)
 
 - Fixed the vehicle-create success path to retain the form element reference across the asynchronous save before resetting it. Also remounts the controlled usual-driver picker after a successful create so the visible selection and hidden submitted driver ID both clear with the rest of the form.
-- `npm test` passes (51/51), `npm run lint` and `git diff --check` pass. Sandbox `npm run typecheck` remains blocked by stale generated Prisma Client types (implicit-any Prisma callbacks and missing generated Prisma exports in unrelated modules); the owner previously confirmed regeneration/typecheck on Fedora for the earlier usual-driver slice. No browser test was available here, so the updated UI behavior still needs local browser verification.
+- Added a jsdom component test that chooses a driver, verifies its ID is submitted, and checks that the text form fields, picker display and hidden driver ID all clear after a successful response. `npm test` passes (52/52), `npm run lint` and `git diff --check` pass. Sandbox `npm run typecheck` remains blocked by stale generated Prisma Client types (implicit-any Prisma callbacks and missing generated Prisma exports in unrelated modules); the new test adds no reported type errors. This is component-level coverage, not a real browser/backend test; local browser verification remains outstanding.
 
 ## Owner decision — vehicle status safety boundary (D-016; 2026-10-18)
 
