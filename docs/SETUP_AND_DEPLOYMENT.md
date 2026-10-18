@@ -15,7 +15,7 @@ Node.js 22+, npm 10+, Docker with Compose for local PostgreSQL. Production hosti
 9. `npm run dev`.
 10. Verify `GET /api/health` returns `{ "status": "ok", "service": "richie-tms" }`.
 
-The current migrations contain auth, audit, company/settings scaffolding and the owner-approved role/grant catalog; they do not seed users or operational/business data. Do not run a fabricated operational seed.
+The current migrations contain auth, audit, company/settings scaffolding, the owner-approved role/grant catalog, and the vehicle register schema; migrations do not seed users or operational/business data. For an explicitly requested, clearly synthetic vehicle used for local UI testing only, first apply migrations, then run `NODE_ENV=development npm run seed:demo:vehicle -- --confirm-demo`. This idempotent command refuses non-development mode, non-local app/database hosts, production-named databases, or anything other than exactly one active operator company; it never runs at app startup or during migration. It creates `DEMO-GH-001`, labelled `DEMO — TEST ONLY`, and an audit event. Do not use this fixture in production or for operational dispatch.
 
 ## Quality gates
 `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`. For database-backed tests, use a disposable local database ending in `_test`: `TMS_TEST_DATABASE_URL=... npm run db:test:migrate`, then run `DATABASE_URL=... APP_URL=http://localhost:3000 AUTH_SECRET=<test-secret> npm run test:integration`. The raw-SQL migration helper refuses remote hosts and database names without the `_test` suffix; it is test-only and does not write Prisma migration history. CI uses PostgreSQL 16 and Prisma's native `migrate deploy`, then runs integration tests.

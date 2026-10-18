@@ -16,7 +16,8 @@
     "db:migrate:dev": "prisma migrate dev",
     "db:test:migrate": "node scripts/apply-test-migrations.mjs",
     "bootstrap:super-admin": "tsx scripts/bootstrap-super-admin.ts",
-    "bootstrap:company": "tsx scripts/bootstrap-company.ts"
+    "bootstrap:company": "tsx scripts/bootstrap-company.ts",
+    "seed:demo:vehicle": "tsx scripts/seed-demo-vehicle.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
