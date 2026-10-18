@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   PermissionDeniedError: class PermissionDeniedError extends Error {},
   FleetCompanyNotFoundError: class FleetCompanyNotFoundError extends Error {},
   InvalidVehicleCursorError: class InvalidVehicleCursorError extends Error {},
+  InvalidUsualDriverError: class InvalidUsualDriverError extends Error {},
 }));
 
 vi.mock('@/server/auth', () => ({ getAuth: () => ({ api: { getSession: mocks.getSession } }) }));
@@ -16,6 +17,7 @@ vi.mock('@/modules/fleet/vehicles', () => ({
   createVehicle: mocks.createVehicle,
   FleetCompanyNotFoundError: mocks.FleetCompanyNotFoundError,
   InvalidVehicleCursorError: mocks.InvalidVehicleCursorError,
+  InvalidUsualDriverError: mocks.InvalidUsualDriverError,
   isUniqueVehicleError: (error: unknown) => typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002',
 }));
 
@@ -50,5 +52,15 @@ describe('company vehicle collection API', () => {
     }), context);
     expect(response.status).toBe(201);
     expect(mocks.createVehicle).toHaveBeenCalledWith({ registrationNumber: 'GH-1' }, 'user-1', 'company-1');
+  });
+
+  it('returns a client error for an invalid same-company usual-driver selection', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'user-1' } });
+    mocks.createVehicle.mockRejectedValue(new mocks.InvalidUsualDriverError());
+    const response = await POST(new Request('http://localhost/api/companies/company-1/vehicles', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usualDriverId: 'other-company-driver' }),
+    }), context);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'Select an active driver in this operator company.' });
   });
 });

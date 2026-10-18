@@ -102,11 +102,13 @@ button:disabled { opacity: .65; cursor: wait; }
 .fleet-list-heading h2, .vehicle-editor h2 { margin: 0; color: var(--navy-950); font-size: 20px; }
 .fleet-list-heading .muted { margin: 6px 0 0; font-size: 13px; }
 .fleet-search { display: grid; gap: 6px; width: min(100%, 420px); }
-.fleet-search label, .vehicle-form label, .vehicle-archive label { display: grid; gap: 6px; color: var(--navy-800); font-size: 13px; font-weight: 650; }
+.fleet-search label, .vehicle-form label, .vehicle-archive label, .usual-driver-picker label { display: grid; gap: 6px; color: var(--navy-800); font-size: 13px; font-weight: 650; }
+.usual-driver-field { min-width: 0; margin: 0; padding: 0; border: 0; }
+.usual-driver-field legend { margin-bottom: 6px; color: var(--navy-800); font-size: 13px; font-weight: 650; }
 .fleet-search > div { display: flex; gap: 8px; }
-.fleet-search input, .vehicle-form input, .vehicle-form select, .vehicle-form textarea, .vehicle-archive input { min-width: 0; min-height: 42px; padding: 9px 11px; border: 1px solid #b9c5cb; border-radius: 6px; background: #fff; color: var(--ink); font: inherit; font-weight: 400; }
+.fleet-search input, .vehicle-form input, .vehicle-form select, .vehicle-form textarea, .vehicle-archive input, .usual-driver-picker input { min-width: 0; min-height: 42px; padding: 9px 11px; border: 1px solid #b9c5cb; border-radius: 6px; background: #fff; color: var(--ink); font: inherit; font-weight: 400; }
 .fleet-search input { flex: 1; }
-.vehicle-form input:focus, .vehicle-form select:focus, .vehicle-form textarea:focus, .vehicle-archive input:focus, .fleet-search input:focus { border-color: var(--focus); outline: 3px solid #087c7825; }
+.vehicle-form input:focus, .vehicle-form select:focus, .vehicle-form textarea:focus, .vehicle-archive input:focus, .fleet-search input:focus, .usual-driver-picker input:focus { border-color: var(--focus); outline: 3px solid #087c7825; }
 .vehicle-table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
 .vehicle-table-wrap:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 .vehicle-table { width: 100%; min-width: 820px; border-collapse: collapse; text-align: left; font-size: 13px; }
@@ -123,6 +125,12 @@ button:disabled { opacity: .65; cursor: wait; }
 .vehicle-editor > .muted { max-width: 750px; margin: 0 0 20px; font-size: 13px; }
 .vehicle-form { display: grid; gap: 16px; }
 .vehicle-form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.usual-driver-picker { display: grid; gap: 10px; }
+.usual-driver-selected { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 42px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 6px; background: #f8fbfa; color: var(--navy-950); font-size: 13px; }
+.usual-driver-results { max-height: 240px; overflow: auto; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 6px; list-style: none; }
+.usual-driver-results li + li { border-top: 1px solid var(--line); }
+.usual-driver-option { display: grid; width: 100%; gap: 2px; padding: 10px 12px; border: 0; background: #fff; color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
+.usual-driver-option:hover, .usual-driver-option:focus-visible { background: var(--teal-50); outline: 2px solid var(--focus); outline-offset: -2px; }
 .vehicle-form textarea { resize: vertical; }
 .vehicle-form-actions { display: flex; justify-content: flex-start; }
 .button-primary, .button-danger { min-height: 42px; padding: 9px 15px; border: 0; border-radius: 6px; color: #fff; font: inherit; font-weight: 650; cursor: pointer; }

@@ -4,6 +4,7 @@ import { PermissionDeniedError } from '@/modules/auth/permissions';
 import {
   createVehicle,
   FleetCompanyNotFoundError,
+  InvalidUsualDriverError,
   InvalidVehicleCursorError,
   isUniqueVehicleError,
   listVehicles,
@@ -18,6 +19,7 @@ function errorResponse(error: unknown) {
     return NextResponse.json({ error: 'Check the submitted vehicle details.' }, { status: 400 });
   }
   if (error instanceof PermissionDeniedError) return NextResponse.json({ error: 'Access denied.' }, { status: 403 });
+  if (error instanceof InvalidUsualDriverError) return NextResponse.json({ error: 'Select an active driver in this operator company.' }, { status: 400 });
   if (error instanceof InvalidVehicleCursorError) return NextResponse.json({ error: 'Invalid vehicle page cursor.' }, { status: 400 });
   if (error instanceof FleetCompanyNotFoundError) return NextResponse.json({ error: 'Company not found.' }, { status: 404 });
   if (isUniqueVehicleError(error)) return NextResponse.json({ error: 'That registration number is already in the vehicle register.' }, { status: 409 });

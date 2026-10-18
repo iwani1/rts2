@@ -3,8 +3,9 @@
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { VehicleRecord } from '@/modules/fleet/vehicles';
+import { UsualDriverPicker } from './usual-driver-picker';
 
-type VehicleFormValues = Omit<VehicleRecord, 'id' | 'createdAt' | 'updatedAt'>;
+type VehicleFormValues = Omit<VehicleRecord, 'id' | 'createdAt' | 'updatedAt' | 'usualDriverId' | 'usualDriverName' | 'usualDriverArchived'>;
 
 const emptyVehicle: VehicleFormValues = {
   registrationNumber: '', make: '', model: '', category: '', seatCount: null,
@@ -18,7 +19,11 @@ function field(form: FormData, name: string) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-export function VehicleManager({ companyId, vehicle }: { companyId: string; vehicle?: VehicleRecord }) {
+export function VehicleManager({ companyId, vehicle, canAssignUsualDriver }: {
+  companyId: string;
+  vehicle?: VehicleRecord;
+  canAssignUsualDriver: boolean;
+}) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -65,6 +70,7 @@ export function VehicleManager({ companyId, vehicle }: { companyId: string; vehi
       registrationExpiresAt: field(form, 'registrationExpiresAt') || null,
       nextServiceAt: field(form, 'nextServiceAt') || null,
       notes: field(form, 'notes') || null,
+      ...(canAssignUsualDriver ? { usualDriverId: field(form, 'usualDriverId') || null } : {}),
       reason: field(form, 'reason'),
     };
     try {
@@ -125,6 +131,17 @@ export function VehicleManager({ companyId, vehicle }: { companyId: string; vehi
         <label>Make<input name="make" required maxLength={80} defaultValue={values.make} /></label>
         <label>Model<input name="model" required maxLength={80} defaultValue={values.model} /></label>
         <label>Vehicle category<input name="category" required maxLength={80} defaultValue={values.category} aria-describedby="category-help" /></label>
+        {canAssignUsualDriver && <fieldset className="usual-driver-field">
+          <legend>Usual driver</legend>
+          <UsualDriverPicker
+            companyId={companyId}
+            current={vehicle?.usualDriverId && vehicle.usualDriverName ? {
+              id: vehicle.usualDriverId,
+              fullName: vehicle.usualDriverName,
+              archived: vehicle.usualDriverArchived,
+            } : null}
+          />
+        </fieldset>}
         <label>Seat capacity<input name="seatCount" type="number" min="1" max="10000" step="1" defaultValue={values.seatCount ?? ''} /></label>
         <label>Fuel type<input name="fuelType" maxLength={60} defaultValue={values.fuelType ?? ''} /></label>
         <label>Ownership / lease<input name="ownershipType" maxLength={60} defaultValue={values.ownershipType ?? ''} /></label>
@@ -135,6 +152,7 @@ export function VehicleManager({ companyId, vehicle }: { companyId: string; vehi
         <label>Registration document expiry<input name="registrationExpiresAt" type="date" defaultValue={values.registrationExpiresAt ?? ''} /></label>
         <label>Next service date<input name="nextServiceAt" type="date" defaultValue={values.nextServiceAt ?? ''} /></label>
       </div>
+      {canAssignUsualDriver && <p id="usual-driver-help" className="form-help">Choose an active driver from this company, or leave blank if no usual driver is recorded. An existing archived driver link is shown so it can be preserved or cleared.</p>}
       <label>Notes<textarea name="notes" rows={3} maxLength={2000} defaultValue={values.notes ?? ''} /></label>
       <label>Reason for {vehicle ? 'change' : 'creation'}<input name="reason" required minLength={8} maxLength={500} /></label>
       <p id="category-help" className="form-help">Use the company’s current category naming. Categories are not preloaded.</p>

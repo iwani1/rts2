@@ -25,6 +25,7 @@ const vehicleFieldsSchema = z.object({
   roadworthinessExpiresAt: dateOnly,
   registrationExpiresAt: dateOnly,
   nextServiceAt: dateOnly,
+  usualDriverId: z.string().trim().min(1).max(128).nullable().optional(),
   notes: optionalText(2000),
 }).strict();
 

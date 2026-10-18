@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getPrisma } from '@/server/prisma';
 import { assignRole, PermissionDeniedError } from '@/modules/auth/permissions';
-import { archiveVehicle, createVehicle, getVehicle, listVehicles, updateVehicle } from './vehicles';
+import { archiveVehicle, createVehicle, getVehicle, InvalidUsualDriverError, listVehicles, updateVehicle } from './vehicles';
 
 const prisma = getPrisma();
 let companyId = '';
@@ -64,6 +64,38 @@ describe('vehicle register with PostgreSQL persistence', () => {
   it('enforces company registration uniqueness and blocks cross-company lookup', async () => {
     await expect(createVehicle(vehicleInput(), fleetManagerId, companyId)).rejects.toMatchObject({ code: 'P2002' });
     await expect(listVehicles({ actorId: fleetManagerId, companyId: otherCompanyId })).rejects.toBeInstanceOf(PermissionDeniedError);
+  });
+
+  it('stores a same-company usual-driver link and keeps it out of dispatcher vehicle projections', async () => {
+    const [driver, otherCompanyDriver] = await Promise.all([
+      prisma.driver.create({ data: { companyId, fullName: `Usual Driver Test ${randomUUID()}` } }),
+      prisma.driver.create({ data: { companyId: otherCompanyId, fullName: `Other Company Driver ${randomUUID()}` } }),
+    ]);
+    const vehicle = await createVehicle(vehicleInput({ registrationNumber: 'GR 4321-25', usualDriverId: driver.id }), fleetManagerId, companyId);
+    expect(vehicle.usualDriverId).toBe(driver.id);
+    expect(vehicle.usualDriverName).toBe(driver.fullName);
+    const stored = await prisma.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } });
+    expect(stored.usualDriverCompanyId).toBe(companyId);
+    expect(stored.usualDriverId).toBe(driver.id);
+
+    const managerList = await listVehicles({ actorId: fleetManagerId, companyId });
+    expect(managerList.vehicles.find((entry) => entry.id === vehicle.id)?.usualDriverName).toBe(driver.fullName);
+    const limited = await getVehicle({ actorId: dispatcherId, companyId, vehicleId: vehicle.id });
+    expect(limited.vehicle.usualDriverId).toBeNull();
+    expect(limited.vehicle.usualDriverName).toBeNull();
+
+    await expect(createVehicle(vehicleInput({ registrationNumber: 'GR 9876-25', usualDriverId: otherCompanyDriver.id }), fleetManagerId, companyId))
+      .rejects.toBeInstanceOf(InvalidUsualDriverError);
+    await expect(prisma.$executeRaw`UPDATE "Vehicle" SET "usualDriverCompanyId" = ${otherCompanyId}, "usualDriverId" = ${otherCompanyDriver.id} WHERE "id" = ${vehicle.id}`)
+      .rejects.toBeDefined();
+
+    const cleared = await updateVehicle(vehicleInput({
+      registrationNumber: vehicle.registrationNumber,
+      usualDriverId: null,
+      reason: 'Clear the test-only usual-driver association',
+    }), fleetManagerId, companyId, vehicle.id);
+    expect(cleared.usualDriverId).toBeNull();
+    expect((await prisma.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).usualDriverCompanyId).toBeNull();
   });
 
   it('limits dispatcher reads, denies dispatcher mutations, and supports audited update/archive', async () => {

@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { FleetCompanyNotFoundError, getVehicle, listVehicles, VehicleNotFoundError } from '@/modules/fleet/vehicles';
 import type { VehicleRecord } from '@/modules/fleet/vehicles';
-import { PermissionDeniedError, resolvePermission } from '@/modules/auth/permissions';
+import { PermissionDeniedError } from '@/modules/auth/permissions';
 import { mayStartSession } from '@/modules/auth/policy';
 import { getAuth } from '@/server/auth';
 import { getPrisma } from '@/server/prisma';
@@ -43,13 +43,10 @@ export default async function VehiclesPage({ searchParams }: PageProps) {
     }
   }
 
-  const driverAccess = await resolvePermission({ userId: session.user.id, companyId: companies[0].id, permission: 'driver:manage' });
-  const canReadDriverRegister = driverAccess.allowed && driverAccess.scopes.some((scope) => ['GLOBAL', 'COMPANY'].includes(scope));
-
   return <main className="fleet-page">
     <header className="fleet-page-header">
       <Link className="wordmark fleet-wordmark" href="/" aria-label="Richie TMS home">R<span>.</span>TS</Link>
-      <nav aria-label="Fleet navigation"><Link href="/">Workspace</Link>{canReadDriverRegister && <Link href="/fleet/drivers">Driver register</Link>}<span aria-current="page">Vehicle register</span></nav>
+      <nav aria-label="Fleet navigation"><Link href="/">Workspace</Link>{result.canManageDrivers && <Link href="/fleet/drivers">Driver register</Link>}<span aria-current="page">Vehicle register</span></nav>
     </header>
     <div className="fleet-content">
       <div className="fleet-title-row">
@@ -61,15 +58,15 @@ export default async function VehiclesPage({ searchParams }: PageProps) {
           <form className="fleet-search" method="get"><label htmlFor="vehicle-search">Search vehicles</label><div><input id="vehicle-search" type="search" name="q" maxLength={100} defaultValue={params.q ?? ''} placeholder="Registration, make, model, category"/><button className="button-link" type="submit">Search</button></div></form>
         </div>
         {result.vehicles.length === 0 ? <div className="fleet-empty"><h3>No vehicles found</h3><p>{params.q ? 'Try a different search, or clear the search term.' : 'No vehicle records have been entered yet.'}</p></div> : <div className="vehicle-table-wrap" role="region" aria-label="Vehicle records" tabIndex={0}>
-          <table className="vehicle-table"><thead><tr><th>Registration</th><th>Vehicle</th><th>Category</th><th>Seats</th>{result.canManage && <><th>Odometer</th><th>Document dates</th><th>Record</th></>}</tr></thead>
-            <tbody>{result.vehicles.map((vehicle) => <tr key={vehicle.id}><td><strong>{vehicle.registrationNumber}</strong></td><td>{vehicle.make} {vehicle.model}{vehicle.fuelType && <span className="vehicle-secondary">{vehicle.fuelType}</span>}</td><td>{vehicle.category}</td><td>{vehicle.seatCount ?? '—'}</td>{result.canManage && <><td>{vehicle.odometerValue === null ? '—' : `${vehicle.odometerValue} ${vehicle.odometerUnit === 'KM' ? 'km' : 'mi'}`}</td><td><span className="vehicle-secondary">Insurance: {vehicle.insuranceExpiresAt ?? 'not recorded'}</span><span className="vehicle-secondary">Roadworthiness: {vehicle.roadworthinessExpiresAt ?? 'not recorded'}</span><span className="vehicle-secondary">Registration: {vehicle.registrationExpiresAt ?? 'not recorded'}</span><span className="vehicle-secondary">Service: {vehicle.nextServiceAt ?? 'not recorded'}</span></td><td><Link className="button-link vehicle-edit-link" href={`/fleet/vehicles?edit=${encodeURIComponent(vehicle.id)}${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`}>Edit</Link></td></>}</tr>)}</tbody>
+          <table className="vehicle-table"><thead><tr><th>Registration</th><th>Vehicle</th><th>Category</th><th>Seats</th>{result.canManageDrivers && <th>Usual driver</th>}{result.canManage && <><th>Odometer</th><th>Document dates</th><th>Record</th></>}</tr></thead>
+            <tbody>{result.vehicles.map((vehicle) => <tr key={vehicle.id}><td><strong>{vehicle.registrationNumber}</strong></td><td>{vehicle.make} {vehicle.model}{vehicle.fuelType && <span className="vehicle-secondary">{vehicle.fuelType}</span>}</td><td>{vehicle.category}</td><td>{vehicle.seatCount ?? '—'}</td>{result.canManageDrivers && <td>{vehicle.usualDriverName ? <>{vehicle.usualDriverName}{vehicle.usualDriverArchived && <span className="vehicle-secondary">Archived driver record</span>}</> : 'Not recorded'}</td>}{result.canManage && <><td>{vehicle.odometerValue === null ? '—' : `${vehicle.odometerValue} ${vehicle.odometerUnit === 'KM' ? 'km' : 'mi'}`}</td><td><span className="vehicle-secondary">Insurance: {vehicle.insuranceExpiresAt ?? 'not recorded'}</span><span className="vehicle-secondary">Roadworthiness: {vehicle.roadworthinessExpiresAt ?? 'not recorded'}</span><span className="vehicle-secondary">Registration: {vehicle.registrationExpiresAt ?? 'not recorded'}</span><span className="vehicle-secondary">Service: {vehicle.nextServiceAt ?? 'not recorded'}</span></td><td><Link className="button-link vehicle-edit-link" href={`/fleet/vehicles?edit=${encodeURIComponent(vehicle.id)}${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`}>Edit</Link></td></>}</tr>)}</tbody>
           </table>
         </div>}
         {result.nextCursor && <div className="fleet-pagination"><span className="muted">More records available.</span><Link className="button-link" href={`/fleet/vehicles?${params.q ? `q=${encodeURIComponent(params.q)}&` : ''}cursor=${encodeURIComponent(result.nextCursor)}`}>Next page</Link></div>}
       </section>
-      {result.canManage && <VehicleManager companyId={companies[0].id} vehicle={editing} />}
+      {result.canManage && <VehicleManager key={editing?.id ?? 'new'} companyId={companies[0].id} vehicle={editing} canAssignUsualDriver={result.canManageDrivers} />}
       {!result.canManage && <p className="form-help">Your current fleet permission allows this limited register view. Editing and restricted fleet details are not available to your role.</p>}
-      <p className="fleet-limits">Photo and document file uploads, usual-driver assignment, vehicle status transitions, reminders and assignment safety checks are not available yet.</p>
+      <p className="fleet-limits">Photo and document file uploads, vehicle status transitions, reminders and assignment safety checks are not available yet.</p>
     </div>
   </main>;
 }

@@ -174,14 +174,18 @@ model Vehicle {
   registrationExpiresAt     DateTime? @db.Date
   nextServiceAt             DateTime? @db.Date
   notes                     String?
+  usualDriverCompanyId      String?
+  usualDriverId             String?
   archivedAt                DateTime? @db.Timestamptz(6)
   createdAt                 DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt                 DateTime  @updatedAt @db.Timestamptz(6)
   company                   Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  usualDriver               Driver?   @relation("VehicleUsualDriver", fields: [usualDriverCompanyId, usualDriverId], references: [companyId, id], onDelete: Restrict)
 
   @@unique([companyId, registrationNumber])
   @@index([companyId, archivedAt, registrationNumber])
   @@index([companyId, category])
+  @@index([companyId, usualDriverId])
 }
 
 model Driver {
@@ -197,7 +201,9 @@ model Driver {
   createdAt         DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt         DateTime  @updatedAt @db.Timestamptz(6)
   company           Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  usualVehicles     Vehicle[] @relation("VehicleUsualDriver")
 
+  @@unique([companyId, id])
   @@index([companyId, archivedAt, fullName])
   @@index([companyId, licenceExpiresAt])
 }

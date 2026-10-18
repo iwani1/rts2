@@ -5,6 +5,7 @@ import {
   archiveVehicle,
   FleetCompanyNotFoundError,
   getVehicle,
+  InvalidUsualDriverError,
   isUniqueVehicleError,
   updateVehicle,
   VehicleNotFoundError,
@@ -17,6 +18,7 @@ type RouteContext = { params: Promise<{ companyId: string; vehicleId: string }> 
 function errorResponse(error: unknown) {
   if (error instanceof ZodError || error instanceof SyntaxError) return NextResponse.json({ error: 'Check the submitted vehicle details.' }, { status: 400 });
   if (error instanceof PermissionDeniedError) return NextResponse.json({ error: 'Access denied.' }, { status: 403 });
+  if (error instanceof InvalidUsualDriverError) return NextResponse.json({ error: 'Select an active driver in this operator company.' }, { status: 400 });
   if (error instanceof FleetCompanyNotFoundError) return NextResponse.json({ error: 'Company not found.' }, { status: 404 });
   if (error instanceof VehicleNotFoundError) return NextResponse.json({ error: 'Vehicle not found.' }, { status: 404 });
   if (isUniqueVehicleError(error)) return NextResponse.json({ error: 'That registration number is already in the vehicle register.' }, { status: 409 });

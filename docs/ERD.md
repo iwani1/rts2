@@ -188,6 +188,8 @@ erDiagram
 
 The initial Prisma migration is intentionally empty apart from the extension, because Phase 0 authorizes no domain feature schema.
 
-## Implemented additions — vehicle register base (FLT-01 in progress)
+## Implemented additions — vehicle and driver register bases (FLT-01/FLT-04 in progress)
 
-`Vehicle` is tenant-scoped with restrictive `Company` FK, company-unique normalized registration number, free-text company-supplied category/fuel/ownership values, optional seat count, optional odometer value paired with explicit `KM`/`MILE` unit, insurance/roadworthiness/registration expiry dates, next service date, notes, and archive timestamps. SQL checks enforce non-empty identity fields, positive seat counts, and paired non-negative odometer data. Photos, document files/records, vehicle status, and usual-driver relations are not yet implemented; see `docs/PROGRESS.md`.
+`Vehicle` is tenant-scoped with restrictive `Company` FK, company-unique normalized registration number, free-text company-supplied category/fuel/ownership values, optional seat count, optional odometer value paired with explicit `KM`/`MILE` unit, insurance/roadworthiness/registration expiry dates, next service date, notes, and archive timestamps. SQL checks enforce non-empty identity fields, positive seat counts, and paired non-negative odometer data. `Driver` is company-scoped with only the brief-listed licence, qualification, availability and status fields plus a name for record identity; no driver contact fields or defaults are stored.
+
+`Vehicle.usualDriver` is optional and is constrained by a composite foreign key to a driver in the same company. An additional check keeps the relation's tenant key equal to the vehicle's company. The UI/API only expose this relation to users who can manage both fleet and driver records; assignment requires an active same-company driver. A pre-existing link to an archived driver can be preserved or cleared, but new links to archived drivers are rejected. Vehicle status, photo/document files and records remain unimplemented; see `docs/PROGRESS.md`.
