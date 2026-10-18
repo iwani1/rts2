@@ -1,6 +1,6 @@
 # Relational data model (target; Phase 0)
 
-The following is the intended complete domain relationship map. It is a design artifact, **not yet implemented schema**. Fields are abbreviated to keep the diagram legible; every tenant-owned entity carries `company_id` where applicable, with restrictive foreign keys and tenant-aware uniqueness. Global super-admin identity and system settings are exceptions.
+The following is the intended complete domain relationship map. Fields are abbreviated to keep the diagram legible; every tenant-owned entity carries `company_id` where applicable, with restrictive foreign keys and tenant-aware uniqueness. Global super-admin identity and system settings are exceptions. This diagram remains a target; auth/settings and the first Vehicle register schema are implemented in Prisma, but most shown domain entities do not yet exist.
 
 ```mermaid
 erDiagram
@@ -187,3 +187,7 @@ erDiagram
 - Audit/status history append-only; indexes on tenant+status, tenant+created time, operational date windows, foreign keys, and normalized search keys.
 
 The initial Prisma migration is intentionally empty apart from the extension, because Phase 0 authorizes no domain feature schema.
+
+## Implemented additions — vehicle register base (FLT-01 in progress)
+
+`Vehicle` is tenant-scoped with restrictive `Company` FK, company-unique normalized registration number, free-text company-supplied category/fuel/ownership values, optional seat count, optional odometer value paired with explicit `KM`/`MILE` unit, insurance/roadworthiness/registration expiry dates, next service date, notes, and archive timestamps. SQL checks enforce non-empty identity fields, positive seat counts, and paired non-negative odometer data. Photos, document files/records, vehicle status, and usual-driver relations are not yet implemented; see `docs/PROGRESS.md`.

@@ -12,14 +12,18 @@ export const dynamic = 'force-dynamic';
 export default async function Home() {
   const session = await getAuth().api.getSession({ headers: await headers() });
   if (!session) redirect('/login');
-  const currentUser = await getPrisma().user.findUnique({ where: { id: session.user.id }, select: { status: true } });
+  const prisma = getPrisma();
+  const currentUser = await prisma.user.findUnique({ where: { id: session.user.id }, select: { status: true } });
   if (!mayStartSession(currentUser?.status)) redirect('/login');
   const auditAccess = await resolvePermission({ userId: session.user.id, permission: 'audit:read' });
+  const company = await prisma.company.findFirst({ where: { status: 'ACTIVE' }, select: { id: true } });
+  const fleetAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'fleet:manage' }) : { allowed: false, scopes: [] };
   return <main className="app-shell">
     <header className="app-header">
       <Link className="wordmark" href="/" aria-label="Richie TMS home">R<span>.</span>TS</Link>
       <nav className="account-area" aria-label="Account">
         {auditAccess.scopes.includes('GLOBAL') && <Link className="header-link" href="/admin/audit">Audit activity</Link>}
+        {fleetAccess.allowed && <Link className="header-link" href="/fleet/vehicles">Vehicle register</Link>}
         <span>{session.user.name || session.user.email}</span>
         <LogoutButton />
       </nav>

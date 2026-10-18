@@ -16,6 +16,7 @@ model Company {
   settings        Setting[]
   auditEvents     AuditEvent[]
   roleAssignments UserRoleAssignment[]
+  vehicles        Vehicle[]
 }
 
 model User {
@@ -153,4 +154,31 @@ model Setting {
 
   @@unique([companyId, key])
   @@index([companyId, configured])
+}
+
+model Vehicle {
+  id                        String    @id @default(cuid())
+  companyId                 String
+  registrationNumber        String
+  make                      String
+  model                     String
+  category                  String
+  seatCount                 Int?
+  fuelType                  String?
+  ownershipType             String?
+  odometerValue             Decimal?  @db.Decimal(12, 2)
+  odometerUnit              String?
+  insuranceExpiresAt        DateTime? @db.Date
+  roadworthinessExpiresAt   DateTime? @db.Date
+  registrationExpiresAt     DateTime? @db.Date
+  nextServiceAt             DateTime? @db.Date
+  notes                     String?
+  archivedAt                DateTime? @db.Timestamptz(6)
+  createdAt                 DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt                 DateTime  @updatedAt @db.Timestamptz(6)
+  company                   Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, registrationNumber])
+  @@index([companyId, archivedAt, registrationNumber])
+  @@index([companyId, category])
 }

@@ -1,0 +1,35 @@
+CREATE TABLE "Vehicle" (
+  "id" TEXT NOT NULL,
+  "companyId" TEXT NOT NULL,
+  "registrationNumber" TEXT NOT NULL,
+  "make" TEXT NOT NULL,
+  "model" TEXT NOT NULL,
+  "category" TEXT NOT NULL,
+  "seatCount" INTEGER,
+  "fuelType" TEXT,
+  "ownershipType" TEXT,
+  "odometerValue" NUMERIC(12,2),
+  "odometerUnit" TEXT,
+  "insuranceExpiresAt" DATE,
+  "roadworthinessExpiresAt" DATE,
+  "registrationExpiresAt" DATE,
+  "nextServiceAt" DATE,
+  "notes" TEXT,
+  "archivedAt" TIMESTAMPTZ(6),
+  "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+  CONSTRAINT "Vehicle_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "Vehicle_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT "Vehicle_registration_nonempty" CHECK (length(trim("registrationNumber")) > 0),
+  CONSTRAINT "Vehicle_registration_normalized" CHECK ("registrationNumber" = upper(trim("registrationNumber"))),
+  CONSTRAINT "Vehicle_make_nonempty" CHECK (length(trim("make")) > 0),
+  CONSTRAINT "Vehicle_model_nonempty" CHECK (length(trim("model")) > 0),
+  CONSTRAINT "Vehicle_category_nonempty" CHECK (length(trim("category")) > 0),
+  CONSTRAINT "Vehicle_seat_count_positive" CHECK ("seatCount" IS NULL OR "seatCount" > 0),
+  CONSTRAINT "Vehicle_odometer_pair" CHECK (("odometerValue" IS NULL) = ("odometerUnit" IS NULL)),
+  CONSTRAINT "Vehicle_odometer_unit_valid" CHECK ("odometerUnit" IS NULL OR "odometerUnit" IN ('KM', 'MILE')),
+  CONSTRAINT "Vehicle_odometer_nonnegative" CHECK ("odometerValue" IS NULL OR "odometerValue" >= 0)
+);
+CREATE UNIQUE INDEX "Vehicle_companyId_registrationNumber_key" ON "Vehicle"("companyId", "registrationNumber");
+CREATE INDEX "Vehicle_companyId_archivedAt_registrationNumber_idx" ON "Vehicle"("companyId", "archivedAt", "registrationNumber");
+CREATE INDEX "Vehicle_companyId_category_idx" ON "Vehicle"("companyId", "category");

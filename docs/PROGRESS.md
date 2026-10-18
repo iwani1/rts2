@@ -11,8 +11,8 @@ Phase 0 foundation plus the first Phase 1A authentication slice. Backlog status 
 | AUTH-05 | Not Started | Profile and login-history UI not implemented. |
 | AUTH-06 | Not Started | Phase 2. |
 | AUD-01 | In Progress | Auth session and role assignment/revocation/initial-bootstrap events are persisted; append-only trigger verified against real PostgreSQL. A Super Administrator-only paginated API and responsive read-only viewer exist; broader event coverage and browser/PostgreSQL route verification remain. |
-| SET-01 | In Progress | No-default policy catalogue, required-setting reader, globally authorized write service and Super Administrator settings-status/update API now exist; writes are audited transactionally. Per-setting role scopes, typed policy schemas, configuration UI and PostgreSQL verification remain. |
-| MIG-01 | Not Started | No feature implementation; Phase 1+ approval required. |
+| SET-01 | In Progress | No-default policy catalogue, required-setting reader, globally authorized write service and Super Administrator settings-status/update API exist; writes are audited transactionally. Three disposable-PostgreSQL integration tests passed on Fedora. Per-setting role scopes, typed policy schemas and configuration UI remain. |
+| MIG-01 | Not Started | CSV import not started; customer import depends on CUS-01 and driver import on FLT-04. |
 | CUS-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | RNT-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | RNT-02 | Not Started | No feature implementation; Phase 1+ approval required. |
@@ -24,7 +24,7 @@ Phase 0 foundation plus the first Phase 1A authentication slice. Backlog status 
 | RNT-08 | Not Started | No feature implementation; Phase 1+ approval required. |
 | RNT-09 | Not Started | No feature implementation; Phase 1+ approval required. |
 | WEB-01 | Not Started | No feature implementation; Phase 1+ approval required. |
-| FLT-01 | Not Started | No feature implementation; Phase 1+ approval required. |
+| FLT-01 | In Progress | Vehicle register schema/API/UI implemented for core factual fields; photo storage, document records/files, usual-driver link and browser/real-PostgreSQL verification remain. |
 | FLT-02 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FLT-03 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FLT-04 | Not Started | No feature implementation; Phase 1+ approval required. |
@@ -166,3 +166,12 @@ The owner approved the role/permission matrix. The first-admin method is now exp
 - The first user-run integration pass exercised 11 PostgreSQL tests: 10 passed, and one authorization assertion failed because a second assigned role legitimately retained `BILLING_LINK_READ` on `trip:dispatch` after revoking the Driver role. The role-revocation check now asserts denial of the Driver-specific `driver:manage` grant instead. This corrects the test expectation for users with multiple roles; no permission code changed.
 - After pulling `0786f44`, the user reran the suite against a fresh disposable PostgreSQL database: **3 test files and all 11 integration tests passed** (4 auth, 4 authorization, 3 settings). Better Auth error/warning log lines were from expected negative-path suspended-account and invalid-password tests. This is the current real-PostgreSQL integration result.
 - Sandbox lint and all 32 unit tests pass. Sandbox typecheck currently cannot validate because its local generated Prisma Client is stale/missing model types; it reports implicit-any and missing Prisma exports across existing auth/settings files. The user previously confirmed Fedora typecheck passed at `7c51f21`; the subsequent source change was limited to the integration-test assertion. Clean standard-engine generation remains a CI/environment verification requirement.
+
+## Phase 1A — vehicle register base (FLT-01, in progress; 2026-10-18)
+
+- Studied FleetSimple's publicly visible fleet inventory/editor and driver-overview screenshots before UI work; recorded the mapping and access limits in `docs/REFERENCE_RESEARCH.md`. The screenshots inform inventory filtering and grouped editor fields only; no demo information, AI interactions, or marketing patterns were copied.
+- Added a `Vehicle` Prisma model and handwritten migration with company-scoped registration uniqueness, non-empty identity checks, positive optional seats, paired nonnegative odometer plus explicit unit, optional compliance/service dates, notes, and archive timestamp. Registration is normalized to uppercase before persistence. No status default, category list, fuel list, ownership default, odometer unit default, or operational vehicle record was seeded.
+- Added tenant-filtered fleet service, API and UI: list/search/cursor, create, replace/update, archive (never hard-delete), audit events, active-company guard, and dispatcher-limited read projection; mutation requires full GLOBAL/COMPANY fleet scope. The responsive `/fleet/vehicles` page links from the authenticated workspace when `fleet:manage` is granted.
+- Added unit tests for validation and API authentication/session-derived actor, plus real-PostgreSQL integration tests for normalization, tenant scoping, unique registration, permission projections/denials, audited create/update/archive, and archive retention. **Integration tests have not yet run against PostgreSQL in this session.** They require the new migration to be applied to a fresh disposable DB ending `_test`.
+- Sandbox checks: `npm run lint` passes; `npm test` passes 38 unit tests; `git diff --check` passes. Typecheck/build are not verified here: the sandbox's Prisma Client is stale and lacks the just-added Vehicle model as well as existing generated exports, while `prisma format/generate` cannot fetch Prisma binaries in this network. No build success is claimed.
+- FLT-01 stays In Progress: vehicle photo/document file storage, document records, usual-driver relation and browser end-to-end verification remain. FLT-02/03/04/05 and MIG-01 are not started; no further feature slice should begin until this one is verified and the remaining FLT-01 requirements are addressed. The migration has not been applied to the owner's application database.
