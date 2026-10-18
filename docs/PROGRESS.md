@@ -215,3 +215,9 @@ The owner approved the role/permission matrix. The first-admin method is now exp
 - Fleet managers with both `fleet:manage` and `driver:manage` may search active driver records and link/clear the usual driver in the vehicle editor. Vehicle list/detail projections include driver identity only for that same manager scope; dispatcher projections omit both the driver ID and name. API changes recheck the active same-company driver; the database composite FK blocks cross-company links even on direct writes.
 - Existing links to an archived driver are visible to managers as archived and can be preserved or cleared; new links to archived drivers are rejected. This is master-data linkage only, not operational trip assignment or availability/safety logic.
 - Added migration `20261018200000_vehicle_usual_driver`, schema/API validation and integration coverage for same-company links, cross-company denial/database constraints, clearing links and dispatcher projection. Sandbox lint and 51 unit tests pass. The new migration, PostgreSQL integration case, regenerated-client typecheck and browser link flow have not yet been run; sandbox Prisma generation/typecheck remain blocked by unavailable engine binaries/stale generated model types.
+
+## Owner Fedora verification — usual-driver migration (2026-10-18)
+
+- Owner pulled `23be783`, regenerated Prisma Client 6.19.3, and applied `20261018200000_vehicle_usual_driver` to the local `richie_tms` PostgreSQL database successfully.
+- Owner-confirmed `npm run typecheck`, `npm run lint`, and `npm test` all pass; unit suite is **51/51**. This verifies schema/client generation and migration deployment on Fedora.
+- The PostgreSQL integration tests for same-company linkage/database constraints and the browser link/clear flow have not yet been reported; FLT-01/FLT-04 remain In Progress pending those checks and existing vehicle edit/save verification.
