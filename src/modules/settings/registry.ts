@@ -46,7 +46,7 @@ export async function listCompanySettingStatus(companyIdInput: string) {
     return {
       ...definition,
       configured,
-      updatedAt: configured ? row.updatedAt : null,
+      updatedAt: configured && row ? row.updatedAt : null,
     };
   });
 }
