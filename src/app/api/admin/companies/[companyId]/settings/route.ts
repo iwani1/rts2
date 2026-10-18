@@ -26,18 +26,24 @@ function errorResponse(error: unknown) {
   return NextResponse.json({ error: 'The request could not be completed.' }, { status: 500 });
 }
 
-async function authenticatedAdmin(request: Request) {
+type AdminAuthentication =
+  | { ok: true; userId: string }
+  | { ok: false; response: NextResponse };
+
+async function authenticatedAdmin(request: Request): Promise<AdminAuthentication> {
   const session = await getAuth().api.getSession({ headers: request.headers });
-  if (!session) return { response: NextResponse.json({ error: 'Authentication required.' }, { status: 401 }) };
-  if (!await isActiveSuperAdmin(session.user.id)) {
-    return { response: NextResponse.json({ error: 'Access denied.' }, { status: 403 }) };
+  if (!session) {
+    return { ok: false, response: NextResponse.json({ error: 'Authentication required.' }, { status: 401 }) };
   }
-  return { userId: session.user.id };
+  if (!await isActiveSuperAdmin(session.user.id)) {
+    return { ok: false, response: NextResponse.json({ error: 'Access denied.' }, { status: 403 }) };
+  }
+  return { ok: true, userId: session.user.id };
 }
 
 export async function GET(request: Request, context: RouteContext) {
   const auth = await authenticatedAdmin(request);
-  if ('response' in auth) return auth.response;
+  if (!auth.ok) return auth.response;
   try {
     const { companyId } = await context.params;
     const settings = await listCompanySettingStatus(companyId);
@@ -49,7 +55,7 @@ export async function GET(request: Request, context: RouteContext) {
 
 export async function PUT(request: Request, context: RouteContext) {
   const auth = await authenticatedAdmin(request);
-  if ('response' in auth) return auth.response;
+  if (!auth.ok) return auth.response;
   try {
     const { companyId } = await context.params;
     const body = updateSchema.parse(await request.json());
