@@ -10,7 +10,7 @@ Phase 0 foundation plus the first Phase 1A authentication slice. Backlog status 
 | AUTH-04 | In Progress | Owner-approved role/grant schema, company-scoped authorization resolver, audited role service and one-time bootstrap added. Super Administrator-only role-directory/assign/revoke APIs now exist with actor identity from the session; UI, domain repository filtering, and PostgreSQL route-level tests remain. |
 | AUTH-05 | Not Started | Profile and login-history UI not implemented. |
 | AUTH-06 | Not Started | Phase 2. |
-| AUD-01 | In Progress | Auth session and role assignment/revocation/initial-bootstrap events are persisted; append-only trigger verified against real PostgreSQL. Broader event coverage and audit viewer remain. |
+| AUD-01 | In Progress | Auth session and role assignment/revocation/initial-bootstrap events are persisted; append-only trigger verified against real PostgreSQL. A Super Administrator-only paginated audit API exists; viewer UI, broader event coverage and route-level PostgreSQL verification remain. |
 | SET-01 | In Progress | Company-scoped setting table scaffolded with no default values; registry service, permission checks, configuration UI and tests remain. |
 | MIG-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | CUS-01 | Not Started | No feature implementation; Phase 1+ approval required. |
@@ -129,3 +129,9 @@ The owner approved the role/permission matrix. The first-admin method is now exp
 - User confirmed on Fedora that migrations applied, the first-admin bootstrap completed with hidden password input, and the authenticated workspace rendered. This verifies the local login path, not the unfinished role API or Phase 1A exit criteria.
 - The Fedora Compose issue was fixed by using the fully-qualified Docker Hub PostgreSQL image and removing the SELinux-blocked init-file mount; `btree_gist` is created by the baseline migration.
 - Current check: AUTH-04 remains in progress; role UI, route-level PostgreSQL tests, domain repository filtering, audit viewer, settings registry, invitation/reset/profile flows, and remaining Phase 1A features still need implementation/validation. Do not proceed to Phase 1B until Phase 1A exit criteria pass and are approved.
+
+## Phase 1A continuation — audit API foundation (2026-10-18)
+
+- Added `GET /api/admin/audit-events`, restricted to an active global Super Administrator, cursor-paginated with a fixed 50-event page, and `Cache-Control: private, no-store`. It deliberately excludes IP addresses. This is an API foundation, not the AUD-01 viewer UI.
+- Added unit tests for authentication/authorization denial, rejection of unsupported filters, pagination bounds/cursor and no-store behavior.
+- Latest sandbox checks: lint passes; `npm test` passes 13 unit tests across five test files. Typecheck cannot run here because the sandbox install has no generated Prisma model client; typecheck passed on the user's Fedora machine before this audit route was added, so rerun it there after pulling.
