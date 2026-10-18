@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { resolvePermission } from '@/modules/auth/permissions';
 import { mayStartSession } from '@/modules/auth/policy';
 import { getAuth } from '@/server/auth';
 import { getPrisma } from '@/server/prisma';
@@ -13,10 +14,15 @@ export default async function Home() {
   if (!session) redirect('/login');
   const currentUser = await getPrisma().user.findUnique({ where: { id: session.user.id }, select: { status: true } });
   if (!mayStartSession(currentUser?.status)) redirect('/login');
+  const auditAccess = await resolvePermission({ userId: session.user.id, permission: 'audit:read' });
   return <main className="app-shell">
     <header className="app-header">
       <Link className="wordmark" href="/" aria-label="Richie TMS home">R<span>.</span>TS</Link>
-      <div className="account-area"><span>{session.user.name || session.user.email}</span><LogoutButton /></div>
+      <nav className="account-area" aria-label="Account">
+        {auditAccess.scopes.includes('GLOBAL') && <Link className="header-link" href="/admin/audit">Audit activity</Link>}
+        <span>{session.user.name || session.user.email}</span>
+        <LogoutButton />
+      </nav>
     </header>
     <section className="welcome-panel">
       <p className="eyebrow">Operations workspace</p>

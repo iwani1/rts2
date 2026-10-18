@@ -43,16 +43,46 @@ button:disabled { opacity: .65; cursor: wait; }
 .wordmark { color: white; font-size: 20px; font-weight: 800; letter-spacing: -.06em; text-decoration: none; }
 .wordmark span { color: #62c4b9; }
 .account-area { display: flex; align-items: center; gap: 18px; font-size: 14px; }
+.header-link { color: #d7efec; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+.header-link:hover { color: white; }
 .button-secondary { border: 1px solid #ffffff5c; background: transparent; }
 .welcome-panel { width: min(100% - 40px, 960px); margin: clamp(40px, 9vh, 96px) auto; padding: clamp(24px, 5vw, 48px); border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .welcome-panel > p:not(.eyebrow) { max-width: 650px; color: var(--muted); line-height: 1.65; }
 .notice { margin-top: 28px; padding: 14px 16px; border-left: 3px solid var(--teal-700); background: var(--teal-50); color: var(--navy-950) !important; font-size: 14px; }
+.audit-content { width: min(100% - 40px, 1440px); margin: 40px auto 72px; }
+.audit-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+.audit-heading .muted { margin: 12px 0 0; }
+.button-link { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: 9px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--navy-950); font-size: 14px; font-weight: 650; text-decoration: none; white-space: nowrap; }
+.button-link:hover { border-color: var(--teal-700); color: var(--teal-700); }
+.audit-table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.audit-table-wrap:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.audit-table { width: 100%; min-width: 1050px; border-collapse: collapse; text-align: left; font-size: 13px; }
+.audit-table th { padding: 13px 14px; border-bottom: 1px solid var(--line); background: #f2f5f5; color: var(--navy-800); font-size: 12px; font-weight: 700; letter-spacing: .035em; }
+.audit-table td { max-width: 320px; padding: 13px 14px; border-bottom: 1px solid #e8edef; vertical-align: top; line-height: 1.45; }
+.audit-table tbody tr:last-child td { border-bottom: 0; }
+.audit-table tbody tr:hover { background: #f8fbfa; }
+.audit-secondary { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.audit-id { max-width: 150px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.audit-action { display: inline-block; padding: 4px 7px; border-radius: 4px; background: var(--teal-50); color: var(--navy-800); font-size: 12px; font-weight: 650; }
+.audit-details { display: grid; gap: 5px; min-width: 170px; margin: 0; }
+.audit-details > div { display: grid; grid-template-columns: minmax(75px, auto) 1fr; gap: 8px; }
+.audit-details dt { color: var(--muted); text-transform: capitalize; }
+.audit-details dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+.audit-pagination { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 16px; }
+.audit-empty { padding: 32px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.audit-empty h2 { margin: 0 0 8px; color: var(--navy-950); font-size: 19px; }
+.audit-empty p { margin: 0; color: var(--muted); line-height: 1.5; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
 @media (max-width: 600px) {
   .login-shell { background: var(--paper); align-items: start; padding: 32px 16px; }
   .login-panel { padding: 28px 22px; }
-  .app-header { min-height: 60px; padding-inline: 16px; }
-  .account-area { gap: 10px; font-size: 12px; }
+  .app-header { min-height: 60px; padding: 10px 16px; gap: 10px; }
+  .account-area { gap: 10px; flex-wrap: wrap; justify-content: flex-end; font-size: 12px; }
   .button-secondary { min-height: 40px; padding: 8px 11px; }
+  .audit-content { width: min(100% - 32px, 1440px); margin-top: 28px; }
+  .audit-heading { align-items: start; flex-direction: column; gap: 16px; }
+  .audit-pagination { flex-wrap: wrap; }
+  .audit-pagination .muted { order: 1; width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }

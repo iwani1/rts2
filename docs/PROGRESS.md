@@ -10,7 +10,7 @@ Phase 0 foundation plus the first Phase 1A authentication slice. Backlog status 
 | AUTH-04 | In Progress | Owner-approved role/grant schema, company-scoped authorization resolver, audited role service and one-time bootstrap added. Super Administrator-only role-directory/assign/revoke APIs now exist with actor identity from the session; UI, domain repository filtering, and PostgreSQL route-level tests remain. |
 | AUTH-05 | Not Started | Profile and login-history UI not implemented. |
 | AUTH-06 | Not Started | Phase 2. |
-| AUD-01 | In Progress | Auth session and role assignment/revocation/initial-bootstrap events are persisted; append-only trigger verified against real PostgreSQL. A Super Administrator-only paginated audit API exists; viewer UI, broader event coverage and route-level PostgreSQL verification remain. |
+| AUD-01 | In Progress | Auth session and role assignment/revocation/initial-bootstrap events are persisted; append-only trigger verified against real PostgreSQL. A Super Administrator-only paginated API and responsive read-only viewer exist; broader event coverage and browser/PostgreSQL route verification remain. |
 | SET-01 | In Progress | Company-scoped setting table scaffolded with no default values; registry service, permission checks, configuration UI and tests remain. |
 | MIG-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | CUS-01 | Not Started | No feature implementation; Phase 1+ approval required. |
@@ -132,6 +132,13 @@ The owner approved the role/permission matrix. The first-admin method is now exp
 
 ## Phase 1A continuation — audit API foundation (2026-10-18)
 
-- Added `GET /api/admin/audit-events`, restricted to an active global Super Administrator, cursor-paginated with a fixed 50-event page, and `Cache-Control: private, no-store`. It deliberately excludes IP addresses. This is an API foundation, not the AUD-01 viewer UI.
+- Added `GET /api/admin/audit-events`, restricted to an active global Super Administrator, cursor-paginated with a fixed 50-event page, and `Cache-Control: private, no-store`. It deliberately excludes IP addresses. At this record's point, this was an API foundation only; the viewer UI was added in the continuation below.
 - Added unit tests for authentication/authorization denial, rejection of unsupported filters, pagination bounds/cursor and no-store behavior.
 - Latest sandbox checks: lint passes; `npm test` passes 13 unit tests across five test files. Typecheck cannot run here because the sandbox install has no generated Prisma model client; typecheck passed on the user's Fedora machine before this audit route was added, so rerun it there after pulling.
+
+## Phase 1A continuation — audit viewer (2026-10-18)
+
+- Added `/admin/audit`, a read-only server-rendered audit table linked from the workspace only when the signed-in user has the global audit grant. The page rechecks permission on every request, shows 50 newest events per page, localizes times to `Africa/Accra`, excludes IP addresses, and provides a keyboard-scrollable responsive table. It uses only persisted events; no demo rows or guessed business data.
+- Added the audit-viewer mapping to `REFERENCE_RESEARCH.md`: the existing responsive static-nav and compact table/token references inform layout, while Mobbin authenticated audit flows remain gated and no claim of workflow inspection is made.
+- The audit API and viewer are read-only and Super Administrator-scoped. Audit event retention, broader event coverage and database/browser end-to-end verification remain open; AUD-01 stays In Progress.
+- Latest sandbox checks after the viewer change: lint passes; `npm test` passes 13 unit tests. Typecheck and production build still require a generated Prisma Client and must be verified on the user's Fedora setup/CI; no Prisma schema or migration changed in this slice.
