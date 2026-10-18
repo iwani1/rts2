@@ -26,7 +26,7 @@ Phase 0 foundation plus the first Phase 1A authentication slice. Backlog status 
 | WEB-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FLT-01 | In Progress | Vehicle register schema/API/UI supports core factual fields and a manager-only usual-driver link to an active same-company driver. Photo storage, document records/files, and browser vehicle edit/save with the link remain. |
 | FLT-04 | In Progress | Driver register schema/API/UI supports company-scoped searchable records with only brief-listed details and full fleet-manager create/edit/archive; active drivers can be linked as vehicles' usual drivers by managers with both grants. Browser verification, dispatcher field-level scope decision, account-to-driver linking, and policy-defined status/availability workflows remain. Dispatcher and Driver OWN_PROFILE listing fail closed until the field projection and verified account-link behavior are implemented. |
-| FLT-02 | Not Started | Owner approved the seven status names, no-default/manual-edit boundary, derived Reserved/Assigned/On Trip states, and safety-blocking principle in D-016. Transition actors, active-assignment handling and maintenance/inspection release rules remain undefined; no status implementation yet. |
+| FLT-02 | Not Started | D-016/D-018 approve seven status names, no default/manual status control, derived Reserved/Assigned/On Trip, immediate safety blocks, conflict handling, and manager/releaser approval after work plus inspection record. Safety-state entry actors and transition-specific preconditions remain undefined; no status implementation yet. |
 | FLT-03 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FLT-05 | Not Started | No feature implementation; Phase 1+ approval required. |
 | MNT-01 | Not Started | No feature implementation; Phase 1+ approval required. |
@@ -232,3 +232,9 @@ The owner approved the role/permission matrix. The first-admin method is now exp
 - Owner approved deferring photo/document uploads until a production hosting/storage provider is selected. Initial document categories are limited to Insurance, Roadworthiness, and Vehicle Registration.
 - Existing expiry dates remain manually entered/viewed. No automatic reminders or automatic file deletion will be implemented until lead times, recipients/channel, and retention periods are approved. No file records, storage provider, or fixture were added by this decision; service/maintenance records remain separate.
 - Recorded in `docs/DECISIONS.md` and `docs/OPEN_QUESTIONS.md`. FLT-01/FLT-03 remain In Progress/Not Started as shown in the feature table until the relevant workflows can be safely implemented.
+
+## Owner decision — vehicle safety-block conflicts and release authority (D-018; 2026-10-18)
+
+- Owner approved immediate safety blocking with no new assignments; future assignments are flagged for dispatcher resolution and are not silently cancelled/reassigned; an active trip uses the incident/replacement workflow.
+- A Fleet Manager/authorized releaser can return a vehicle to Available after work completion and an inspection record; a separate inspector role is not required.
+- Recorded in `docs/DECISIONS.md`, `docs/STATE_MACHINES.md`, and `docs/OPEN_QUESTIONS.md`. FLT-02 remains unimplemented: entry actors and transition-specific preconditions remain open, and the dependent assignment/maintenance/incident workflows do not yet exist. No manual status UI/default was added.

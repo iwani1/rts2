@@ -80,3 +80,8 @@
 - **Reason:** Production file storage is not selected, and reminder recipients, channels, lead times, and retention periods are not defined. Local disk is not approved as production storage.
 - **Source:** Owner approved this recommendation on 2026-10-18.
 - **Limits:** This decision adds no file-upload feature, storage provider, notification, retention period, or new operational data. Existing vehicle expiry-date fields remain as implemented; service/maintenance records remain separate and are not added to the document-type list by implication.
+
+## D-018 — Vehicle safety-block conflicts and release authority
+- **Decision:** Apply a safety block immediately and prevent new assignments. Flag future assignments for dispatcher resolution; do not silently cancel or reassign them. An already active trip follows the incident/replacement workflow. A Fleet Manager/authorized releaser may return the vehicle to Available after work completion and an inspection record; a separate inspector role is not required.
+- **Source:** Owner selected the recommended options on 2026-10-18.
+- **Limits:** The actor allowed to enter each safety-blocking state, transition-specific preconditions, and operational conflict/replacement workflows remain undefined. The state machine and assignment/maintenance/incident modules are not implemented; do not expose status controls or claim these protections are active yet.

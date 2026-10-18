@@ -33,8 +33,8 @@ No business defaults have been invented. Items marked **Phase 1A blocker** preve
 - Password-reset delivery channel, account recovery verification, session revocation policy and login-history retention require approval.
 
 ## Other required policies
-- Named approvers for financial approvals; who can release safety-blocked vehicles and whether inspector must differ from technician. Finance quotation approval remains gated on a specific delegated-approval policy.
-- Vehicle status transitions: permitted actors and transition-specific preconditions; how to handle active assignments when a safety-blocking status is applied; maintenance/inspection release authority. The seven status names and safety-blocking principle are approved in D-016. Assignment active statuses, time buffers between jobs, and conflict horizon also remain open.
+- Named approvers for financial approvals. Finance quotation approval remains gated on a specific delegated-approval policy.
+- Vehicle status transitions: actors allowed to enter each safety-blocking state and transition-specific preconditions remain open. D-016 approves the status names/safety boundary; D-018 approves immediate blocking, dispatcher resolution for future assignments without auto-cancellation/reassignment, incident/replacement workflow for an active trip, and Fleet Manager/authorized-releaser approval after work completion and an inspection record (no separate inspector role required). Assignment active statuses, time buffers between jobs, and conflict horizon also remain open.
 - Booking cutoff, duplicate-journey identity, capacity/waitlist and no-show rules.
 - Exact shift/route recurrence and local-time behavior; contract approval, suspension and renewal rules.
 - Corporate billing frequency and payment terms; chargeable trip definition and duplicate-billing event key.
