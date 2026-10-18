@@ -11,8 +11,9 @@ Node.js 22+, npm 10+, Docker with Compose for local PostgreSQL. Production hosti
 5. `npm run db:migrate:deploy`.
 6. Set `AUTH_SECRET` to a cryptographically random secret of at least 32 characters and `APP_URL` to the exact application origin.
 7. For a fresh, controlled environment only, run `npm run bootstrap:super-admin -- --confirm` from an interactive local terminal. It refuses non-TTY use and refuses if any active Super Administrator already exists; enter a strong password when prompted (input is hidden). This creates the user, credential, global role and audit event in one transaction. Treat the database credentials and local shell as privileged; public sign-up remains disabled.
-8. `npm run dev`.
-9. Verify `GET /api/health` returns `{ "status": "ok", "service": "richie-tms" }`.
+8. Run `npm run bootstrap:company -- --confirm` and enter the active Super Administrator email. This one-time command creates the approved Richie Transport Services tenant and its audit event; it refuses if a company already exists and does not seed settings or operational data.
+9. `npm run dev`.
+10. Verify `GET /api/health` returns `{ "status": "ok", "service": "richie-tms" }`.
 
 The current migrations contain auth, audit, company/settings scaffolding and the owner-approved role/grant catalog; they do not seed users or operational/business data. Do not run a fabricated operational seed.
 
