@@ -3,7 +3,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ getPrisma: vi.fn() }));
 vi.mock('@/server/prisma', () => ({ getPrisma: mocks.getPrisma }));
 
-import { listCompanySettingStatus, requireCompanySetting, settingRegistry } from './registry';
+import { CompanyNotFoundError, listCompanySettingStatus, requireCompanySetting, setCompanySetting, settingRegistry } from './registry';
+
+function mockTransaction({ admin = true, company = true }: { admin?: boolean; company?: boolean } = {}) {
+  const tx = {
+    $executeRaw: vi.fn(),
+    user: { findUnique: vi.fn().mockResolvedValue({ status: 'ACTIVE' }) },
+    userRoleAssignment: { findFirst: vi.fn().mockResolvedValue(admin ? { id: 'global-admin-role' } : null) },
+    company: { findUnique: vi.fn().mockResolvedValue(company ? { id: 'company-a' } : null) },
+    setting: { upsert: vi.fn().mockResolvedValue({ id: 'setting-1', key: 'finance.tax_lines', updatedAt: new Date('2026-10-18T12:00:00Z') }) },
+    auditEvent: { create: vi.fn().mockResolvedValue({}) },
+  };
+  const transaction = vi.fn((callback: (client: typeof tx) => Promise<unknown>) => callback(tx));
+  mocks.getPrisma.mockReturnValue({ $transaction: transaction });
+  return { tx, transaction };
+}
 
 describe('company settings registry', () => {
   beforeEach(() => vi.resetAllMocks());
@@ -73,6 +87,58 @@ describe('company settings registry', () => {
   it('rejects unknown setting keys instead of silently defaulting them', async () => {
     mocks.getPrisma.mockReturnValue({ setting: { findUnique: vi.fn() } });
     await expect(requireCompanySetting('company-a', 'unknown.setting')).rejects.toThrow();
+    expect(mocks.getPrisma).not.toHaveBeenCalled();
+  });
+
+  it('allows a global Super Administrator to set a registered policy and audits it atomically', async () => {
+    const { tx, transaction } = mockTransaction();
+    const updated = await setCompanySetting({
+      actorId: 'admin-user',
+      companyId: 'company-a',
+      key: 'finance.tax_lines',
+      value: [{ code: 'owner-entered-value' }],
+      reason: 'Owner confirmed tax configuration',
+    });
+    expect(transaction).toHaveBeenCalledOnce();
+    expect(tx.setting.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      where: { companyId_key: { companyId: 'company-a', key: 'finance.tax_lines' } },
+      create: expect.objectContaining({ configured: true, updatedById: 'admin-user' }),
+      update: expect.objectContaining({ configured: true, updatedById: 'admin-user' }),
+    }));
+    expect(tx.auditEvent.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        actorId: 'admin-user', companyId: 'company-a', action: 'SETTING_UPDATED',
+        summary: { key: 'finance.tax_lines', reason: 'Owner confirmed tax configuration' },
+      }),
+    }));
+    expect(updated).toMatchObject({ key: 'finance.tax_lines', configured: true });
+  });
+
+  it('denies setting changes by a non-Super-Administrator', async () => {
+    const { tx } = mockTransaction({ admin: false });
+    await expect(setCompanySetting({
+      actorId: 'ops-user', companyId: 'company-a', key: 'finance.tax_lines',
+      value: [], reason: 'Attempted unapproved policy change',
+    })).rejects.toThrow('Access denied');
+    expect(tx.setting.upsert).not.toHaveBeenCalled();
+    expect(tx.auditEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('does not store a policy for a nonexistent company', async () => {
+    const { tx } = mockTransaction({ company: false });
+    await expect(setCompanySetting({
+      actorId: 'admin-user', companyId: 'missing-company', key: 'finance.tax_lines',
+      value: [], reason: 'Owner confirmed tax configuration',
+    })).rejects.toBeInstanceOf(CompanyNotFoundError);
+    expect(tx.setting.upsert).not.toHaveBeenCalled();
+  });
+
+  it('rejects null and non-JSON policy values instead of marking them configured', async () => {
+    mockTransaction();
+    await expect(setCompanySetting({
+      actorId: 'admin-user', companyId: 'company-a', key: 'finance.tax_lines',
+      value: null, reason: 'Owner confirmed tax configuration',
+    })).rejects.toThrow();
     expect(mocks.getPrisma).not.toHaveBeenCalled();
   });
 });

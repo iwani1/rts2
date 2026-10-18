@@ -1,4 +1,6 @@
+import { Prisma } from '@prisma/client';
 import { z } from 'zod';
+import { PermissionDeniedError } from '@/modules/auth/permissions';
 import { getPrisma } from '@/server/prisma';
 
 export const settingRegistry = [
@@ -18,6 +20,18 @@ export const settingRegistry = [
 export type SettingKey = (typeof settingRegistry)[number]['key'];
 const settingKeySchema = z.enum(settingRegistry.map(({ key }) => key) as [SettingKey, ...SettingKey[]]);
 const companyIdSchema = z.string().trim().min(1).max(128);
+type SettingJsonValue = string | number | boolean | null | SettingJsonValue[] | { [key: string]: SettingJsonValue };
+function isJsonValue(value: unknown): value is SettingJsonValue {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (Array.isArray(value)) return value.every(isJsonValue);
+  if (typeof value === 'object') {
+    const prototype = Object.getPrototypeOf(value);
+    return (prototype === Object.prototype || prototype === null) && Object.values(value).every(isJsonValue);
+  }
+  return false;
+}
+const settingValueSchema = z.custom<SettingJsonValue>((value) => isJsonValue(value) && value !== null);
 const registryByKey = new Map(settingRegistry.map((definition) => [definition.key, definition]));
 
 export class SettingNotConfiguredError extends Error {
@@ -64,4 +78,65 @@ export async function requireCompanySetting(companyIdInput: string, keyInput: st
   });
   if (!row?.configured || row.value === null) throw new SettingNotConfiguredError(key);
   return row.value;
+}
+
+export class CompanyNotFoundError extends Error {
+  readonly code = 'COMPANY_NOT_FOUND';
+  constructor() {
+    super('Company not found.');
+    this.name = 'CompanyNotFoundError';
+  }
+}
+
+const writeSettingSchema = z.object({
+  actorId: z.string().min(1),
+  companyId: companyIdSchema,
+  key: settingKeySchema,
+  value: settingValueSchema,
+  reason: z.string().trim().min(8).max(500),
+}).strict();
+
+/** Only a global Super Administrator can write policy until per-setting grants are approved. */
+export async function setCompanySetting(input: unknown) {
+  const data = writeSettingSchema.parse(input);
+  const prisma = getPrisma();
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('richie_tms_super_admin_roles'))`;
+    const actor = await tx.user.findUnique({ where: { id: data.actorId }, select: { status: true } });
+    const activeAdmin = actor?.status === 'ACTIVE' ? await tx.userRoleAssignment.findFirst({
+      where: { userId: data.actorId, roleCode: 'SUPER_ADMIN', companyId: null, revokedAt: null },
+      select: { id: true },
+    }) : null;
+    if (!activeAdmin) throw new PermissionDeniedError();
+
+    const company = await tx.company.findUnique({ where: { id: data.companyId }, select: { id: true } });
+    if (!company) throw new CompanyNotFoundError();
+    const setting = await tx.setting.upsert({
+      where: { companyId_key: { companyId: data.companyId, key: data.key } },
+      create: {
+        companyId: data.companyId,
+        key: data.key,
+        value: data.value as Prisma.InputJsonValue,
+        configured: true,
+        updatedById: data.actorId,
+      },
+      update: {
+        value: data.value as Prisma.InputJsonValue,
+        configured: true,
+        updatedById: data.actorId,
+      },
+      select: { id: true, key: true, updatedAt: true },
+    });
+    await tx.auditEvent.create({
+      data: {
+        actorId: data.actorId,
+        companyId: data.companyId,
+        action: 'SETTING_UPDATED',
+        entityType: 'SETTING',
+        entityId: setting.id,
+        summary: { key: setting.key, reason: data.reason },
+      },
+    });
+    return { key: setting.key, configured: true, updatedAt: setting.updatedAt };
+  });
 }

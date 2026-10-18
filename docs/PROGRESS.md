@@ -11,7 +11,7 @@ Phase 0 foundation plus the first Phase 1A authentication slice. Backlog status 
 | AUTH-05 | Not Started | Profile and login-history UI not implemented. |
 | AUTH-06 | Not Started | Phase 2. |
 | AUD-01 | In Progress | Auth session and role assignment/revocation/initial-bootstrap events are persisted; append-only trigger verified against real PostgreSQL. A Super Administrator-only paginated API and responsive read-only viewer exist; broader event coverage and browser/PostgreSQL route verification remain. |
-| SET-01 | In Progress | Added a no-default catalogue for the policy keys named in the brief and a required-setting reader that blocks dependent work when missing or explicitly unconfigured; 5 unit tests pass. Company permission filtering, write service/API/UI and PostgreSQL verification remain. |
+| SET-01 | In Progress | Added a no-default policy catalogue, required-setting reader and global Super Administrator write service with transactional audit, unconfigured blocking and JSON input checks. Per-setting role authorization, API/UI, typed policy schemas and PostgreSQL verification remain. |
 | MIG-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | CUS-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | RNT-01 | Not Started | No feature implementation; Phase 1+ approval required. |
@@ -147,4 +147,9 @@ The owner approved the role/permission matrix. The first-admin method is now exp
 
 - Added a typed catalogue of the required policy keys named in the brief (including pricing, distance/time, tax, deposit, quotation/cancellation, shifts, reminder, on-time, inactive-contract booking and boarding-code policies). It stores no defaults and creates no rows.
 - Added a company-scoped status reader and a required-value reader. Missing or `configured=false` settings raise a typed error with the dependent feature IDs, so callers can block actions instead of silently substituting a value.
-- Added six unit tests for catalogue coverage/no defaults, empty status, malformed/unconfigured blocking and unknown keys. Latest sandbox checks: lint passes and `npm test` passes 19 tests. The service has no write endpoint or configuration UI; it must not be treated as a complete SET-01 until per-setting authorization/value validation and PostgreSQL tests exist.
+- Added six unit tests for catalogue coverage/no defaults, empty status, malformed/unconfigured blocking and unknown keys. Latest sandbox checks: lint passes and `npm test` passes 19 tests. At this record's point there was no write service; a conservative global-Super-Administrator write service was added in the continuation below. No API/configuration UI or typed per-key policy validator exists yet, and SET-01 remains incomplete.
+
+## Phase 1A continuation — audited setting writes (2026-10-18)
+
+- Added a write service for registered setting keys. Until management defines per-key role scopes, writes require an active global Super Administrator. The service accepts JSON values only, requires a reason, verifies the company exists, and atomically upserts the setting plus a `SETTING_UPDATED` audit event. The audit record stores the setting key/reason, not the value. It creates no default or company record.
+- Added unit tests for successful audited write, denial for non-Super Administrators, nonexistent companies, and rejected null/invalid values. Per-key shape validation, settings API/UI, real PostgreSQL transaction tests, and a company bootstrap/selection path remain open. Settings values must stay unset until approved and explicitly entered.
