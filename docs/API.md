@@ -3,7 +3,7 @@
 | Method | Path | Status | Behavior |
 |---|---|---|---|
 | GET | `/api/health` | Implemented | Returns minimal service health JSON; no database probe and does not assert dependencies are healthy. |
-| GET/POST | `/api/auth/[...all]` | Implemented | Better Auth handler for email/password sign-in, session query/revocation and rate limits. Public sign-up disabled. Requires generated Prisma client, applied migrations, PostgreSQL, `AUTH_SECRET`, `APP_URL`. |
+| GET/POST | `/api/auth/[...all]` | Implemented | Better Auth handler for email/password sign-in, session query/revocation, authenticated password change and rate limits. Public sign-up disabled. Password changes can revoke other sessions. Requires generated Prisma client, applied migrations, PostgreSQL, `AUTH_SECRET`, `APP_URL`. |
 | GET/POST | `/api/admin/users/{userId}/roles` | Implemented, Super Administrator only | Lists a user's role assignment history and role catalogue, or assigns a role with company scope and a required reason. Actor identity comes from the session, never the request body. |
 | DELETE | `/api/admin/role-assignments/{assignmentId}` | Implemented, Super Administrator only | Revokes an assignment with a required reason; the service prevents self-escalation and writes the audit event transactionally. |
 | GET | `/api/admin/audit-events` | Implemented, Super Administrator only | Returns a private, cursor-paginated audit-event page; excludes IP addresses and disables caching. |

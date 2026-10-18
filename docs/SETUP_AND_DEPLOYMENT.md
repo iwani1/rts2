@@ -15,6 +15,8 @@ Node.js 22+, npm 10+, Docker with Compose for local PostgreSQL. Production hosti
 9. `npm run dev`.
 10. Verify `GET /api/health` returns `{ "status": "ok", "service": "richie-tms" }`.
 
+Stop the development server before running `npm run build`; Next.js development and production builds both use `.next` and should not run concurrently. After a build, restart `npm run dev` for browser development. The login form uses POST and the login page clears credential query parameters; never send, bookmark, or share passwords in URLs.
+
 The current migrations contain auth, audit, company/settings scaffolding, the owner-approved role/grant catalog, and the vehicle register schema; migrations do not seed users or operational/business data. For an explicitly requested, clearly synthetic vehicle used for local UI testing only, first apply migrations, then run `NODE_ENV=development npm run seed:demo:vehicle -- --confirm-demo`. This idempotent command refuses non-development mode, non-local app/database hosts, production-named databases, or anything other than exactly one active operator company; it never runs at app startup or during migration. It creates `DEMO-GH-001`, labelled `DEMO — TEST ONLY`, and an audit event. Do not use this fixture in production or for operational dispatch.
 
 ## Quality gates

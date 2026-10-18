@@ -33,7 +33,7 @@ export function LoginForm() {
     }
   }
 
-  return <form className="login-form" onSubmit={submit}>
+  return <form className="login-form" method="post" onSubmit={submit}>
     <label htmlFor="email">Email address</label>
     <input id="email" name="email" type="email" autoComplete="username" required maxLength={254} />
     <label htmlFor="password">Password</label>

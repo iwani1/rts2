@@ -186,3 +186,10 @@ The owner approved the role/permission matrix. The first-admin method is now exp
 
 - Owner screenshot confirms `/fleet/vehicles` renders and shows the clearly labelled `DEMO-GH-001` record. This verifies display, not edit/archive or persistence across an application restart.
 - Owner ran `npm run build` successfully on `8ba8a73`; Next compiled and typechecked. It emitted two Autoprefixer warnings for `align-items: end` (audit heading and fleet title row). Both CSS declarations have been changed to `flex-end` in the current patch; rebuild after pulling to confirm warning-free output. The owner has not yet reported an edit/save test.
+
+## Login credential URL leak hardening (2026-10-18)
+
+- Owner screenshot showed the login page in an unstyled, non-hydrated state and credential parameters in the address bar. Treat the password as compromised; it must be rotated anywhere reused. No credential value is copied into source or docs.
+- Changed the login form's native fallback to `method=post`, added a server redirect that strips email/password query parameters, and set a global `Referrer-Policy: no-referrer` header. Added `/account/security` with an authenticated Better Auth password-change form that revokes other sessions; a future sign-in now has a route to rotate the exposed credential.
+- Added a PostgreSQL auth integration case for password change, old-password rejection, new-password sign-in, and revocation of other sessions. It has not yet been run. Sandbox lint and all 44 unit tests pass. User should pull and run typecheck/build/integration checks; stop `npm run dev` before `npm run build`, then restart dev.
+- Likely cause of unstyled page is the dev server being left running while `next build` replaced shared `.next` output; restart dev after build. This is a diagnosis, not yet confirmed on the user's machine.

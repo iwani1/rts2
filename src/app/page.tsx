@@ -24,6 +24,7 @@ export default async function Home() {
       <nav className="account-area" aria-label="Account">
         {auditAccess.scopes.includes('GLOBAL') && <Link className="header-link" href="/admin/audit">Audit activity</Link>}
         {fleetAccess.allowed && <Link className="header-link" href="/fleet/vehicles">Vehicle register</Link>}
+        <Link className="header-link" href="/account/security">Change password</Link>
         <span>{session.user.name || session.user.email}</span>
         <LogoutButton />
       </nav>

@@ -129,6 +129,54 @@ describe('Better Auth with PostgreSQL persistence', () => {
     expect(responses[5]?.status).toBe(429);
   });
 
+  it('changes an authenticated password and revokes other sessions', async () => {
+    const changeEmail = `change-password-${randomUUID()}@example.invalid`;
+    const user = await prisma.user.create({
+      data: { name: 'Password Change Test', email: changeEmail, emailVerified: true, status: 'ACTIVE' },
+    });
+    await prisma.account.create({
+      data: { accountId: user.id, providerId: 'credential', userId: user.id, password: await hashPassword(password) },
+    });
+    const firstLogin = await authRequest('/sign-in/email', {
+      method: 'POST',
+      headers: { 'x-forwarded-for': `198.51.100.${Math.floor(Math.random() * 200) + 20}` },
+      body: JSON.stringify({ email: changeEmail, password }),
+    });
+    expect(firstLogin.status).toBe(200);
+    const cookie = firstLogin.headers.getSetCookie()
+      .map((value) => value.split(';', 1)[0])
+      .find((value) => value.includes('session_token='));
+    expect(cookie).toBeTruthy();
+    const otherLogin = await authRequest('/sign-in/email', {
+      method: 'POST',
+      headers: { 'x-forwarded-for': `198.51.100.${Math.floor(Math.random() * 200) + 20}` },
+      body: JSON.stringify({ email: changeEmail, password }),
+    });
+    expect(otherLogin.status).toBe(200);
+    expect(await prisma.session.count({ where: { userId: user.id } })).toBe(2);
+
+    const change = await authRequest('/change-password', {
+      method: 'POST',
+      headers: { cookie: cookie as string },
+      body: JSON.stringify({ currentPassword: password, newPassword: 'New-unique-test-passphrase-2026!', revokeOtherSessions: true }),
+    });
+    expect(change.status).toBe(200);
+    expect(await prisma.session.count({ where: { userId: user.id } })).toBe(1);
+
+    const oldPasswordLogin = await authRequest('/sign-in/email', {
+      method: 'POST',
+      headers: { 'x-forwarded-for': `198.51.100.${Math.floor(Math.random() * 200) + 20}` },
+      body: JSON.stringify({ email: changeEmail, password }),
+    });
+    expect(oldPasswordLogin.status).toBeGreaterThanOrEqual(400);
+    const newPasswordLogin = await authRequest('/sign-in/email', {
+      method: 'POST',
+      headers: { 'x-forwarded-for': `198.51.100.${Math.floor(Math.random() * 200) + 20}` },
+      body: JSON.stringify({ email: changeEmail, password: 'New-unique-test-passphrase-2026!' }),
+    });
+    expect(newPasswordLogin.status).toBe(200);
+  });
+
   it('does not allow public email/password registration', async () => {
     const response = await authRequest('/sign-up/email', {
       method: 'POST',
