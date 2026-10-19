@@ -200,3 +200,8 @@
 - **Decision:** For future time-priced quote lines, use an explicitly entered positive duration in whole minutes when no scheduled return is present. When a scheduled return is present, derive elapsed minutes from the saved service date, departure time, and stored return date/time; an overnight return still requires the explicit D-030 date. If both duration and scheduled return are saved, require them to agree exactly or block the time-priced line until corrected. Never infer a return date or use actual trip time for the initial quote.
 - **Source:** Recommended fail-closed quantity-resolution rule from the existing D-022/D-030 request model; accepted under the owner's standing instruction, 2026-10-19.
 - **Limits:** Implemented as a pure duration resolver only. It does not update a request, create a quote, choose a rate, source/verify distance, or authorize quotation or status transitions.
+
+## D-040 — Pure percentage-tax line arithmetic
+- **Decision:** A tax-line rate in basis points is applied to a caller-supplied non-negative integer taxable base in GHS pesewas, using exact integer arithmetic and half-up rounding once to the nearest pesewa per line.
+- **Source:** Recommended arithmetic-only foundation under the owner's standing instruction; 2026-10-19.
+- **Limits:** The helper does not decide whether an item is taxable, choose the taxable base, compound lines, set line order, handle exemptions, confirm legal rates, or include any tax in a quote/invoice. No tax arithmetic is wired into a financial workflow.
