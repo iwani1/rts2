@@ -26,6 +26,7 @@ No business defaults have been invented. Items marked **Phase 1A blocker** preve
 - Boarding-code policy, validity and single-use requirement.
 - Are bookings allowed under expired or suspended contracts?
 - Rental quotation approval separation, customer acceptance evidence, and invoice due/payment terms.
+- **Pricing policies still require operator decisions:** actual named rental lines/rates; distance/time calculation and interaction with the selected basis; applicable taxes/levies and rates; deposits, discounts, rounding, and approval authority. D-035 only defines an empty-by-default typed configuration structure; no commercial values are inferred.
 
 ## Phase 1A authentication/authorization blockers
 - **Resolved 2026-10-18:** owner approved the `PERMISSIONS.md` matrix. First Super Administrator will use the one-time audited local CLI bootstrap; public self-registration stays disabled.

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ getPrisma: vi.fn() }));
 vi.mock('@/server/prisma', () => ({ getPrisma: mocks.getPrisma }));
 
-import { CompanyNotFoundError, getCompanyQuoteValidityDays, listCompanySettingStatus, requireCompanySetting, setCompanySetting, settingRegistry } from './registry';
+import { CompanyNotFoundError, getCompanyQuoteValidityDays, getCompanyRentalPricingModels, listCompanySettingStatus, requireCompanySetting, setCompanySetting, settingRegistry } from './registry';
 
 function mockTransaction({ admin = true, company = true }: { admin?: boolean; company?: boolean } = {}) {
   const tx = {
@@ -79,6 +79,36 @@ describe('company settings registry', () => {
       where: { companyId_key: { companyId: 'company-a', key: 'rental.quote_validity' } },
       select: { value: true, configured: true },
     });
+  });
+
+  it('reads operator-entered pricing models without supplying example rates', async () => {
+    const models = [{ code: 'EXECUTIVE', label: 'Executive vehicle', unit: 'PER_DAY', ratePesewas: 275000 }];
+    mocks.getPrisma.mockReturnValue({
+      company: { findUnique: vi.fn().mockResolvedValue({ id: 'company-a' }) },
+      setting: { findUnique: vi.fn().mockResolvedValue({ configured: true, value: models }) },
+    });
+    await expect(getCompanyRentalPricingModels('company-a')).resolves.toEqual(models);
+  });
+
+  it('treats a deliberately cleared pricing-model list as unconfigured', async () => {
+    mocks.getPrisma.mockReturnValue({
+      setting: { findUnique: vi.fn().mockResolvedValue({ configured: true, value: [] }) },
+    });
+    await expect(requireCompanySetting('company-a', 'rental.pricing_models')).rejects.toMatchObject({ name: 'SettingNotConfiguredError' });
+  });
+
+  it('rejects malformed pricing models, duplicate codes, and non-positive rates before any write', async () => {
+    mockTransaction();
+    const base = { code: 'STANDARD', label: 'Standard vehicle', unit: 'PER_TRIP', ratePesewas: 100 };
+    for (const value of [
+      [base, base],
+      [{ ...base, ratePesewas: 0 }],
+      [{ ...base, unit: 'PER_WEEK' }],
+      [{ ...base, extra: true }],
+    ]) {
+      await expect(setCompanySetting({ actorId: 'admin-user', companyId: 'company-a', key: 'rental.pricing_models', value, reason: 'Operator approved pricing model' })).rejects.toThrow();
+    }
+    expect(mocks.getPrisma).not.toHaveBeenCalled();
   });
 
   it('marks invalid stored quotation validity as unconfigured instead of reporting it ready', async () => {

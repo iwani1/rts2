@@ -37,6 +37,21 @@ const settingValueSchema = z.custom<SettingJsonValue>((value) => isJsonValue(val
 const resourceBufferMinutesSchema = z.number().int().nonnegative().safe();
 const quoteValidityDaysSchema = z.number().int().positive().safe();
 const quoteValidityKey: SettingKey = 'rental.quote_validity';
+const pricingModelsKey: SettingKey = 'rental.pricing_models';
+const rentalPricingModelSchema = z.object({
+  code: z.string().trim().regex(/^[A-Z0-9_-]{2,32}$/),
+  label: z.string().trim().min(1).max(100),
+  unit: z.enum(['PER_TRIP', 'PER_DAY', 'PER_HOUR', 'PER_KM']),
+  ratePesewas: z.number().int().positive().safe(),
+}).strict();
+export const rentalPricingModelsSchema = z.array(rentalPricingModelSchema).max(50).superRefine((models, context) => {
+  const seen = new Set<string>();
+  models.forEach((model, index) => {
+    if (seen.has(model.code)) context.addIssue({ code: z.ZodIssueCode.custom, path: [index, 'code'], message: 'Pricing model codes must be unique.' });
+    seen.add(model.code);
+  });
+});
+export type RentalPricingModel = z.infer<typeof rentalPricingModelSchema>;
 const resourceBufferKeys = new Set<SettingKey>([
   'fleet.vehicle_between_job_buffer_minutes',
   'fleet.driver_between_job_buffer_minutes',
@@ -46,6 +61,7 @@ const registryByKey = new Map(settingRegistry.map((definition) => [definition.ke
 function validateRegisteredValue(key: SettingKey, value: SettingJsonValue): SettingJsonValue {
   if (resourceBufferKeys.has(key)) return resourceBufferMinutesSchema.parse(value);
   if (key === quoteValidityKey) return quoteValidityDaysSchema.parse(value);
+  if (key === pricingModelsKey) return rentalPricingModelsSchema.parse(value) as SettingJsonValue;
   return value;
 }
 
@@ -79,6 +95,7 @@ export async function listCompanySettingStatus(companyIdInput: string) {
       try {
         if (resourceBufferKeys.has(definition.key)) resourceBufferMinutesSchema.parse(row.value);
         if (definition.key === quoteValidityKey) quoteValidityDaysSchema.parse(row.value);
+        if (definition.key === pricingModelsKey && rentalPricingModelsSchema.parse(row.value).length === 0) configured = false;
       } catch { configured = false; }
     }
     return {
@@ -103,6 +120,11 @@ export async function requireCompanySetting(companyIdInput: string, keyInput: st
   if (!row?.configured || row.value === null) throw new SettingNotConfiguredError(key);
   if (resourceBufferKeys.has(key)) return resourceBufferMinutesSchema.parse(row.value);
   if (key === quoteValidityKey) return quoteValidityDaysSchema.parse(row.value);
+  if (key === pricingModelsKey) {
+    const models = rentalPricingModelsSchema.parse(row.value);
+    if (models.length === 0) throw new SettingNotConfiguredError(key);
+    return models;
+  }
   return row.value;
 }
 
@@ -118,6 +140,21 @@ export async function getCompanyQuoteValidityDays(companyIdInput: string) {
   });
   if (!row?.configured || row.value === null) return null;
   return quoteValidityDaysSchema.parse(row.value);
+}
+
+/** Returns only company-entered pricing models; it creates no examples or rates. */
+export async function getCompanyRentalPricingModels(companyIdInput: string) {
+  const companyId = companyIdSchema.parse(companyIdInput);
+  const prisma = getPrisma();
+  const company = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true } });
+  if (!company) throw new CompanyNotFoundError();
+  const row = await prisma.setting.findUnique({
+    where: { companyId_key: { companyId, key: pricingModelsKey } },
+    select: { value: true, configured: true },
+  });
+  if (!row?.configured || row.value === null) return null;
+  const models = rentalPricingModelsSchema.parse(row.value);
+  return models.length === 0 ? null : models;
 }
 
 /** Returns only the two typed buffer values needed by their dedicated admin form. */

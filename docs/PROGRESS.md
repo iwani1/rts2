@@ -333,3 +333,8 @@ The owner approved the role/permission matrix. The first-admin method is now exp
 - Applied the safe recommendation to expose quotation validity as a positive whole-day policy without inventing a duration. Added typed registry validation, a Super Administrator-only uncached read endpoint, and a dedicated audited settings form that requires a reason and leaves the input blank until explicitly entered.
 - Unset/invalid validity remains a blocker for future quote creation; the form does not issue quotes, calculate expiry dates, authorize extensions, or enable acceptance.
 - Added registry, API authorization, and UI tests. Actual setting value, quote validity calculation, expiry/extension rules, and quotation workflow remain unconfigured or unimplemented.
+
+## Phase 1A — typed rental pricing-model configuration (D-035; 2026-10-19)
+- Added an empty-by-default company setting for operator-entered rental pricing lines: unique code, label, typed basis (per trip/day/hour/kilometre), and positive whole-number rate in GHS pesewas. Super Administrator-only editor requires an audit reason; read endpoint returns only the typed setting.
+- No lines, rates, model names, pricing calculations, tax/deposit assumptions, or quotation behavior are seeded or activated. The feature remains configuration readiness only; commercial values and calculation rules remain operator decisions.
+- Added validation, duplicate-code and malformed-value tests, editor/API tests, and documented D-035 plus outstanding commercial-policy decisions.
