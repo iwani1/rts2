@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ getPrisma: vi.fn() }));
 vi.mock('@/server/prisma', () => ({ getPrisma: mocks.getPrisma }));
 
-import { CompanyNotFoundError, listCompanySettingStatus, requireCompanySetting, setCompanySetting, settingRegistry } from './registry';
+import { CompanyNotFoundError, getCompanyQuoteValidityDays, listCompanySettingStatus, requireCompanySetting, setCompanySetting, settingRegistry } from './registry';
 
 function mockTransaction({ admin = true, company = true }: { admin?: boolean; company?: boolean } = {}) {
   const tx = {
@@ -66,6 +66,32 @@ describe('company settings registry', () => {
     });
     const { getCompanyResourceBuffers } = await import('./registry');
     await expect(getCompanyResourceBuffers('company-a')).resolves.toEqual({ vehicleBufferMinutes: 0, driverBufferMinutes: null });
+  });
+
+  it('returns quotation validity only when the positive day count was explicitly configured', async () => {
+    const findUnique = vi.fn().mockResolvedValue({ configured: true, value: 30 });
+    mocks.getPrisma.mockReturnValue({
+      company: { findUnique: vi.fn().mockResolvedValue({ id: 'company-a' }) },
+      setting: { findUnique },
+    });
+    await expect(getCompanyQuoteValidityDays('company-a')).resolves.toBe(30);
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { companyId_key: { companyId: 'company-a', key: 'rental.quote_validity' } },
+      select: { value: true, configured: true },
+    });
+  });
+
+  it('marks invalid stored quotation validity as unconfigured instead of reporting it ready', async () => {
+    mocks.getPrisma.mockReturnValue({
+      company: { findUnique: vi.fn().mockResolvedValue({ id: 'company-a' }) },
+      setting: { findMany: vi.fn().mockResolvedValue([{
+        key: 'rental.quote_validity', configured: true, value: 0, updatedAt: new Date(),
+      }]) },
+    });
+    const status = await listCompanySettingStatus('company-a');
+    expect(status.find((setting) => setting.key === 'rental.quote_validity')).toMatchObject({
+      configured: false, updatedAt: null,
+    });
   });
 
   it('treats a row with configured=true but no value as unconfigured', async () => {
@@ -132,13 +158,18 @@ describe('company settings registry', () => {
     expect(updated).toMatchObject({ key: 'finance.tax_lines', configured: true });
   });
 
-  it('rejects negative and fractional buffer values before any database write', async () => {
+  it('rejects invalid resource buffers and quote-validity periods before any database write', async () => {
     mockTransaction();
-    for (const value of [-1, 2.5]) {
+    const invalidSettings = [
+      { key: 'fleet.vehicle_between_job_buffer_minutes', value: -1 },
+      { key: 'fleet.vehicle_between_job_buffer_minutes', value: 2.5 },
+      { key: 'rental.quote_validity', value: 0 },
+      { key: 'rental.quote_validity', value: 1.5 },
+    ];
+    for (const setting of invalidSettings) {
       await expect(setCompanySetting({
-        actorId: 'admin-user', companyId: 'company-a',
-        key: 'fleet.vehicle_between_job_buffer_minutes', value,
-        reason: 'Owner confirmed turnaround buffer',
+        actorId: 'admin-user', companyId: 'company-a', ...setting,
+        reason: 'Owner confirmed explicit policy value',
       })).rejects.toThrow();
     }
     expect(mocks.getPrisma).not.toHaveBeenCalled();

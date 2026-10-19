@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildRentalConflictWindow, conflictWindowsOverlap } from './resource-conflict-window';
+import { buildRentalConflictWindow, conflictWindowsOverlap, conflictWindowsOverlapWithBuffer } from './resource-conflict-window';
 
 describe('buildRentalConflictWindow', () => {
   it('uses the approved service date, departure and scheduled return time', () => {
@@ -64,5 +64,21 @@ describe('conflictWindowsOverlap', () => {
 
     expect(conflictWindowsOverlap(first, overlap)).toBe(true);
     expect(conflictWindowsOverlap(first, adjacent)).toBe(false);
+  });
+
+  it('applies an explicit buffer after the earlier trip, with an exact boundary allowed', () => {
+    const earlier = { startAt: new Date('2026-11-01T08:00:00Z'), endAt: new Date('2026-11-01T09:00:00Z') };
+    const exactBufferGap = { startAt: new Date('2026-11-01T09:30:00Z'), endAt: new Date('2026-11-01T10:30:00Z') };
+    const shortGap = { startAt: new Date('2026-11-01T09:29:00Z'), endAt: new Date('2026-11-01T10:30:00Z') };
+    expect(conflictWindowsOverlapWithBuffer(earlier, exactBufferGap, 30)).toEqual({ ready: true, conflict: false, gapMinutes: 30 });
+    expect(conflictWindowsOverlapWithBuffer(shortGap, earlier, 30)).toEqual({ ready: true, conflict: true, gapMinutes: 29 });
+  });
+
+  it('does not substitute zero for missing or invalid buffer/window data', () => {
+    const valid = { startAt: new Date('2026-11-01T08:00:00Z'), endAt: new Date('2026-11-01T09:00:00Z') };
+    expect(conflictWindowsOverlapWithBuffer(valid, valid, null)).toEqual({ ready: false, reason: 'BUFFER_NOT_CONFIGURED' });
+    expect(conflictWindowsOverlapWithBuffer(valid, valid, -1)).toEqual({ ready: false, reason: 'INVALID_BUFFER' });
+    expect(conflictWindowsOverlapWithBuffer(valid, { startAt: new Date('invalid'), endAt: new Date('2026-11-01T10:00:00Z') }, 0))
+      .toEqual({ ready: false, reason: 'INVALID_WINDOW' });
   });
 });

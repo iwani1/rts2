@@ -1,14 +1,17 @@
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
-import { PermissionDeniedError, resolvePermission } from '@/modules/auth/permissions';
+import { isActiveSuperAdmin, PermissionDeniedError, resolvePermission } from '@/modules/auth/permissions';
 import { mayStartSession } from '@/modules/auth/policy';
 import { getRentalRequest, listRentalRequests, RentalCompanyNotFoundError, RentalRequestNotFoundError } from '@/modules/rentals/rental-requests';
 import type { RentalRequestRecord } from '@/modules/rentals/rental-requests';
 import { getAuth } from '@/server/auth';
 import { getPrisma } from '@/server/prisma';
+import { listCompanySettingStatus } from '@/modules/settings/registry';
 import { RequestManager } from './request-manager';
 import { RentalRequestTransitionManager } from './rental-request-transition-manager';
+import { RentalRequestDetails } from './rental-request-details';
+import { QuotationReadiness } from './quotation-readiness';
 
 export const dynamic = 'force-dynamic';
 type PageProps = { searchParams: Promise<{ q?: string; cursor?: string; edit?: string }> };
@@ -47,6 +50,15 @@ export default async function RentalRequestsPage({ searchParams }: PageProps) {
     }
   }
 
+  let quotationPolicyStatus: Awaited<ReturnType<typeof listCompanySettingStatus>> = [];
+  let canEditPolicies = false;
+  if (result.canManage && editing?.status === 'Under Review') {
+    [quotationPolicyStatus, canEditPolicies] = await Promise.all([
+      listCompanySettingStatus(company.id),
+      isActiveSuperAdmin(session.user.id),
+    ]);
+  }
+
   const customerAccess = await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'customer:manage' });
   return <main className="fleet-page">
     <header className="fleet-page-header">
@@ -81,6 +93,8 @@ export default async function RentalRequestsPage({ searchParams }: PageProps) {
         {result.nextCursor && <div className="fleet-pagination"><span className="muted">More requests available.</span><Link className="button-link" href={`/rentals/requests?${params.q ? `q=${encodeURIComponent(params.q)}&` : ''}cursor=${encodeURIComponent(result.nextCursor)}`}>Next page</Link></div>}
       </section>
       {result.canManage && (!editing || editing.status === 'Draft') && <RequestManager companyId={company.id} request={editing} />}
+      {result.canManage && editing && editing.status !== 'Draft' && <RentalRequestDetails request={editing} />}
+      {result.canManage && editing?.status === 'Under Review' && <QuotationReadiness settings={quotationPolicyStatus} canEditPolicies={canEditPolicies} />}
       {result.canManage && editing && editing.status !== 'Draft' && <RentalRequestTransitionManager companyId={company.id} request={editing} />}
       {editing && editing.status !== 'Draft' && <p className="fleet-limits">This request has been submitted. Only the explicitly approved review and decline transitions are currently available; quotation, confirmation, assignment, cancellation and dispatch are not enabled.</p>}
       {editing && <section className="fleet-list-panel" aria-labelledby="request-history-title">

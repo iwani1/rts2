@@ -55,3 +55,32 @@ export function buildRentalConflictWindow(input: unknown): RentalConflictWindowR
 export function conflictWindowsOverlap(first: RentalConflictWindow, second: RentalConflictWindow) {
   return first.startAt < second.endAt && second.startAt < first.endAt;
 }
+
+export type BufferedConflictResult =
+  | { ready: true; conflict: boolean; gapMinutes: number }
+  | { ready: false; reason: 'BUFFER_NOT_CONFIGURED' | 'INVALID_BUFFER' | 'INVALID_WINDOW' };
+
+/**
+ * Applies the explicit between-job buffer after whichever trip finishes first.
+ * It is a pure policy helper only; callers must not use it as a reservation or
+ * availability claim until the authoritative resource ledger is implemented.
+ */
+export function conflictWindowsOverlapWithBuffer(
+  first: RentalConflictWindow,
+  second: RentalConflictWindow,
+  bufferMinutes: number | null,
+): BufferedConflictResult {
+  if (bufferMinutes === null) return { ready: false, reason: 'BUFFER_NOT_CONFIGURED' };
+  if (!Number.isSafeInteger(bufferMinutes) || bufferMinutes < 0 || !Number.isSafeInteger(bufferMinutes * 60_000)) {
+    return { ready: false, reason: 'INVALID_BUFFER' };
+  }
+  const windows = [first, second];
+  if (windows.some(({ startAt, endAt }) => !Number.isFinite(startAt.getTime()) || !Number.isFinite(endAt.getTime()) || endAt <= startAt)) {
+    return { ready: false, reason: 'INVALID_WINDOW' };
+  }
+  if (conflictWindowsOverlap(first, second)) return { ready: true, conflict: true, gapMinutes: 0 };
+  const [earlier, later] = first.startAt <= second.startAt ? [first, second] : [second, first];
+  const gapMs = later.startAt.getTime() - earlier.endAt.getTime();
+  const gapMinutes = gapMs / 60_000;
+  return { ready: true, conflict: gapMs < bufferMinutes * 60_000, gapMinutes };
+}

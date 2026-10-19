@@ -55,6 +55,8 @@ test('authorized staff can submit a rental request, review it, then record a rea
   await page.getByLabel('Reason for recording or updating this Draft').fill('Required details checked before submission');
   await page.getByRole('button', { name: 'Submit request' }).click();
 
+  await expect(page.getByRole('heading', { name: 'Request details' })).toBeVisible();
+  await expect(page.getByText(upcomingDate(15)).first()).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Status history' })).toBeVisible();
   await expect(page.getByText('Draft → Submitted')).toBeVisible();
   await expect(requestRow).toContainText('Submitted');
@@ -64,6 +66,7 @@ test('authorized staff can submit a rental request, review it, then record a rea
   await page.getByLabel('Reason for this status change').fill('Ops manager begins rental review');
   await page.getByRole('button', { name: 'Start review' }).click();
   await expect(page.getByText('Submitted → Under Review')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Quotation is not available yet' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Decline request' })).toBeVisible();
 
   await page.getByLabel('Reason for this status change').fill('Unable to meet customer requirements');

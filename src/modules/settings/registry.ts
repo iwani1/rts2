@@ -35,6 +35,8 @@ function isJsonValue(value: unknown): value is SettingJsonValue {
 }
 const settingValueSchema = z.custom<SettingJsonValue>((value) => isJsonValue(value) && value !== null);
 const resourceBufferMinutesSchema = z.number().int().nonnegative().safe();
+const quoteValidityDaysSchema = z.number().int().positive().safe();
+const quoteValidityKey: SettingKey = 'rental.quote_validity';
 const resourceBufferKeys = new Set<SettingKey>([
   'fleet.vehicle_between_job_buffer_minutes',
   'fleet.driver_between_job_buffer_minutes',
@@ -43,6 +45,7 @@ const registryByKey = new Map(settingRegistry.map((definition) => [definition.ke
 
 function validateRegisteredValue(key: SettingKey, value: SettingJsonValue): SettingJsonValue {
   if (resourceBufferKeys.has(key)) return resourceBufferMinutesSchema.parse(value);
+  if (key === quoteValidityKey) return quoteValidityDaysSchema.parse(value);
   return value;
 }
 
@@ -72,8 +75,11 @@ export async function listCompanySettingStatus(companyIdInput: string) {
   return settingRegistry.map((definition) => {
     const row = byKey.get(definition.key);
     let configured = Boolean(row?.configured && row.value !== null);
-    if (configured && resourceBufferKeys.has(definition.key) && row) {
-      try { resourceBufferMinutesSchema.parse(row.value); } catch { configured = false; }
+    if (configured && row) {
+      try {
+        if (resourceBufferKeys.has(definition.key)) resourceBufferMinutesSchema.parse(row.value);
+        if (definition.key === quoteValidityKey) quoteValidityDaysSchema.parse(row.value);
+      } catch { configured = false; }
     }
     return {
       ...definition,
@@ -95,9 +101,23 @@ export async function requireCompanySetting(companyIdInput: string, keyInput: st
     select: { value: true, configured: true },
   });
   if (!row?.configured || row.value === null) throw new SettingNotConfiguredError(key);
-  return resourceBufferKeys.has(key)
-    ? resourceBufferMinutesSchema.parse(row.value)
-    : row.value;
+  if (resourceBufferKeys.has(key)) return resourceBufferMinutesSchema.parse(row.value);
+  if (key === quoteValidityKey) return quoteValidityDaysSchema.parse(row.value);
+  return row.value;
+}
+
+/** Returns the explicitly configured quote-validity duration, or null when unset. */
+export async function getCompanyQuoteValidityDays(companyIdInput: string) {
+  const companyId = companyIdSchema.parse(companyIdInput);
+  const prisma = getPrisma();
+  const company = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true } });
+  if (!company) throw new CompanyNotFoundError();
+  const row = await prisma.setting.findUnique({
+    where: { companyId_key: { companyId, key: quoteValidityKey } },
+    select: { value: true, configured: true },
+  });
+  if (!row?.configured || row.value === null) return null;
+  return quoteValidityDaysSchema.parse(row.value);
 }
 
 /** Returns only the two typed buffer values needed by their dedicated admin form. */

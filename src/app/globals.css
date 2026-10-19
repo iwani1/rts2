@@ -80,7 +80,19 @@ button:disabled { opacity: .65; cursor: wait; }
 .settings-status-panel h2 { margin: 0; color: var(--navy-950); font-size: 20px; }
 .settings-status-table { min-width: 1100px; }
 .resource-buffer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.resource-buffer-form { display: grid; align-content: start; gap: 10px; padding: 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.rental-request-details { display: grid; gap: 18px; }
+.rental-request-detail-group { min-width: 0; }
+.rental-request-detail-group h3 { margin: 0 0 8px; color: var(--navy-800); font-size: 15px; }
+.rental-request-detail-group dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 22px; margin: 0; }
+.rental-request-detail-group dl > div { min-width: 0; display: grid; grid-template-columns: minmax(100px, .7fr) minmax(0, 1.3fr); gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.rental-request-detail-group dt { color: var(--navy-800); font-size: 13px; font-weight: 700; }
+.rental-request-detail-group dd { margin: 0; overflow-wrap: anywhere; color: var(--ink); font-size: 14px; }
+.resource-buffer-form, .quote-validity-form { display: grid; align-content: start; gap: 10px; padding: 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.quote-validity-form { width: min(100%, 620px); }
+.quote-validity-form label { display: grid; gap: 6px; color: var(--navy-800); font-size: 13px; font-weight: 650; }
+.quote-validity-form input, .quote-validity-form textarea { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid #b9c5cb; border-radius: 6px; background: #fff; color: var(--ink); font: inherit; }
+.quote-validity-form textarea { min-height: 78px; resize: vertical; }
+.quote-validity-form input:focus, .quote-validity-form textarea:focus { border-color: var(--focus); outline: 3px solid #087c7825; }
 .resource-buffer-form h3, .resource-buffer-form p { margin: 0; }
 .resource-buffer-form label { color: var(--navy-800); font-size: 13px; font-weight: 650; }
 .resource-buffer-form input, .resource-buffer-form textarea { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid #b9c5cb; border-radius: 6px; background: #fff; color: var(--ink); font: inherit; }
@@ -111,6 +123,8 @@ button:disabled { opacity: .65; cursor: wait; }
   .audit-heading { align-items: start; flex-direction: column; gap: 16px; }
   .audit-pagination { flex-wrap: wrap; }
   .resource-buffer-grid { grid-template-columns: 1fr; }
+  .rental-request-detail-group dl { grid-template-columns: 1fr; }
+  .rental-request-detail-group dl > div { grid-template-columns: 1fr; gap: 4px; }
   .audit-pagination .muted { order: 1; width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
