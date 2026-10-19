@@ -92,6 +92,7 @@ export default async function VehicleDocumentsPage({ searchParams }: PageProps) 
           <p>{result.vehicles.length === 0
             ? params.q ? 'Try a different search, or clear the search term.' : 'No active vehicle records are available.'
             : `${selectedDocumentType ? `No ${selectedDocumentType} expiry dates are` : 'No approved document dates are'} recorded for these vehicles. Enter a date in the vehicle register or continue to the next page.`}</p>
+          {(params.q || selectedDocumentType) && <Link className="button-link" href="/fleet/vehicles/documents">Clear filters</Link>}
         </div> : <div className="vehicle-table-wrap" role="region" aria-label="Vehicle document expiry dates" tabIndex={0}>
           <table className="vehicle-table">
             <caption className="sr-only">{selectedDocumentType ? `Recorded ${selectedDocumentType.toLowerCase()} expiry dates, earliest first` : 'Recorded vehicle document expiry dates, earliest first'}</caption>

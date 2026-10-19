@@ -98,6 +98,15 @@ describe('VehicleDocumentsPage', () => {
     expect(nextPage.getAttribute('href')).toContain('cursor=vehicle-2');
   });
 
+  it('offers a clear-filters link when a search and document filter find no vehicles', async () => {
+    mocks.listVehicles.mockResolvedValue({ canManage: true, nextCursor: null, vehicles: [] });
+    const page = await VehicleDocumentsPage({ searchParams: Promise.resolve({ q: 'missing', type: 'Insurance' }) });
+    render(page);
+
+    expect(screen.getByRole('heading', { name: 'No vehicles found' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Clear filters' }).getAttribute('href')).toBe('/fleet/vehicles/documents');
+  });
+
   it('redirects limited fleet views before displaying document dates', async () => {
     mocks.listVehicles.mockResolvedValue({ canManage: false, nextCursor: null, vehicles: [] });
 
