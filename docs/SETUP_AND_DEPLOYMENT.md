@@ -22,5 +22,17 @@ The current migrations contain auth, audit, company/settings scaffolding, the ow
 ## Quality gates
 `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`. For database-backed tests, use a disposable local database ending in `_test`: `TMS_TEST_DATABASE_URL=... npm run db:test:migrate`, then run `DATABASE_URL=... APP_URL=http://localhost:3000 AUTH_SECRET=<test-secret> npm run test:integration`. The raw-SQL migration helper refuses remote hosts and database names without the `_test` suffix; it is test-only and does not write Prisma migration history. CI uses PostgreSQL 16 and Prisma's native `migrate deploy`, then runs integration tests.
 
+## Browser end-to-end test (local disposable database only)
+
+The Playwright test `e2e/rental-request-submission.spec.ts` signs into the local app, creates a synthetic customer, creates an incomplete Draft, verifies submission is blocked with missing fields, fills the approved fields, then submits and checks status history. Test records remain in the disposable database.
+
+1. Create a fresh local PostgreSQL database whose name ends in `_test`; do not use `richie_tms` or any production database. Generate the Prisma Client with `npm run db:generate`.
+2. Apply the test SQL migrations with `TMS_TEST_DATABASE_URL="$TEST_DATABASE_URL" npm run db:test:migrate`.
+3. In an interactive terminal, bootstrap a Super Administrator and the Richie Transport Services company against that same test DB. For both commands, set `DATABASE_URL="$TEST_DATABASE_URL"`, `APP_URL=http://localhost:3000`, and a local `AUTH_SECRET` of at least 32 characters. The admin CLI asks for the password with hidden terminal input. Set `TMS_E2E_EMAIL` to that account's email for the browser test.
+4. Install the browser once with `npx playwright install chromium`.
+5. Stop any existing app on port 3000. In the same shell, set `DATABASE_URL="$TEST_DATABASE_URL"`, `APP_URL=http://localhost:3000`, `AUTH_SECRET`, `TMS_E2E_EMAIL`, and `TMS_E2E_PASSWORD`, then run `npm run test:e2e`.
+
+The Playwright configuration refuses non-local application/database hosts and database names without the `_test` suffix. It starts its own Next development server and will fail rather than reuse an already-running server. Never use live customer records or production credentials for this test.
+
 ## Production notes
 Do not deploy until secrets, auth, monitoring, backups/restore, migrations, hosting capabilities, privacy policy and owner-approved business configuration are in place. Build with `npm ci && npx prisma generate && npm run build`; run the Node server with `npm start`. Configure `DATABASE_URL`, `AUTH_SECRET`, and `APP_URL` from the deployment secret manager. This is a scaffold, not a deployable operational TMS.

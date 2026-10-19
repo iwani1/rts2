@@ -93,5 +93,20 @@
 
 ## D-020 — Customer register identity and undefined-value handling
 - **Decision:** Require a customer/display name for an individual or organisation. The reference is optional, entered by staff, and unique within the company when supplied; no reference format or automatic sequence is introduced. Customer type and status remain optional free text with no preset values or defaults. The register includes the brief-listed contact person, telephone, email, billing details, notes, and audit history.
-- **Source:** Owner approved the recommended scope on 2026-10-18.
+- **Source:** Owner approved the recommended scope on 2026-10-19.
 - **Limits:** This establishes register fields only, not customer-status transitions, type vocabularies, billing rules, retention, or privacy/legal policy. Dispatcher enquiry, Finance billing, and rental-customer own-profile projections remain fail-closed until field-level scopes are implemented. Customer-to-rental workflows are separate and not implemented by this decision.
+
+## D-021 — Staff rental enquiry draft entry
+- **Decision:** A staff-entered phone/email rental enquiry is first saved as `Draft`; submission is a separate action. A Draft may omit both return time and duration, but submission requires at least one. Link a request to an existing customer-register record; staff create the customer record first. No rental-request status transitions beyond initial Draft creation are approved by this decision.
+- **Source:** Owner selected the recommended entry model on 2026-10-19.
+- **Limits:** D-023 separately approves the required fields and actors for Draft → Submitted. Other transition-specific preconditions and the remaining RNT-02 from-to matrix remain open. No quotation, availability, resource reservation, confirmation, cancellation, or dispatch behavior is included by this decision.
+
+## D-022 — Rental-request duration unit
+- **Decision:** When staff records a trip duration, use a positive whole-number count of minutes. Drafts may leave duration unset; the D-021 submission precondition remains return time or duration.
+- **Source:** Owner selected integer minutes on 2026-10-19.
+- **Limits:** D-023 separately specifies submission preconditions. This unit decision does not approve availability, travel-time, or booking calculations.
+
+## D-023 — Rental-request Draft submission preconditions and authority
+- **Decision:** To submit a Draft, require the existing customer link, service date, departure time, pickup location, destination, positive passenger count, request source, and either return time or duration in whole minutes. Intermediate stops, luggage/special needs, purpose, requested vehicle type, driver requirement, trip contact, and notes remain optional. Only Ops Managers and Super Administrators may submit staff-entered Drafts; Dispatchers remain excluded until enquiry-context ownership and field projections are implemented.
+- **Source:** Owner selected the recommended required-field and actor boundary on 2026-10-19.
+- **Limits:** This approves only `Draft → Submitted`. No further transition, review, quote, availability, reservation, confirmation, dispatch, cancellation, or notification workflow is approved or implemented by this decision.

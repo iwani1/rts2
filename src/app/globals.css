@@ -102,7 +102,19 @@ button:disabled { opacity: .65; cursor: wait; }
 .fleet-list-heading h2, .vehicle-editor h2 { margin: 0; color: var(--navy-950); font-size: 20px; }
 .fleet-list-heading .muted { margin: 6px 0 0; font-size: 13px; }
 .fleet-search { display: grid; gap: 6px; width: min(100%, 420px); }
-.fleet-search label, .vehicle-form label, .vehicle-archive label, .usual-driver-picker label { display: grid; gap: 6px; color: var(--navy-800); font-size: 13px; font-weight: 650; }
+.fleet-search label, .vehicle-form label, .vehicle-archive label, .usual-driver-picker label, .customer-picker label { display: grid; gap: 6px; color: var(--navy-800); font-size: 13px; font-weight: 650; }
+.request-customer-field, .request-details-field { min-width: 0; margin: 0; padding: 16px; border: 1px solid var(--line); border-radius: 8px; }
+.request-customer-field legend, .request-details-field legend { padding: 0 6px; color: var(--navy-800); font-size: 14px; font-weight: 700; }
+.request-details-field { display: grid; gap: 14px; }
+.customer-picker { display: grid; gap: 10px; }
+.customer-picker-selected { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 42px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 6px; background: #f8fbfa; color: var(--navy-950); font-size: 13px; }
+.customer-picker input { min-width: 0; min-height: 42px; padding: 9px 11px; border: 1px solid #b9c5cb; border-radius: 6px; background: #fff; color: var(--ink); font: inherit; font-weight: 400; }
+.customer-picker input:focus { border-color: var(--focus); outline: 3px solid #087c7825; }
+.customer-picker-results { max-height: 240px; overflow: auto; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 6px; list-style: none; }
+.customer-picker-results li + li { border-top: 1px solid var(--line); }
+.customer-picker-option { display: grid; width: 100%; gap: 2px; padding: 10px 12px; border: 0; background: #fff; color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
+.customer-picker-option:hover, .customer-picker-option:focus-visible { background: var(--teal-50); outline: 2px solid var(--focus); outline-offset: -2px; }
+.request-status { display: inline-block; padding: 4px 8px; border-radius: 999px; background: var(--teal-50); color: var(--navy-800); font-size: 12px; font-weight: 700; }
 .usual-driver-field { min-width: 0; margin: 0; padding: 0; border: 0; }
 .usual-driver-field legend { margin-bottom: 6px; color: var(--navy-800); font-size: 13px; font-weight: 650; }
 .fleet-search > div { display: flex; gap: 8px; }
@@ -138,6 +150,10 @@ button:disabled { opacity: .65; cursor: wait; }
 .button-primary:hover { background: var(--teal-700); }
 .button-danger { background: #8c2727; }
 .button-danger:hover { background: #6f1f1f; }
+.button-submit-request { min-height: 42px; padding: 9px 15px; border: 1px solid var(--navy-800); border-radius: 6px; background: #fff; color: var(--navy-800); font: inherit; font-weight: 650; cursor: pointer; }
+.button-submit-request:hover { background: var(--teal-50); }
+.button-submit-request:focus-visible { outline: 3px solid var(--teal-700); outline-offset: 2px; }
+.button-submit-request:disabled { cursor: wait; opacity: 0.65; }
 .form-success { margin: 0; color: #146452; font-size: 14px; }
 .vehicle-archive { padding-top: 16px; border-top: 1px solid var(--line); }
 .vehicle-archive summary { color: var(--danger); font-size: 14px; font-weight: 700; cursor: pointer; }

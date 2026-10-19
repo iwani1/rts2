@@ -20,6 +20,8 @@ export default async function Home() {
   const fleetAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'fleet:manage' }) : { allowed: false, scopes: [] };
   const driverAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'driver:manage' }) : { allowed: false, scopes: [] };
   const customerAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'customer:manage' }) : { allowed: false, scopes: [] };
+  const rentalAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'rental:manage' }) : { allowed: false, scopes: [] };
+  const canManageRentalRequests = rentalAccess.allowed && rentalAccess.scopes.some((scope) => ['GLOBAL', 'COMPANY'].includes(scope));
   const canReadDriverRegister = driverAccess.allowed && driverAccess.scopes.some((scope) => ['GLOBAL', 'COMPANY'].includes(scope));
   const canManageCustomers = customerAccess.allowed && customerAccess.scopes.some((scope) => ['GLOBAL', 'COMPANY'].includes(scope));
   return <main className="app-shell">
@@ -30,6 +32,7 @@ export default async function Home() {
         {fleetAccess.allowed && <Link className="header-link" href="/fleet/vehicles">Vehicle register</Link>}
         {canReadDriverRegister && <Link className="header-link" href="/fleet/drivers">Driver register</Link>}
         {canManageCustomers && <Link className="header-link" href="/customers">Customer register</Link>}
+        {canManageRentalRequests && <Link className="header-link" href="/rentals/requests">Rental requests</Link>}
         <Link className="header-link" href="/account/security">Change password</Link>
         <span>{session.user.name || session.user.email}</span>
         <LogoutButton />
@@ -39,7 +42,7 @@ export default async function Home() {
       <p className="eyebrow">Operations workspace</p>
       <h1>Welcome, {session.user.name || 'team member'}</h1>
       <p>Your account is authenticated. Use the available registers to maintain verified company records.</p>
-      <p className="notice">Phase 1A is in progress. Vehicle, driver and customer registers are available; rental, finance and operational assignment workflows are not yet available.</p>
+      <p className="notice">Phase 1A is in progress. Vehicle, driver and customer registers plus rental Draft entry are available. Ops Managers and Super Administrators can submit Drafts; quotation, finance and operational assignment workflows are not yet available.</p>
     </section>
   </main>;
 }

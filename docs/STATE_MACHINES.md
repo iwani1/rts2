@@ -1,10 +1,10 @@
 # State machines — approved and proposed tables
 
-Approval is tracked per entity: the vehicle status vocabulary and safety/derivation principles are owner-approved in D-016; detailed vehicle transitions and the other entity tables remain proposed until their required workflows and business rules are confirmed. `*` means any nonterminal state. Any implemented change must be service-authorized, enforce preconditions, and preserve status history/audit evidence. No vehicle status transition implementation exists yet.
+Approval is tracked per entity: the vehicle status vocabulary and safety/derivation principles are owner-approved in D-016; detailed vehicle transitions and most other entity transitions remain proposed. D-021/D-022/D-023 approve only the rental-request Draft entry and Draft → Submitted action. `*` means any nonterminal state. Any implemented change must be service-authorized, enforce preconditions, and preserve status history/audit evidence. No vehicle status transition implementation exists yet.
 
 | Entity | From → To | Actor | Preconditions |
 |---|---|---|---|
-| Rental request | Draft → Submitted | staff/customer | required request fields; public spam/rate controls |
+| Rental request | Draft → Submitted | Ops Manager/Super Administrator | D-023: customer, service date, departure time, pickup, destination, positive passenger count, request source, and either return time or duration in positive whole minutes; audited reason and status-history entry |
 | | Submitted → Under Review | rental staff | request belongs to company |
 | | Under Review → Awaiting Quotation | rental staff | review complete |
 | | Under Review → Declined | authorized rental staff | reason |
@@ -44,5 +44,7 @@ Approval is tracked per entity: the vehicle status vocabulary and safety/derivat
 **D-016 approved vehicle boundary:** use only the seven vehicle status names in the standing brief. Do not add `Retired`. New vehicle records receive no status default, and the current vehicle register must not expose manual status editing. Reserved/Assigned/On Trip will derive from authoritative related records.
 
 **D-018 approved conflict/release policy:** apply a safety block immediately and prevent new assignments. Flag future assignments for dispatcher resolution without auto-cancelling or reassigning them; use the incident/replacement workflow for a vehicle already on a trip. A Fleet Manager/authorized releaser may return a vehicle to Available after work completion and an inspection record; a separate inspector role is not required. D-019 records who may apply safety blocks. Transition-specific preconditions remain open; these workflows are not implemented yet.
+
+**D-021/D-022/D-023 approved rental-request boundary:** staff enquiries are initially saved as Draft; submission is separate. Drafts may omit both return time and duration; before submission at least one is required, with duration measured in positive whole minutes. A request links to an existing customer. D-023 approves only Draft → Submitted, its required fields, and Ops Manager/Super Administrator authority. Every later transition in the proposed table remains unapproved and unimplemented.
 
 Actor names are roles, not a substitute for resource/action permission checks. Management must approve the full from-to matrices and ambiguous transitions before implementation. Terminal states cannot be changed without explicit audited exceptional transition and reason.

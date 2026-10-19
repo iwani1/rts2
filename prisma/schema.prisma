@@ -19,6 +19,7 @@ model Company {
   vehicles        Vehicle[]
   drivers         Driver[]
   customers       Customer[]
+  rentalRequests  RentalRequest[]
 }
 
 model User {
@@ -35,6 +36,7 @@ model User {
   auditEvents         AuditEvent[]
   roleAssignments     UserRoleAssignment[] @relation("RoleAssignee")
   assignedRoleChanges UserRoleAssignment[] @relation("RoleAssignmentActor")
+  rentalRequestStatusChanges RentalRequestStatusHistory[]
 }
 
 model Role {
@@ -225,8 +227,59 @@ model Customer {
   createdAt      DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt      DateTime  @updatedAt @db.Timestamptz(6)
   company        Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  rentalRequests RentalRequest[]
 
+  @@unique([companyId, id])
   @@unique([companyId, reference])
   @@index([companyId, archivedAt, displayName])
   @@index([companyId, customerType])
+}
+
+model RentalRequest {
+  id                   String                       @id @default(cuid())
+  companyId            String
+  customerId           String
+  serviceDate          DateTime?                    @db.Date
+  departureTime         String?
+  returnTime            String?
+  durationMinutes      Int?
+  pickupLocation       String?
+  destination          String?
+  intermediateStops    String?
+  passengerCount       Int?
+  luggageSpecialNeeds  String?
+  purpose              String?
+  requestedVehicleType String?
+  driverRequirement    String?
+  tripContactName      String?
+  tripContactTelephone String?
+  tripContactEmail     String?
+  notes                String?
+  requestSource        String?
+  status               String
+  createdAt            DateTime                     @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime                     @updatedAt @db.Timestamptz(6)
+  company              Company                      @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  customer             Customer                     @relation(fields: [companyId, customerId], references: [companyId, id], onDelete: Restrict)
+  statusHistory        RentalRequestStatusHistory[]
+
+  @@unique([companyId, id])
+  @@index([companyId, status, createdAt])
+  @@index([companyId, customerId, createdAt])
+  @@index([companyId, serviceDate])
+}
+
+model RentalRequestStatusHistory {
+  id          String        @id @default(cuid())
+  companyId   String
+  requestId   String
+  actorId     String
+  fromStatus  String?
+  toStatus    String
+  reason      String
+  createdAt   DateTime      @default(now()) @db.Timestamptz(6)
+  request     RentalRequest @relation(fields: [companyId, requestId], references: [companyId, id], onDelete: Restrict)
+  actor       User          @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, requestId, createdAt])
 }

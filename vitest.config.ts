@@ -8,6 +8,6 @@ export default defineConfig({
   esbuild: { jsx: 'automatic' },
   test: {
     environment: 'node',
-    exclude: ['**/*.integration.test.ts', '**/node_modules/**', '**/dist/**'],
+    exclude: ['**/*.integration.test.ts', 'e2e/**', '**/node_modules/**', '**/dist/**'],
   },
 });
