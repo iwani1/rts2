@@ -60,6 +60,10 @@ describe('driver import service duplicate warnings', () => {
     expect(preview).toMatchObject({ totalRows: 2, validRows: 2, invalidRows: 0, canImport: true });
     expect(preview.rows[0]?.warnings).toHaveLength(2);
     expect(preview.rows[1]?.warnings).toHaveLength(2);
+    expect(prisma.driver.findMany).toHaveBeenCalledWith({
+      where: { companyId: 'company-1' },
+      select: { fullName: true },
+    });
 
     const result = await importDriversFromCsv({
       actorId: 'admin-1', companyId: 'company-1', csv, reason: 'Import reviewed possible name matches',

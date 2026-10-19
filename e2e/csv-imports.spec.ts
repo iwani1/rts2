@@ -4,7 +4,7 @@ function csv(headers: string[], fields: Record<string, string>) {
   return [headers.join(','), headers.map((header) => fields[header] ?? '').join(',')].join('\r\n');
 }
 
-test('authorized staff can import CSV records, edit customer history, link a usual driver, and verify persistence after sign-in', async ({ page }) => {
+test('authorized staff can import records, review vehicle document dates, edit customer history, link a usual driver, and verify persistence', async ({ page }) => {
   const email = process.env.TMS_E2E_EMAIL;
   const password = process.env.TMS_E2E_PASSWORD;
   if (!email || !password) throw new Error('Set TMS_E2E_EMAIL and TMS_E2E_PASSWORD in the local environment.');
@@ -60,7 +60,10 @@ test('authorized staff can import CSV records, edit customer history, link a usu
   await page.goto('/fleet/vehicles/import');
   const vehicleCsv = csv(
     ['registrationNumber', 'make', 'model', 'category', 'seatCount', 'fuelType', 'ownershipType', 'odometerValue', 'odometerUnit', 'insuranceExpiresAt', 'roadworthinessExpiresAt', 'registrationExpiresAt', 'nextServiceAt', 'notes'],
-    { registrationNumber: `E2E-${suffix}`, make: 'Test make', model: 'Test model', category: 'Browser-test category' },
+    {
+      registrationNumber: `E2E-${suffix}`, make: 'Test make', model: 'Test model', category: 'Browser-test category',
+      insuranceExpiresAt: '2027-07-01', roadworthinessExpiresAt: '2026-12-30', registrationExpiresAt: '2027-01-15',
+    },
   );
   await page.getByLabel('Vehicle CSV file').setInputFiles({ name: 'vehicles.csv', mimeType: 'text/csv', buffer: Buffer.from(vehicleCsv) });
   await page.getByRole('button', { name: 'Preview CSV' }).click();
@@ -71,6 +74,17 @@ test('authorized staff can import CSV records, edit customer history, link a usu
   await expect(page.getByRole('heading', { name: 'Imported vehicle records' })).toBeVisible();
   await expect(page.getByLabel('Vehicle CSV file')).toHaveValue('');
   await expect(page.getByRole('button', { name: 'Preview CSV' })).toBeDisabled();
+
+  await page.goto('/fleet/vehicles/documents');
+  await expect(page.getByRole('heading', { name: 'Vehicle document dates' })).toBeVisible();
+  const vehicleDocumentRows = page.getByRole('row').filter({ hasText: `E2E-${suffix}` });
+  await expect(vehicleDocumentRows).toHaveCount(3);
+  await expect(vehicleDocumentRows.filter({ hasText: 'Roadworthiness' })).toContainText('2026-12-30');
+  await expect(vehicleDocumentRows.filter({ hasText: 'Vehicle Registration' })).toContainText('2027-01-15');
+  await expect(vehicleDocumentRows.filter({ hasText: 'Insurance' })).toContainText('2027-07-01');
+  await page.getByLabel('Document type').selectOption('Insurance');
+  await page.getByRole('button', { name: 'Apply filters' }).click();
+  await expect(page.getByRole('row').filter({ hasText: `E2E-${suffix}` })).toHaveCount(1);
 
   await page.goto('/fleet/drivers/import');
   const driverCsv = csv(

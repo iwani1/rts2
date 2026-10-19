@@ -26,11 +26,20 @@ describe('driver import preview API', () => {
   });
   it('uses the authenticated actor and route company and prevents caching', async () => {
     mocks.getSession.mockResolvedValue({ user: { id: 'fleet-manager-1' } });
-    mocks.previewDriverImport.mockResolvedValue({ totalRows: 1, validRows: 1, invalidRows: 0, canImport: true, fileErrors: [], rows: [] });
+    const preview = {
+      totalRows: 1, validRows: 1, invalidRows: 0, canImport: true, fileErrors: [],
+      rows: [{
+        rowNumber: 2, fullName: 'Example Driver', licenceClass: '', licenceExpiresAt: '',
+        qualifications: '', availability: '', status: '', errors: [],
+        warnings: ['Possible name match in an existing company driver record.'],
+      }],
+    };
+    mocks.previewDriverImport.mockResolvedValue(preview);
     const csv = 'fullName,licenceClass,licenceExpiresAt,qualifications,availability,status\nExample Driver,,,,,';
     const response = await POST(makeRequest({ csv }), context);
     expect(response.status).toBe(200);
     expect(response.headers.get('cache-control')).toBe('private, no-store');
+    expect(await response.json()).toEqual({ preview });
     expect(mocks.previewDriverImport).toHaveBeenCalledWith({ csv, actorId: 'fleet-manager-1', companyId: 'company-1' });
   });
   it('rejects unsupported body properties', async () => {

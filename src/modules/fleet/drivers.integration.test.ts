@@ -94,6 +94,16 @@ describe('driver register with PostgreSQL persistence', () => {
     expect(await prisma.driver.count({ where: { companyId } })).toBe(beforeCount);
   });
 
+  it('does not reveal name matches from another company in import warnings', async () => {
+    const nameOwnedByOtherCompany = `Other Company Driver ${randomUUID()}`;
+    await prisma.driver.create({ data: { companyId: otherCompanyId, fullName: nameOwnedByOtherCompany } });
+    const csv = `${driverImportHeaders.join(',')}\n${nameOwnedByOtherCompany},,,,,\n`;
+    const preview = await previewDriverImport({ actorId: fleetManagerId, companyId, csv });
+
+    expect(preview.canImport).toBe(true);
+    expect(preview.rows[0]?.warnings).toEqual([]);
+  });
+
   it('imports all valid driver rows atomically and records an audit event per row', async () => {
     const fullName = `Imported Driver ${randomUUID()}`;
     const csv = `${driverImportHeaders.join(',')}\n${fullName},Class B,2027-09-30,Qualification A,Availability note,Status note\n`;
