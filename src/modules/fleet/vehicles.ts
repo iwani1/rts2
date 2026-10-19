@@ -173,6 +173,28 @@ function presentVehicle<T extends {
   };
 }
 
+export type VehicleRegisterCategoryCount = { category: string; count: number };
+export type VehicleRegisterSummary = { registeredVehicleCount: number; byCategory: VehicleRegisterCategoryCount[] };
+
+export async function getVehicleRegisterSummary(input: { actorId: string; companyId: string }): Promise<VehicleRegisterSummary> {
+  const actorId = z.string().trim().min(1).max(128).parse(input.actorId);
+  const companyId = companyIdSchema.parse(input.companyId);
+  const access = await accessFor(actorId, companyId);
+  if (!access.canManage) throw new PermissionDeniedError();
+
+  const categories = await getPrisma().vehicle.groupBy({
+    by: ['category'],
+    where: { companyId, archivedAt: null },
+    _count: { _all: true },
+    orderBy: { category: 'asc' },
+  }) as Array<{ category: string; _count: { _all: number } }>;
+  const byCategory: VehicleRegisterCategoryCount[] = categories.map(({ category, _count }) => ({ category, count: _count._all }));
+  return {
+    registeredVehicleCount: byCategory.reduce<number>((total, entry) => total + entry.count, 0),
+    byCategory,
+  };
+}
+
 export async function listVehicles(input: {
   actorId: string; companyId: string; search?: string; cursor?: string;
 }): Promise<{ vehicles: VehicleRecord[]; nextCursor: string | null; canManage: boolean; canManageDrivers: boolean }> {

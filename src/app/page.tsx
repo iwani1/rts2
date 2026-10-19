@@ -36,6 +36,7 @@ export default async function Home() {
         {canReadDriverRegister && <Link className="header-link" href="/fleet/drivers">Driver register</Link>}
         {canManageCustomers && <Link className="header-link" href="/customers">Customer register</Link>}
         {canManageRentalRequests && <Link className="header-link" href="/rentals/requests">Rental requests</Link>}
+        <Link className="header-link" href="/account/profile">My profile</Link>
         <Link className="header-link" href="/account/security">Change password</Link>
         <span>{session.user.name || session.user.email}</span>
         <LogoutButton />

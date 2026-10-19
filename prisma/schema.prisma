@@ -242,6 +242,7 @@ model RentalRequest {
   serviceDate          DateTime?                    @db.Date
   departureTime         String?
   returnTime            String?
+  returnDate            DateTime?                    @db.Date
   durationMinutes      Int?
   pickupLocation       String?
   destination          String?

@@ -29,6 +29,7 @@ const draftInput = (customer: string, overrides: Record<string, unknown> = {}) =
   serviceDate: null,
   departureTime: null,
   returnTime: null,
+  returnDate: null,
   durationMinutes: null,
   pickupLocation: null,
   destination: null,
@@ -142,6 +143,24 @@ describe('staff rental request Draft persistence with PostgreSQL', () => {
     await expect(updateRentalRequestDraft(ready, managerId, companyId, draft.id)).rejects.toBeInstanceOf(RentalRequestNotDraftError);
     await expect(submitRentalRequest({ reason: 'Submit it again after completion' }, managerId, companyId, draft.id))
       .rejects.toBeInstanceOf(RentalRequestNotDraftError);
+  });
+
+  it('requires an explicit later return date for overnight submission and persists it', async () => {
+    const draft = await createRentalRequest(draftInput(customerId), managerId, companyId);
+    const overnight = draftInput(customerId, {
+      serviceDate: '2026-11-01', departureTime: '22:30', returnTime: '01:30',
+      pickupLocation: 'Accra', destination: 'Kumasi', passengerCount: 12, requestSource: 'PHONE',
+      reason: 'Record overnight journey details',
+    });
+    await updateRentalRequestDraft(overnight, managerId, companyId, draft.id);
+    await expect(submitRentalRequest({ reason: 'Submit without explicit overnight date' }, managerId, companyId, draft.id))
+      .rejects.toMatchObject({ missingFields: expect.arrayContaining(['return date for overnight trip']) });
+
+    const explicitReturnDate = { ...overnight, returnDate: '2026-11-02', reason: 'Set explicit overnight return date' };
+    await updateRentalRequestDraft(explicitReturnDate, managerId, companyId, draft.id);
+    const submitted = await submitRentalRequest({ reason: 'Submit with explicit overnight date' }, managerId, companyId, draft.id);
+    expect(submitted.status).toBe('Submitted');
+    expect(submitted.returnDate).toBe('2026-11-02');
   });
 
   it('updates only Drafts and audits changes without adding a status transition', async () => {

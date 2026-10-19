@@ -34,6 +34,8 @@ describe('company settings registry', () => {
       'rental.cancellation_windows',
       'operations.shift_definitions',
       'documents.reminder_lead_times',
+      'fleet.vehicle_between_job_buffer_minutes',
+      'fleet.driver_between_job_buffer_minutes',
       'reports.on_time_threshold',
       'contracts.inactive_booking_policy',
       'trips.boarding_code_policy',
@@ -52,6 +54,18 @@ describe('company settings registry', () => {
     expect(status.every((setting) => !setting.configured && setting.updatedAt === null)).toBe(true);
     expect(findMany).toHaveBeenCalledOnce();
     expect(findMany.mock.calls[0]?.[0].where.companyId).toBe('company-a');
+  });
+
+  it('returns typed buffer settings without inventing defaults', async () => {
+    mocks.getPrisma.mockReturnValue({
+      company: { findUnique: vi.fn().mockResolvedValue({ id: 'company-a' }) },
+      setting: { findMany: vi.fn().mockResolvedValue([
+        { key: 'fleet.vehicle_between_job_buffer_minutes', configured: true, value: 0 },
+        { key: 'fleet.driver_between_job_buffer_minutes', configured: false, value: 15 },
+      ]) },
+    });
+    const { getCompanyResourceBuffers } = await import('./registry');
+    await expect(getCompanyResourceBuffers('company-a')).resolves.toEqual({ vehicleBufferMinutes: 0, driverBufferMinutes: null });
   });
 
   it('treats a row with configured=true but no value as unconfigured', async () => {
@@ -116,6 +130,18 @@ describe('company settings registry', () => {
       }),
     }));
     expect(updated).toMatchObject({ key: 'finance.tax_lines', configured: true });
+  });
+
+  it('rejects negative and fractional buffer values before any database write', async () => {
+    mockTransaction();
+    for (const value of [-1, 2.5]) {
+      await expect(setCompanySetting({
+        actorId: 'admin-user', companyId: 'company-a',
+        key: 'fleet.vehicle_between_job_buffer_minutes', value,
+        reason: 'Owner confirmed turnaround buffer',
+      })).rejects.toThrow();
+    }
+    expect(mocks.getPrisma).not.toHaveBeenCalled();
   });
 
   it('denies setting changes by a non-Super-Administrator', async () => {

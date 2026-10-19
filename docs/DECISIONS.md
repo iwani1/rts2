@@ -128,3 +128,34 @@
 - **Source:** Owner approved this recommendation on 2026-10-19.
 - **Reason:** An assumed rule could produce false availability, unnecessarily block a resource, or permit a double-booking.
 - **Limits:** This defers RNT-03 behavior only. It does not define the future reservation lifecycle or conflict policy and approves no later rental-request transition.
+
+## D-027 — Initial rental resource conflict interval boundary
+- **Decision:** Draft and Submitted rental requests do not reserve vehicles or drivers. For a future explicitly reserving state, the proposed conflict interval is scheduled departure through scheduled return; when only duration is supplied, calculate the interval end as departure plus the approved whole-minute duration. Interpret date/time in `Africa/Accra`. Do not commit a resource when the interval is incomplete. Do not assume a between-job buffer; keep resource commitment unavailable until management explicitly confirms no buffer or defines one.
+- **Source:** Owner approved these recommendations on 2026-10-19.
+- **Reason:** A trip interval is narrower than blocking an entire service date, duration already has an approved minute unit, and an invented buffer or reservation transition could cause false availability or unnecessary blocking.
+- **Limits:** This approves no later request transition and does not activate availability/conflict prevention. D-029/D-030 later resolve reservation triggers and overnight date handling; explicit buffer decisions and resource-release rules remain required before RNT-03 resource commitment can be implemented. D-026 remains in force for those unresolved parts.
+
+## D-028 — Approved handling for unresolved RNT-03 reservation details
+- **Decision:** Do not reserve vehicles or drivers in Draft or Submitted, and do not invent later reservation state names; keep RNT-03 resource commitment paused until exact states are named. If overnight rentals are permitted, require an explicit return date and never infer the next day from a return time earlier than departure; do not commit ambiguous intervals. Require separate explicit between-job buffer decisions for vehicles and drivers; zero is acceptable only when management explicitly confirms it. Do not assume a buffer value.
+- **Source:** Owner approved these recommendations on 2026-10-19.
+- **Reason:** State names and overnight representation affect whether a resource is actually committed; an implicit overnight rule or buffer can create unsafe false availability or unnecessarily block valid work.
+- **Limits:** This decision specifies fail-closed behavior, not numeric buffer values or release rules. D-029/D-030 later define reservation triggers and overnight dates; RNT-03 resource commitment remains deferred until the remaining rules are supplied. It approves no further rental-request transition.
+
+## D-029 — Vehicle and driver resource reservation triggers
+- **Decision:** Draft and Submitted remain non-reserving. A vehicle is reserved when a booking is `Confirmed` and a specific vehicle is selected. A driver is reserved when a specific driver is `Assigned` to a `Confirmed` booking. The vehicle's `Reserved` status is derived from the authoritative reservation record, not manually edited.
+- **Source:** Owner approved this recommendation on 2026-10-19.
+- **Reason:** Vehicle selection can be held once the customer's booking is confirmed; driver commitment begins only when a specific driver is actually assigned.
+- **Limits:** This defines reservation triggers only. It does not authorize creating the Confirmed/Assigned transitions, release on cancellation/completion, or other RNT-02/RNT-05..08 behavior. Buffer values remain open; D-026..D-028 continue to constrain RNT-03 implementation.
+
+## D-030 — Overnight rental return dates
+- **Decision:** Overnight rental requests are allowed. When a scheduled return time is earlier than departure, require an explicit return date after the service date before the Draft → Submitted transition; never infer the next day. An explicit later return date may also be supplied when the return time itself is later than departure. A duration-only interval remains calculable from departure plus the approved whole-minute duration.
+- **Source:** Owner approved this recommendation on 2026-10-19.
+- **Reason:** Multi-day rental requests can be represented without ambiguity, while a time-only return before departure cannot identify its calendar day.
+- **Limits:** This adds the return-date field and conditional submission prerequisite only. It does not set vehicle/driver buffer values, resource-release rules, or authorize any further request status transition.
+
+## D-031 — Resource turnaround buffers and reservation release
+- **Decision:** Maintain separate company settings for vehicle and driver between-job buffers. Do not provide seeded or implicit values. Each value is an explicitly configured non-negative whole number of minutes (including zero only when deliberately entered by an authorized Super Administrator with an audit reason). If either resource's value is unset or invalid, block commitment of that resource; do not claim availability. The admin UI updates each resource value separately and every change is audited.
+- **Reservation release:** Release a vehicle reservation on an accepted cancellation only before trip start, or after actual trip completion and an explicit vehicle-return record. Release a driver reservation on an accepted cancellation only before trip start, or when the completed trip records the end of that driver's assignment. An authorized pre-trip resource reassignment transfers/releases the old commitment atomically with the replacement. Never release merely because the scheduled return time has passed. An active or incomplete trip remains committed; a vehicle safety block remains independently effective after reservation release.
+- **Source:** Recommended by the implementation agent and accepted under the owner's standing instruction to accept recommendations on 2026-10-19.
+- **Reason:** Explicit, separate buffers preserve flexibility without inventing operational values, while fail-closed reservation and release rules avoid false availability after delays, incomplete return, or an unresolved active trip.
+- **Limits:** D-031 does not authorize Confirmed, Assigned, cancellation, completion, return, or reassignment transitions or their actors/preconditions. It does not enable resource commitment itself. The values remain unset until entered by the operator; the reservation engine, transition workflows, atomic resource ledger, and PostgreSQL/browser acceptance remain to be implemented.

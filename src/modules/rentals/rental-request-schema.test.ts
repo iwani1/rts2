@@ -6,6 +6,7 @@ const partialDraft = {
   serviceDate: null,
   departureTime: null,
   returnTime: null,
+  returnDate: null,
   durationMinutes: null,
   pickupLocation: null,
   destination: null,
@@ -26,10 +27,14 @@ const partialDraft = {
 describe('rental request draft schemas', () => {
   it('accepts incomplete drafts without applying values or defaults', () => {
     expect(rentalRequestDraftSchema.parse(partialDraft)).toEqual(partialDraft);
+    const preReturnDatePayload = Object.fromEntries(Object.entries(partialDraft).filter(([key]) => key !== 'returnDate'));
+    expect(rentalRequestDraftSchema.safeParse(preReturnDatePayload).success).toBe(true);
   });
 
   it('validates calendar dates, times, source, positive counts and contact email', () => {
     expect(rentalRequestDraftSchema.safeParse({ ...partialDraft, serviceDate: '2026-02-30' }).success).toBe(false);
+    expect(rentalRequestDraftSchema.safeParse({ ...partialDraft, returnDate: '2026-11-31' }).success).toBe(false);
+    expect(rentalRequestDraftSchema.safeParse({ ...partialDraft, returnDate: '2026-11-02' }).success).toBe(true);
     expect(rentalRequestDraftSchema.safeParse({ ...partialDraft, departureTime: '25:00' }).success).toBe(false);
     expect(rentalRequestDraftSchema.safeParse({ ...partialDraft, requestSource: 'SMS' }).success).toBe(false);
     expect(rentalRequestDraftSchema.safeParse({ ...partialDraft, passengerCount: 0 }).success).toBe(false);
@@ -43,6 +48,7 @@ describe('rental request draft schemas', () => {
       serviceDate: null,
       departureTime: null,
       returnTime: null,
+      returnDate: null,
       durationMinutes: null,
       pickupLocation: null,
       destination: null,
@@ -57,6 +63,7 @@ describe('rental request draft schemas', () => {
       serviceDate: new Date('2026-10-30T00:00:00.000Z'),
       departureTime: '08:30',
       returnTime: '17:00',
+      returnDate: null,
       pickupLocation: 'Accra',
       destination: 'Kumasi',
       passengerCount: 12,
@@ -67,11 +74,35 @@ describe('rental request draft schemas', () => {
       serviceDate: new Date('2026-10-30T00:00:00.000Z'),
       departureTime: '08:30',
       durationMinutes: 90,
+      returnDate: null,
       pickupLocation: 'Accra',
       destination: 'Kumasi',
       passengerCount: 12,
       requestSource: 'PHONE',
     })).toEqual([]);
+  });
+
+  it('requires an explicit later return date for an overnight return time', () => {
+    const overnight = {
+      serviceDate: new Date('2026-10-30T00:00:00.000Z'),
+      departureTime: '22:00',
+      returnTime: '01:00',
+      returnDate: null,
+      durationMinutes: null,
+      pickupLocation: 'Accra',
+      destination: 'Kumasi',
+      passengerCount: 12,
+      requestSource: 'PHONE',
+    };
+    expect(missingRentalRequestSubmissionFields(overnight)).toContain('return date for overnight trip');
+    expect(missingRentalRequestSubmissionFields({
+      ...overnight,
+      returnDate: new Date('2026-10-31T00:00:00.000Z'),
+    })).toEqual([]);
+    expect(missingRentalRequestSubmissionFields({
+      ...overnight,
+      returnDate: new Date('2026-10-30T00:00:00.000Z'),
+    })).toContain('return date after service date for overnight trip');
   });
 
   it('applies the approved return-time-or-duration rule only when preparing submission', () => {

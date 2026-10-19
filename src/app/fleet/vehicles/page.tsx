@@ -51,7 +51,7 @@ export default async function VehiclesPage({ searchParams }: PageProps) {
     <div className="fleet-content">
       <div className="fleet-title-row">
         <div><p className="eyebrow">{companies[0].name}</p><h1>Vehicle register</h1><p className="muted">Verified fleet records, stored without assumed vehicle categories or policy defaults.</p></div>
-        <div className="fleet-title-actions">{result.canManage && <><Link className="button-link" href="/fleet/vehicles/documents">Document dates</Link><Link className="button-primary" href="/fleet/vehicles/import">Import vehicles</Link></>}<Link className="button-link" href="/">Back to workspace</Link></div>
+        <div className="fleet-title-actions">{result.canManage && <><Link className="button-link" href="/fleet/dashboard">Fleet overview</Link><Link className="button-link" href="/fleet/vehicles/documents">Document dates</Link><Link className="button-primary" href="/fleet/vehicles/import">Import vehicles</Link></>}<Link className="button-link" href="/">Back to workspace</Link></div>
       </div>
       <section className="fleet-list-panel" aria-labelledby="vehicle-list-title">
         <div className="fleet-list-heading"><div><h2 id="vehicle-list-title">Vehicles</h2><p className="muted">Showing up to 50 active records per page.</p></div>

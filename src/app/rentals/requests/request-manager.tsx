@@ -7,7 +7,7 @@ import { CustomerPicker } from './customer-picker';
 
 type RequestFields = Omit<RentalRequestRecord, 'id' | 'customerName' | 'customerArchived' | 'status' | 'createdAt' | 'updatedAt'>;
 const emptyRequest: RequestFields = {
-  customerId: '', serviceDate: null, departureTime: null, returnTime: null, durationMinutes: null,
+  customerId: '', serviceDate: null, departureTime: null, returnTime: null, returnDate: null, durationMinutes: null,
   pickupLocation: null, destination: null, intermediateStops: null, passengerCount: null,
   luggageSpecialNeeds: null, purpose: null, requestedVehicleType: null, driverRequirement: null,
   tripContactName: null, tripContactTelephone: null, tripContactEmail: null, notes: null, requestSource: null,
@@ -26,6 +26,7 @@ function draftPayload(form: FormData) {
     serviceDate: value(form, 'serviceDate') || null,
     departureTime: value(form, 'departureTime') || null,
     returnTime: value(form, 'returnTime') || null,
+    returnDate: value(form, 'returnDate') || null,
     durationMinutes: duration ? Number(duration) : null,
     pickupLocation: value(form, 'pickupLocation') || null,
     destination: value(form, 'destination') || null,
@@ -57,6 +58,7 @@ export function RequestManager({ companyId, request }: { companyId: string; requ
     serviceDate: request.serviceDate,
     departureTime: request.departureTime,
     returnTime: request.returnTime,
+    returnDate: request.returnDate,
     durationMinutes: request.durationMinutes,
     pickupLocation: request.pickupLocation,
     destination: request.destination,
@@ -158,6 +160,7 @@ export function RequestManager({ companyId, request }: { companyId: string; requ
           <label>Service date<input name="serviceDate" type="date" defaultValue={fields.serviceDate ?? ''} /></label>
           <label>Departure time<input name="departureTime" type="time" defaultValue={fields.departureTime ?? ''} /></label>
           <label>Return time<input name="returnTime" type="time" defaultValue={fields.returnTime ?? ''} /></label>
+          <label>Return date (for overnight trips)<input name="returnDate" type="date" defaultValue={fields.returnDate ?? ''} /></label>
           <label>Duration (minutes)<input name="durationMinutes" type="number" min="1" max="2147483647" step="1" defaultValue={fields.durationMinutes ?? ''} /></label>
           <label>Pickup location<input name="pickupLocation" maxLength={500} defaultValue={fields.pickupLocation ?? ''} /></label>
           <label>Destination<input name="destination" maxLength={500} defaultValue={fields.destination ?? ''} /></label>

@@ -45,8 +45,9 @@ test('authorized staff can save a Draft, see missing submission fields, then sub
   await expect(page.getByRole('alert')).toContainText('return time or duration');
 
   await page.getByLabel('Service date').fill(upcomingDate(14));
-  await page.getByLabel('Departure time').fill('08:30');
-  await page.getByLabel('Duration (minutes)').fill('90');
+  await page.getByLabel('Departure time').fill('22:30');
+  await page.getByLabel('Return time').fill('01:30');
+  await page.getByLabel('Return date (for overnight trips)').fill(upcomingDate(15));
   await page.getByLabel('Pickup location').fill('Accra');
   await page.getByLabel('Destination').fill('Kumasi');
   await page.getByLabel('Passenger count').fill('12');
@@ -57,5 +58,6 @@ test('authorized staff can save a Draft, see missing submission fields, then sub
   await expect(page.getByRole('heading', { name: 'Status history' })).toBeVisible();
   await expect(page.getByText('Draft → Submitted')).toBeVisible();
   await expect(requestRow).toContainText('Submitted');
+  await expect(requestRow).toContainText(upcomingDate(15));
   await expect(page.getByRole('button', { name: 'Submit request' })).toHaveCount(0);
 });

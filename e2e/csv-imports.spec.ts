@@ -16,6 +16,12 @@ test('authorized staff can import records, review vehicle document dates, edit c
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL('/');
 
+  await page.goto('/account/profile');
+  await expect(page.getByRole('heading', { name: 'My profile' })).toBeVisible();
+  await expect(page.getByText(email)).toBeVisible();
+  await page.getByRole('link', { name: 'Back to workspace' }).click();
+  await expect(page).toHaveURL('/');
+
   await page.goto('/customers/import');
   const customerHeaders = ['displayName', 'reference', 'contactPerson', 'telephone', 'email', 'billingDetails', 'customerType', 'status', 'notes'];
   const invalidCustomerCsv = csv(customerHeaders, { reference: `E2E-invalid-${suffix}` });
@@ -76,6 +82,11 @@ test('authorized staff can import records, review vehicle document dates, edit c
   await expect(page.getByRole('button', { name: 'Preview CSV' })).toBeDisabled();
 
   await page.goto('/fleet/vehicles');
+  await page.getByRole('link', { name: 'Fleet overview' }).click();
+  await expect(page).toHaveURL('/fleet/dashboard');
+  await expect(page.getByRole('heading', { name: 'Fleet overview' })).toBeVisible();
+  await expect(page.getByRole('table', { name: 'Non-archived vehicle record counts by supplied category' })).toBeVisible();
+  await page.getByRole('navigation', { name: 'Fleet navigation' }).getByRole('link', { name: 'Vehicle register' }).click();
   await page.getByRole('link', { name: 'Document dates' }).click();
   await expect(page).toHaveURL('/fleet/vehicles/documents');
   await expect(page.getByRole('heading', { name: 'Vehicle document dates' })).toBeVisible();

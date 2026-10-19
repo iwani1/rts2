@@ -51,6 +51,7 @@ describe('RequestManager', () => {
     expect(payload).toMatchObject({ customerId: 'customer-1', requestSource: 'PHONE', reason: 'Capture phone enquiry' });
     expect(payload.serviceDate).toBeNull();
     expect(payload.returnTime).toBeNull();
+    expect(payload.returnDate).toBeNull();
     expect(payload.durationMinutes).toBeNull();
     expect(payload).not.toHaveProperty('vehicleId');
     expect(payload).not.toHaveProperty('status');
@@ -76,7 +77,7 @@ describe('RequestManager', () => {
     vi.stubGlobal('fetch', fetchMock);
     const request = {
       id: 'request-2', customerId: 'customer-1', customerName: 'Ama Transport', customerArchived: false,
-      serviceDate: null, departureTime: null, returnTime: null, durationMinutes: null,
+      serviceDate: null, departureTime: null, returnTime: null, returnDate: null, durationMinutes: null,
       pickupLocation: null, destination: null, intermediateStops: null, passengerCount: null,
       luggageSpecialNeeds: null, purpose: null, requestedVehicleType: null, driverRequirement: null,
       tripContactName: null, tripContactTelephone: null, tripContactEmail: null, notes: null,

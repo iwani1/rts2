@@ -51,6 +51,7 @@ export type RentalRequestRecord = {
   serviceDate: string | null;
   departureTime: string | null;
   returnTime: string | null;
+  returnDate: string | null;
   durationMinutes: number | null;
   pickupLocation: string | null;
   destination: string | null;
@@ -70,8 +71,9 @@ export type RentalRequestRecord = {
   updatedAt: Date;
 };
 
-type RentalRequestDbShape = Omit<RentalRequestRecord, 'serviceDate' | 'customerArchived' | 'customerName'> & {
+type RentalRequestDbShape = Omit<RentalRequestRecord, 'serviceDate' | 'returnDate' | 'customerArchived' | 'customerName'> & {
   serviceDate: Date | null;
+  returnDate: Date | null;
   customer: { displayName: string; archivedAt: Date | null };
 };
 
@@ -84,6 +86,7 @@ function presentRequest(row: RentalRequestDbShape): RentalRequestRecord {
     serviceDate: row.serviceDate?.toISOString().slice(0, 10) ?? null,
     departureTime: row.departureTime,
     returnTime: row.returnTime,
+    returnDate: row.returnDate?.toISOString().slice(0, 10) ?? null,
     durationMinutes: row.durationMinutes,
     pickupLocation: row.pickupLocation,
     destination: row.destination,
@@ -110,6 +113,7 @@ function toRequestData(input: z.infer<typeof rentalRequestDraftSchema>) {
     serviceDate: input.serviceDate ? new Date(`${input.serviceDate}T00:00:00.000Z`) : null,
     departureTime: input.departureTime,
     returnTime: input.returnTime,
+    returnDate: input.returnDate ? new Date(`${input.returnDate}T00:00:00.000Z`) : null,
     durationMinutes: input.durationMinutes,
     pickupLocation: input.pickupLocation || null,
     destination: input.destination || null,
@@ -267,12 +271,13 @@ export async function submitRentalRequest(input: unknown, actorId: string, compa
       serviceDate: Date | null;
       departureTime: string | null;
       returnTime: string | null;
+      returnDate: Date | null;
       durationMinutes: number | null;
       pickupLocation: string | null;
       destination: string | null;
       passengerCount: number | null;
       requestSource: string | null;
-    }>>`SELECT "status", "serviceDate", "departureTime", "returnTime", "durationMinutes", "pickupLocation", "destination", "passengerCount", "requestSource" FROM "RentalRequest" WHERE "id" = ${requestId} AND "companyId" = ${companyId} FOR UPDATE`;
+    }>>`SELECT "status", "serviceDate", "departureTime", "returnTime", "returnDate", "durationMinutes", "pickupLocation", "destination", "passengerCount", "requestSource" FROM "RentalRequest" WHERE "id" = ${requestId} AND "companyId" = ${companyId} FOR UPDATE`;
     const current = rows[0];
     if (!current) throw new RentalRequestNotFoundError();
     if (current.status !== 'Draft') throw new RentalRequestNotDraftError();

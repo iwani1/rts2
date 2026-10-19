@@ -71,7 +71,7 @@ export default async function RentalRequestsPage({ searchParams }: PageProps) {
             <tbody>{result.requests.map((request) => <tr key={request.id}>
               <td><strong>{request.customerName}</strong></td>
               <td>{request.serviceDate ?? 'Not recorded'}{request.departureTime && <span className="vehicle-secondary">Departure: {request.departureTime}</span>}</td>
-              <td>{request.pickupLocation ?? 'Pickup not recorded'} → {request.destination ?? 'Destination not recorded'}{request.returnTime && <span className="vehicle-secondary">Return: {request.returnTime}</span>}</td>
+              <td>{request.pickupLocation ?? 'Pickup not recorded'} → {request.destination ?? 'Destination not recorded'}{request.returnTime && <span className="vehicle-secondary">Return: {request.returnDate ? `${request.returnDate} ` : ''}{request.returnTime}</span>}</td>
               <td><span className="request-status">{request.status}</span></td>
               <td><Link className="button-link vehicle-edit-link" href={`/rentals/requests?edit=${encodeURIComponent(request.id)}${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`}>View / edit</Link></td>
             </tr>)}</tbody>

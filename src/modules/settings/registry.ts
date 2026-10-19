@@ -12,6 +12,8 @@ export const settingRegistry = [
   { key: 'rental.cancellation_windows', label: 'Cancellation windows', category: 'rental', blockedFeatures: ['RNT-08'] },
   { key: 'operations.shift_definitions', label: 'Shift definitions', category: 'operations', blockedFeatures: ['EMP-01', 'RTE-01'] },
   { key: 'documents.reminder_lead_times', label: 'Document reminder lead times', category: 'fleet', blockedFeatures: ['FLT-04', 'MNT-01'] },
+  { key: 'fleet.vehicle_between_job_buffer_minutes', label: 'Vehicle between-job buffer (minutes)', category: 'fleet', blockedFeatures: ['RNT-03'] },
+  { key: 'fleet.driver_between_job_buffer_minutes', label: 'Driver between-job buffer (minutes)', category: 'fleet', blockedFeatures: ['RNT-03'] },
   { key: 'reports.on_time_threshold', label: 'On-time reporting threshold', category: 'operations', blockedFeatures: ['RPT-01'] },
   { key: 'contracts.inactive_booking_policy', label: 'Booking policy for expired or suspended contracts', category: 'contracts', blockedFeatures: ['BKG-01'] },
   { key: 'trips.boarding_code_policy', label: 'Boarding-code policy', category: 'dispatch', blockedFeatures: ['DSP-03', 'PAX-01'] },
@@ -32,7 +34,17 @@ function isJsonValue(value: unknown): value is SettingJsonValue {
   return false;
 }
 const settingValueSchema = z.custom<SettingJsonValue>((value) => isJsonValue(value) && value !== null);
+const resourceBufferMinutesSchema = z.number().int().nonnegative().safe();
+const resourceBufferKeys = new Set<SettingKey>([
+  'fleet.vehicle_between_job_buffer_minutes',
+  'fleet.driver_between_job_buffer_minutes',
+]);
 const registryByKey = new Map(settingRegistry.map((definition) => [definition.key, definition]));
+
+function validateRegisteredValue(key: SettingKey, value: SettingJsonValue): SettingJsonValue {
+  if (resourceBufferKeys.has(key)) return resourceBufferMinutesSchema.parse(value);
+  return value;
+}
 
 export class SettingNotConfiguredError extends Error {
   readonly code = 'SETTING_NOT_CONFIGURED';
@@ -59,7 +71,10 @@ export async function listCompanySettingStatus(companyIdInput: string) {
   const byKey = new Map(rows.map((row) => [row.key, row]));
   return settingRegistry.map((definition) => {
     const row = byKey.get(definition.key);
-    const configured = Boolean(row?.configured && row.value !== null);
+    let configured = Boolean(row?.configured && row.value !== null);
+    if (configured && resourceBufferKeys.has(definition.key) && row) {
+      try { resourceBufferMinutesSchema.parse(row.value); } catch { configured = false; }
+    }
     return {
       ...definition,
       configured,
@@ -80,7 +95,31 @@ export async function requireCompanySetting(companyIdInput: string, keyInput: st
     select: { value: true, configured: true },
   });
   if (!row?.configured || row.value === null) throw new SettingNotConfiguredError(key);
-  return row.value;
+  return resourceBufferKeys.has(key)
+    ? resourceBufferMinutesSchema.parse(row.value)
+    : row.value;
+}
+
+/** Returns only the two typed buffer values needed by their dedicated admin form. */
+export async function getCompanyResourceBuffers(companyIdInput: string) {
+  const companyId = companyIdSchema.parse(companyIdInput);
+  const prisma = getPrisma();
+  const company = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true } });
+  if (!company) throw new CompanyNotFoundError();
+  const rows = await prisma.setting.findMany({
+    where: { companyId, key: { in: [...resourceBufferKeys] } },
+    select: { key: true, value: true, configured: true },
+  });
+  const byKey = new Map(rows.map((row) => [row.key, row]));
+  function value(key: SettingKey) {
+    const row = byKey.get(key);
+    if (!row?.configured || row.value === null) return null;
+    return resourceBufferMinutesSchema.parse(row.value);
+  }
+  return {
+    vehicleBufferMinutes: value('fleet.vehicle_between_job_buffer_minutes'),
+    driverBufferMinutes: value('fleet.driver_between_job_buffer_minutes'),
+  };
 }
 
 export class CompanyNotFoundError extends Error {
@@ -102,6 +141,7 @@ const writeSettingSchema = z.object({
 /** Only a global Super Administrator can write policy until per-setting grants are approved. */
 export async function setCompanySetting(input: unknown) {
   const data = writeSettingSchema.parse(input);
+  const value = validateRegisteredValue(data.key, data.value);
   const prisma = getPrisma();
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('richie_tms_super_admin_roles'))`;
@@ -119,12 +159,12 @@ export async function setCompanySetting(input: unknown) {
       create: {
         companyId: data.companyId,
         key: data.key,
-        value: data.value as Prisma.InputJsonValue,
+        value: value as Prisma.InputJsonValue,
         configured: true,
         updatedById: data.actorId,
       },
       update: {
-        value: data.value as Prisma.InputJsonValue,
+        value: value as Prisma.InputJsonValue,
         configured: true,
         updatedById: data.actorId,
       },

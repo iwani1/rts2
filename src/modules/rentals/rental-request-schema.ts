@@ -14,6 +14,7 @@ const rentalRequestFields = z.object({
   serviceDate: dateOnly,
   departureTime: timeOfDay,
   returnTime: timeOfDay,
+  returnDate: dateOnly.optional(),
   durationMinutes: positiveInteger,
   pickupLocation: optionalText(500),
   destination: optionalText(500),
@@ -46,6 +47,7 @@ export function missingRentalRequestSubmissionFields(input: {
   serviceDate: Date | null;
   departureTime: string | null;
   returnTime: string | null;
+  returnDate: Date | null;
   durationMinutes: number | null;
   pickupLocation: string | null;
   destination: string | null;
@@ -60,6 +62,14 @@ export function missingRentalRequestSubmissionFields(input: {
   if (!input.passengerCount) missingFields.push('passenger count');
   if (!input.requestSource) missingFields.push('request source');
   if (!input.returnTime && !input.durationMinutes) missingFields.push('return time or duration');
+  const serviceDate = input.serviceDate?.toISOString().slice(0, 10) ?? null;
+  const returnDate = input.returnDate?.toISOString().slice(0, 10) ?? null;
+  if (input.returnDate && !input.returnTime) missingFields.push('return time for return date');
+  if (serviceDate && returnDate && returnDate < serviceDate) missingFields.push('return date on or after service date');
+  if (input.returnTime && input.departureTime && input.returnTime < input.departureTime) {
+    if (!returnDate) missingFields.push('return date for overnight trip');
+    else if (!serviceDate || returnDate <= serviceDate) missingFields.push('return date after service date for overnight trip');
+  }
   return missingFields;
 }
 

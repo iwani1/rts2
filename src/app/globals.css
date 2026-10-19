@@ -38,6 +38,10 @@ h1 { margin: 0; color: var(--navy-950); font-size: clamp(28px, 4vw, 36px); line-
 button:disabled { opacity: .65; cursor: wait; }
 .form-error { margin: 4px 0; color: var(--danger); font-size: 14px; }
 .form-help { margin: 8px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.account-profile-details { display: grid; gap: 0; margin: 24px 0; }
+.account-profile-details > div { display: grid; grid-template-columns: minmax(110px, .7fr) minmax(0, 1.3fr); gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.account-profile-details dt { color: var(--navy-800); font-size: 13px; font-weight: 700; }
+.account-profile-details dd { min-width: 0; margin: 0; overflow-wrap: anywhere; color: var(--ink); font-size: 14px; }
 .app-shell { min-height: 100vh; }
 .app-header { display: flex; align-items: center; justify-content: space-between; min-height: 68px; padding: 0 clamp(20px, 5vw, 64px); background: var(--navy-950); color: white; }
 .wordmark { color: white; font-size: 20px; font-weight: 800; letter-spacing: -.06em; text-decoration: none; }
@@ -75,6 +79,13 @@ button:disabled { opacity: .65; cursor: wait; }
 .settings-status-panel { display: grid; gap: 14px; }
 .settings-status-panel h2 { margin: 0; color: var(--navy-950); font-size: 20px; }
 .settings-status-table { min-width: 1100px; }
+.resource-buffer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.resource-buffer-form { display: grid; align-content: start; gap: 10px; padding: 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.resource-buffer-form h3, .resource-buffer-form p { margin: 0; }
+.resource-buffer-form label { color: var(--navy-800); font-size: 13px; font-weight: 650; }
+.resource-buffer-form input, .resource-buffer-form textarea { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid #b9c5cb; border-radius: 6px; background: #fff; color: var(--ink); font: inherit; }
+.resource-buffer-form textarea { min-height: 78px; resize: vertical; }
+.resource-buffer-form input:focus, .resource-buffer-form textarea:focus { border-color: var(--focus); outline: 3px solid #087c7825; }
 .setting-status { display: inline-flex; min-height: 26px; align-items: center; padding: 4px 8px; border-radius: 999px; background: #f8e8e8; color: #812525; font-size: 12px; font-weight: 700; }
 .setting-status-configured { background: var(--teal-50); color: #0d665e; }
 .admin-user-search { margin: 0 0 18px auto; }
@@ -92,12 +103,14 @@ button:disabled { opacity: .65; cursor: wait; }
 @media (max-width: 600px) {
   .login-shell { background: var(--paper); align-items: start; padding: 32px 16px; }
   .login-panel { padding: 28px 22px; }
+  .account-profile-details > div { grid-template-columns: 1fr; gap: 4px; }
   .app-header { min-height: 60px; padding: 10px 16px; gap: 10px; }
   .account-area { gap: 10px; flex-wrap: wrap; justify-content: flex-end; font-size: 12px; }
   .button-secondary { min-height: 40px; padding: 8px 11px; }
   .audit-content { width: min(100% - 32px, 1440px); margin-top: 28px; }
   .audit-heading { align-items: start; flex-direction: column; gap: 16px; }
   .audit-pagination { flex-wrap: wrap; }
+  .resource-buffer-grid { grid-template-columns: 1fr; }
   .audit-pagination .muted { order: 1; width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -111,6 +124,11 @@ button:disabled { opacity: .65; cursor: wait; }
 .fleet-page-header nav a, .fleet-page-header nav span { color: #e1eeee; text-underline-offset: 4px; }
 .fleet-page-header nav span[aria-current="page"] { color: #fff; font-weight: 700; }
 .fleet-content { width: min(100% - 40px, 1440px); margin: 34px auto 72px; display: grid; gap: 24px; }
+.fleet-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 360px)); gap: 14px; }
+.fleet-summary-card { padding: 22px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.fleet-summary-card h2 { margin: 0; color: var(--navy-800); font-size: 14px; }
+.fleet-summary-value { margin: 12px 0 0; color: var(--navy-950); font-size: 42px; font-weight: 750; line-height: 1; }
+.fleet-summary-card .muted { margin: 10px 0 0; font-size: 13px; }
 .fleet-title-row, .fleet-list-heading, .vehicle-editor-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
 .fleet-title-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; }
 .fleet-title-row .muted { margin: 10px 0 0; }

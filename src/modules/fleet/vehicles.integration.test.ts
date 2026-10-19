@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getPrisma } from '@/server/prisma';
 import { assignRole, PermissionDeniedError } from '@/modules/auth/permissions';
 import {
-  archiveVehicle, createVehicle, getVehicle, importVehiclesFromCsv, InvalidUsualDriverError, listVehicles,
+  archiveVehicle, createVehicle, getVehicle, getVehicleRegisterSummary, importVehiclesFromCsv, InvalidUsualDriverError, listVehicles,
   previewVehicleImport, updateVehicle, VehicleImportValidationError,
 } from './vehicles';
 import { vehicleImportHeaders } from './vehicle-import-constants';
@@ -68,6 +68,19 @@ describe('vehicle register with PostgreSQL persistence', () => {
   it('enforces company registration uniqueness and blocks cross-company lookup', async () => {
     await expect(createVehicle(vehicleInput(), fleetManagerId, companyId)).rejects.toMatchObject({ code: 'P2002' });
     await expect(listVehicles({ actorId: fleetManagerId, companyId: otherCompanyId })).rejects.toBeInstanceOf(PermissionDeniedError);
+  });
+
+  it('summarizes only the company’s non-archived vehicle records by supplied category', async () => {
+    const category = `Summary category ${randomUUID()}`;
+    await createVehicle(vehicleInput({ registrationNumber: `SUM-${randomUUID().slice(0, 8)}`, category }), fleetManagerId, companyId);
+    await createVehicle(vehicleInput({ registrationNumber: `SUM-${randomUUID().slice(0, 8)}`, category }), fleetManagerId, companyId);
+    const archived = await createVehicle(vehicleInput({ registrationNumber: `SUM-${randomUUID().slice(0, 8)}`, category }), fleetManagerId, companyId);
+    await archiveVehicle({ actorId: fleetManagerId, companyId, vehicleId: archived.id, reason: 'Archive summary test record' });
+    await createVehicle(vehicleInput({ registrationNumber: `SUM-${randomUUID().slice(0, 8)}`, category }), superAdminId, otherCompanyId);
+
+    const summary = await getVehicleRegisterSummary({ actorId: fleetManagerId, companyId });
+    expect(summary.byCategory.find((entry) => entry.category === category)?.count).toBe(2);
+    expect(summary.registeredVehicleCount).toBe(await prisma.vehicle.count({ where: { companyId, archivedAt: null } }));
   });
 
   it('stores a same-company usual-driver link and keeps it out of dispatcher vehicle projections', async () => {
