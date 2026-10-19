@@ -180,3 +180,23 @@
 - **Source:** Recommended safe configuration structure under the owner's standing instruction to analyze and accept defensible recommendations, 2026-10-19.
 - **Reason:** Integer pesewas avoid floating-point currency storage; named, typed lines give future quotation logic a validated basis without inventing commercial terms.
 - **Limits:** This is configuration only. It does not calculate totals, define distance/time charging interactions, taxes, deposits, discounts, rounding, quote issuance, or commercial prices. Values remain unset pending operator entry; no booking or customer-facing quote behavior is enabled.
+
+## D-036 — Tax and levy configuration structure
+- **Decision:** Represent accountant-approved tax and levy lines as a company-scoped list of unique uppercase code, label, and integer rate in basis points (100 basis points equals 1 percentage point). Allow zero only as an explicitly entered rate. Super Administrator changes require an audit reason. No lines or rates are seeded; an empty list clears the configuration and keeps tax policy unset.
+- **Source:** Recommended as a data-only foundation under the owner's standing instruction; 2026-10-19.
+- **Limits:** This does not assert that a particular tax applies, calculate tax amounts, define taxable base, compounding, exemptions, ordering, rounding, or VAT registration status. Accountant confirmation is required before entering values, and no quote or invoice arithmetic is enabled.
+
+## D-037 — Deposit-policy configuration structure
+- **Decision:** Support an explicitly selected deposit policy: fixed positive amount in GHS pesewas, positive percentage in basis points, or an explicit `NOT_REQUIRED` choice. For amount/percentage policies, record whether the deposit is due before confirmation or before departure. Super Administrator updates require an audit reason; no choice or amount is prefilled.
+- **Source:** Recommended as a typed, unset-by-default policy structure from the brief's amount-or-percentage and timing questions; 2026-10-19.
+- **Limits:** This records policy inputs only. It does not calculate a deposit, authorize booking confirmation, accept or verify payment, define what evidence constitutes receipt, or enable refunds. A configured `NOT_REQUIRED` choice is an explicit management decision, not a default.
+
+## D-038 — Deterministic rental pricing-line arithmetic
+- **Decision:** Keep monetary rates in integer GHS pesewas. A per-trip line applies once. Per-kilometre quantities are whole metres divided by 1,000; per-hour and per-day quantities are whole minutes divided by 60 and 1,440 respectively, so day units are elapsed 24-hour periods rather than calendar dates. Prorate partial units and round each line once, half-up, to the nearest pesewa using exact integer arithmetic. Compute lines independently; this decision does not compound or apply taxes.
+- **Source:** Recommended to make the four D-035 rate units deterministic without floating-point currency arithmetic; accepted under the owner's standing instruction, 2026-10-19.
+- **Limits:** This is a pure helper only. It accepts a supplied distance/duration and does not select a model, establish where the values come from, derive a trip interval, issue or persist quotations, or enable any rental status transition. Distance/time source policy, zero-distance treatment, quote approval and tax arithmetic remain unresolved; missing or non-positive quantities fail closed.
+
+## D-039 — Requested duration as the time-priced quotation quantity
+- **Decision:** For future time-priced quote lines, use an explicitly entered positive duration in whole minutes when no scheduled return is present. When a scheduled return is present, derive elapsed minutes from the saved service date, departure time, and stored return date/time; an overnight return still requires the explicit D-030 date. If both duration and scheduled return are saved, require them to agree exactly or block the time-priced line until corrected. Never infer a return date or use actual trip time for the initial quote.
+- **Source:** Recommended fail-closed quantity-resolution rule from the existing D-022/D-030 request model; accepted under the owner's standing instruction, 2026-10-19.
+- **Limits:** Implemented as a pure duration resolver only. It does not update a request, create a quote, choose a rate, source/verify distance, or authorize quotation or status transitions.

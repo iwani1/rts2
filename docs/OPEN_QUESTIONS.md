@@ -10,8 +10,8 @@ No business defaults have been invented. Items marked **Phase 1A blocker** preve
 - Website service descriptions and authorization/technical method for embedding rental enquiry.
 
 ## Explicit mandatory pricing and policy questions (Phase 1A blockers)
-- Rental pricing basis and configured pricing models/line items; distance/time source and rounding.
-- Deposit amount or percentage, payment requirement and when funds are considered received.
+- Rental pricing basis and configured pricing models/line items; where operator-entered/verified distance comes from and which role records/verifies it. D-038 resolves arithmetic units/rounding; D-039 resolves only the requested-duration source and consistency rule.
+- Deposit amount or percentage and payment requirement; D-037 exposes an explicit amount/percentage/no-deposit policy with a configurable due stage, but actual values, payment-evidence rules and refund treatment remain undecided.
 - Quotation validity duration remains unset; D-034 provides a positive-whole-days setting form but no default. Quote extension authority and process remain unresolved.
 - Cancellation windows, fees, refund rules and resource-release timing by request/booking state.
 - Are drivers always included? When can customer request self-drive, if ever?
@@ -26,7 +26,7 @@ No business defaults have been invented. Items marked **Phase 1A blocker** preve
 - Boarding-code policy, validity and single-use requirement.
 - Are bookings allowed under expired or suspended contracts?
 - Rental quotation approval separation, customer acceptance evidence, and invoice due/payment terms.
-- **Pricing policies still require operator decisions:** actual named rental lines/rates; distance/time calculation and interaction with the selected basis; applicable taxes/levies and rates; deposits, discounts, rounding, and approval authority. D-035 only defines an empty-by-default typed configuration structure; no commercial values are inferred.
+- **Pricing policies still require operator decisions:** actual named rental lines/rates; distance/time calculation and interaction with the selected basis; applicable taxes/levies and rates; deposits, discounts, rounding, and approval authority. D-035/D-036/D-037 only define empty-by-default typed configuration structures; no commercial values are inferred. Tax applicability, taxable base, exemptions, compounding, order, and rounding remain unapproved.
 
 ## Phase 1A authentication/authorization blockers
 - **Resolved 2026-10-18:** owner approved the `PERMISSIONS.md` matrix. First Super Administrator will use the one-time audited local CLI bootstrap; public self-registration stays disabled.

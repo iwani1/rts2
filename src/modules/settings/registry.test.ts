@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ getPrisma: vi.fn() }));
 vi.mock('@/server/prisma', () => ({ getPrisma: mocks.getPrisma }));
 
-import { CompanyNotFoundError, getCompanyQuoteValidityDays, getCompanyRentalPricingModels, listCompanySettingStatus, requireCompanySetting, setCompanySetting, settingRegistry } from './registry';
+import { CompanyNotFoundError, getCompanyQuoteValidityDays, getCompanyRentalPricingModels, getCompanyTaxLines, getCompanyDepositPolicy, listCompanySettingStatus, requireCompanySetting, setCompanySetting, settingRegistry } from './registry';
 
 function mockTransaction({ admin = true, company = true }: { admin?: boolean; company?: boolean } = {}) {
   const tx = {
@@ -90,6 +90,52 @@ describe('company settings registry', () => {
     await expect(getCompanyRentalPricingModels('company-a')).resolves.toEqual(models);
   });
 
+  it('reads an explicitly selected no-deposit policy as configured', async () => {
+    mocks.getPrisma.mockReturnValue({
+      company: { findUnique: vi.fn().mockResolvedValue({ id: 'company-a' }) },
+      setting: { findUnique: vi.fn().mockResolvedValue({ configured: true, value: { kind: 'NOT_REQUIRED' } }) },
+    });
+    await expect(getCompanyDepositPolicy('company-a')).resolves.toEqual({ kind: 'NOT_REQUIRED' });
+  });
+
+  it('rejects incomplete or invalid deposit policies before any database write', async () => {
+    mockTransaction();
+    const invalid = [
+      { kind: 'FIXED_AMOUNT', amountPesewas: 100, collectionStage: 'BEFORE_DEPARTURE', extra: true },
+      { kind: 'FIXED_AMOUNT', amountPesewas: 0, collectionStage: 'BEFORE_DEPARTURE' },
+      { kind: 'PERCENTAGE', rateBasisPoints: 250, collectionStage: 'UNDEFINED_STAGE' },
+      { kind: 'PERCENTAGE', rateBasisPoints: 250 },
+      { kind: 'UNKNOWN' },
+    ];
+    for (const value of invalid) {
+      await expect(setCompanySetting({ actorId: 'admin-user', companyId: 'company-a', key: 'rental.deposit_policy', value, reason: 'Owner approved explicit deposit rule' })).rejects.toThrow();
+    }
+    expect(mocks.getPrisma).not.toHaveBeenCalled();
+  });
+
+  it('reads accountant-entered tax lines without inventing a rate or calculation rule', async () => {
+    const lines = [{ code: 'VAT', label: 'Accountant-approved VAT', rateBasisPoints: 1500 }];
+    mocks.getPrisma.mockReturnValue({
+      company: { findUnique: vi.fn().mockResolvedValue({ id: 'company-a' }) },
+      setting: { findUnique: vi.fn().mockResolvedValue({ configured: true, value: lines }) },
+    });
+    await expect(getCompanyTaxLines('company-a')).resolves.toEqual(lines);
+  });
+
+  it('rejects malformed tax lines before any database write', async () => {
+    mockTransaction();
+    const base = { code: 'LEVY', label: 'Approved levy', rateBasisPoints: 250 };
+    for (const value of [
+      [base, base],
+      [{ ...base, rateBasisPoints: -1 }],
+      [{ ...base, rateBasisPoints: 1.5 }],
+      [{ ...base, extra: true }],
+    ]) {
+      await expect(setCompanySetting({ actorId: 'admin-user', companyId: 'company-a', key: 'finance.tax_lines', value, reason: 'Accountant approved levy line' })).rejects.toThrow();
+    }
+    expect(mocks.getPrisma).not.toHaveBeenCalled();
+  });
+
   it('treats a deliberately cleared pricing-model list as unconfigured', async () => {
     mocks.getPrisma.mockReturnValue({
       setting: { findUnique: vi.fn().mockResolvedValue({ configured: true, value: [] }) },
@@ -170,7 +216,7 @@ describe('company settings registry', () => {
       actorId: 'admin-user',
       companyId: 'company-a',
       key: 'finance.tax_lines',
-      value: [{ code: 'owner-entered-value' }],
+      value: [{ code: 'OWNER_VALUE', label: 'Owner entered value', rateBasisPoints: 0 }],
       reason: 'Owner confirmed tax configuration',
     });
     expect(transaction).toHaveBeenCalledOnce();

@@ -38,6 +38,28 @@ const resourceBufferMinutesSchema = z.number().int().nonnegative().safe();
 const quoteValidityDaysSchema = z.number().int().positive().safe();
 const quoteValidityKey: SettingKey = 'rental.quote_validity';
 const pricingModelsKey: SettingKey = 'rental.pricing_models';
+const taxLinesKey: SettingKey = 'finance.tax_lines';
+const depositPolicyKey: SettingKey = 'rental.deposit_policy';
+const depositStageSchema = z.enum(['BEFORE_CONFIRMATION', 'BEFORE_DEPARTURE']);
+const depositPolicySchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('NOT_REQUIRED') }).strict(),
+  z.object({ kind: z.literal('FIXED_AMOUNT'), amountPesewas: z.number().int().positive().safe(), collectionStage: depositStageSchema }).strict(),
+  z.object({ kind: z.literal('PERCENTAGE'), rateBasisPoints: z.number().int().positive().safe(), collectionStage: depositStageSchema }).strict(),
+]);
+export type DepositPolicy = z.infer<typeof depositPolicySchema>;
+const taxLineSchema = z.object({
+  code: z.string().trim().regex(/^[A-Z0-9_-]{2,32}$/),
+  label: z.string().trim().min(1).max(100),
+  rateBasisPoints: z.number().int().nonnegative().safe(),
+}).strict();
+export const taxLinesSchema = z.array(taxLineSchema).max(50).superRefine((lines, context) => {
+  const seen = new Set<string>();
+  lines.forEach((line, index) => {
+    if (seen.has(line.code)) context.addIssue({ code: z.ZodIssueCode.custom, path: [index, 'code'], message: 'Tax-line codes must be unique.' });
+    seen.add(line.code);
+  });
+});
+export type TaxLine = z.infer<typeof taxLineSchema>;
 const rentalPricingModelSchema = z.object({
   code: z.string().trim().regex(/^[A-Z0-9_-]{2,32}$/),
   label: z.string().trim().min(1).max(100),
@@ -62,6 +84,8 @@ function validateRegisteredValue(key: SettingKey, value: SettingJsonValue): Sett
   if (resourceBufferKeys.has(key)) return resourceBufferMinutesSchema.parse(value);
   if (key === quoteValidityKey) return quoteValidityDaysSchema.parse(value);
   if (key === pricingModelsKey) return rentalPricingModelsSchema.parse(value) as SettingJsonValue;
+  if (key === taxLinesKey) return taxLinesSchema.parse(value) as SettingJsonValue;
+  if (key === depositPolicyKey) return depositPolicySchema.parse(value) as SettingJsonValue;
   return value;
 }
 
@@ -96,6 +120,8 @@ export async function listCompanySettingStatus(companyIdInput: string) {
         if (resourceBufferKeys.has(definition.key)) resourceBufferMinutesSchema.parse(row.value);
         if (definition.key === quoteValidityKey) quoteValidityDaysSchema.parse(row.value);
         if (definition.key === pricingModelsKey && rentalPricingModelsSchema.parse(row.value).length === 0) configured = false;
+        if (definition.key === taxLinesKey && taxLinesSchema.parse(row.value).length === 0) configured = false;
+        if (definition.key === depositPolicyKey) depositPolicySchema.parse(row.value);
       } catch { configured = false; }
     }
     return {
@@ -125,6 +151,12 @@ export async function requireCompanySetting(companyIdInput: string, keyInput: st
     if (models.length === 0) throw new SettingNotConfiguredError(key);
     return models;
   }
+  if (key === taxLinesKey) {
+    const lines = taxLinesSchema.parse(row.value);
+    if (lines.length === 0) throw new SettingNotConfiguredError(key);
+    return lines;
+  }
+  if (key === depositPolicyKey) return depositPolicySchema.parse(row.value);
   return row.value;
 }
 
@@ -155,6 +187,35 @@ export async function getCompanyRentalPricingModels(companyIdInput: string) {
   if (!row?.configured || row.value === null) return null;
   const models = rentalPricingModelsSchema.parse(row.value);
   return models.length === 0 ? null : models;
+}
+
+/** Returns the explicitly entered deposit choice, including an explicit no-deposit policy. */
+export async function getCompanyDepositPolicy(companyIdInput: string) {
+  const companyId = companyIdSchema.parse(companyIdInput);
+  const prisma = getPrisma();
+  const company = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true } });
+  if (!company) throw new CompanyNotFoundError();
+  const row = await prisma.setting.findUnique({
+    where: { companyId_key: { companyId, key: depositPolicyKey } },
+    select: { value: true, configured: true },
+  });
+  if (!row?.configured || row.value === null) return null;
+  return depositPolicySchema.parse(row.value);
+}
+
+/** Returns only company-entered tax lines; an empty list remains unconfigured. */
+export async function getCompanyTaxLines(companyIdInput: string) {
+  const companyId = companyIdSchema.parse(companyIdInput);
+  const prisma = getPrisma();
+  const company = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true } });
+  if (!company) throw new CompanyNotFoundError();
+  const row = await prisma.setting.findUnique({
+    where: { companyId_key: { companyId, key: taxLinesKey } },
+    select: { value: true, configured: true },
+  });
+  if (!row?.configured || row.value === null) return null;
+  const lines = taxLinesSchema.parse(row.value);
+  return lines.length === 0 ? null : lines;
 }
 
 /** Returns only the two typed buffer values needed by their dedicated admin form. */

@@ -9,6 +9,8 @@ import { SettingsRegistryStatus } from './settings-registry-status';
 import { ResourceBuffersEditor } from './resource-buffers-editor';
 import { QuoteValidityEditor } from './quote-validity-editor';
 import { PricingModelsEditor } from './pricing-models-editor';
+import { TaxLinesEditor } from './tax-lines-editor';
+import { DepositPolicyEditor } from './deposit-policy-editor';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,10 +39,10 @@ export default async function AdminSettingsPage() {
         <h1 id="settings-status-title">Policy settings status</h1>
         <p className="muted">Review which required policies are configured and which features they block. Values are not displayed here.</p>
       </div></div>
-      <p className="fleet-limits">General policy values remain read-only here. Typed RNT-03 turnaround buffers and RNT-04 pricing models and quotation validity have dedicated editors; each requires explicit operator-entered values and an audit reason, with no business values prefilled.</p>
+      <p className="fleet-limits">General policy values remain read-only here. Typed RNT-03 turnaround buffers and RNT-04/FIN-01 pricing models, tax lines, quotation validity and deposit policy have dedicated editors; each requires explicit operator-entered values and an audit reason, with no business values prefilled.</p>
       {companies.length !== 1
         ? <div className="audit-empty" role="status"><h2>Settings status unavailable</h2><p>Exactly one active operator company is required for this installation. No company was selected automatically.</p></div>
-        : <><SettingsRegistryStatus companyId={companies[0].id} companyName={companies[0].name} /><QuoteValidityEditor companyId={companies[0].id} /><PricingModelsEditor companyId={companies[0].id} /><ResourceBuffersEditor companyId={companies[0].id} /></>}
+        : <><SettingsRegistryStatus companyId={companies[0].id} companyName={companies[0].name} /><QuoteValidityEditor companyId={companies[0].id} /><PricingModelsEditor companyId={companies[0].id} /><TaxLinesEditor companyId={companies[0].id} /><DepositPolicyEditor companyId={companies[0].id} /><ResourceBuffersEditor companyId={companies[0].id} /></>}
     </section>
   </main>;
 }
