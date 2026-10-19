@@ -135,9 +135,12 @@ button:disabled { opacity: .65; cursor: wait; }
 .usual-driver-field { min-width: 0; margin: 0; padding: 0; border: 0; }
 .usual-driver-field legend { margin-bottom: 6px; color: var(--navy-800); font-size: 13px; font-weight: 650; }
 .fleet-search > div { display: flex; gap: 8px; }
-.fleet-search input, .vehicle-form input, .vehicle-form select, .vehicle-form textarea, .vehicle-archive input, .usual-driver-picker input { min-width: 0; min-height: 42px; padding: 9px 11px; border: 1px solid #b9c5cb; border-radius: 6px; background: #fff; color: var(--ink); font: inherit; font-weight: 400; }
+.fleet-search input, .fleet-search select, .vehicle-form input, .vehicle-form select, .vehicle-form textarea, .vehicle-archive input, .usual-driver-picker input { min-width: 0; min-height: 42px; padding: 9px 11px; border: 1px solid #b9c5cb; border-radius: 6px; background: #fff; color: var(--ink); font: inherit; font-weight: 400; }
 .fleet-search input { flex: 1; }
-.vehicle-form input:focus, .vehicle-form select:focus, .vehicle-form textarea:focus, .vehicle-archive input:focus, .fleet-search input:focus, .usual-driver-picker input:focus { border-color: var(--focus); outline: 3px solid #087c7825; }
+.vehicle-document-filters > .vehicle-document-filter-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; gap: 8px; }
+.vehicle-document-filter-controls select:focus-visible { border-color: var(--focus); outline: 3px solid #087c7825; }
+.vehicle-document-filter-controls button { min-height: 42px; white-space: nowrap; }
+.vehicle-form input:focus, .vehicle-form select:focus, .vehicle-form textarea:focus, .vehicle-archive input:focus, .fleet-search input:focus, .fleet-search select:focus, .usual-driver-picker input:focus { border-color: var(--focus); outline: 3px solid #087c7825; }
 .vehicle-table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
 .vehicle-table-wrap:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 .vehicle-table { width: 100%; min-width: 820px; border-collapse: collapse; text-align: left; font-size: 13px; }
@@ -207,6 +210,8 @@ button:disabled { opacity: .65; cursor: wait; }
   .fleet-content { width: min(100% - 32px, 1440px); margin-top: 24px; }
   .fleet-title-row, .vehicle-editor-heading { align-items: start; flex-direction: column; }
   .vehicle-form-grid { grid-template-columns: 1fr; }
+  .vehicle-document-filters > .vehicle-document-filter-controls { grid-template-columns: 1fr; }
+  .vehicle-document-filter-controls button { justify-self: start; }
   .fleet-pagination { flex-wrap: wrap; }
 }
 .customer-history-list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }

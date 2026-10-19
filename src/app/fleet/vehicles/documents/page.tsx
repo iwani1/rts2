@@ -72,15 +72,17 @@ export default async function VehicleDocumentsPage({ searchParams }: PageProps) 
             <h2 id="vehicle-documents-title">Recorded dates</h2>
             <p className="muted">Dates are entered manually. This view does not classify expiry status or send reminders.</p>
           </div>
-          <form className="fleet-search" method="get">
-            <label htmlFor="document-vehicle-search">Search vehicles</label>
-            <div>
-              <input id="document-vehicle-search" type="search" name="q" maxLength={100} defaultValue={params.q ?? ''} placeholder="Registration, make, model, category" />
-              <label htmlFor="document-type-filter">Document type</label>
-              <select id="document-type-filter" name="type" defaultValue={selectedDocumentType ?? ''}>
-                <option value="">All document types</option>
-                {vehicleDocumentTypes.map((documentType) => <option key={documentType} value={documentType}>{documentType}</option>)}
-              </select>
+          <form className="fleet-search vehicle-document-filters" method="get">
+            <div className="vehicle-document-filter-controls">
+              <label htmlFor="document-vehicle-search">Search vehicles
+                <input id="document-vehicle-search" type="search" name="q" maxLength={100} defaultValue={params.q ?? ''} placeholder="Registration, make, model, category" />
+              </label>
+              <label htmlFor="document-type-filter">Document type
+                <select id="document-type-filter" name="type" defaultValue={selectedDocumentType ?? ''}>
+                  <option value="">All document types</option>
+                  {vehicleDocumentTypes.map((documentType) => <option key={documentType} value={documentType}>{documentType}</option>)}
+                </select>
+              </label>
               <button className="button-link" type="submit">Apply filters</button>
             </div>
           </form>

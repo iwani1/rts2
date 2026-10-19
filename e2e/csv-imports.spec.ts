@@ -75,7 +75,9 @@ test('authorized staff can import records, review vehicle document dates, edit c
   await expect(page.getByLabel('Vehicle CSV file')).toHaveValue('');
   await expect(page.getByRole('button', { name: 'Preview CSV' })).toBeDisabled();
 
-  await page.goto('/fleet/vehicles/documents');
+  await page.goto('/fleet/vehicles');
+  await page.getByRole('link', { name: 'Document dates' }).click();
+  await expect(page).toHaveURL('/fleet/vehicles/documents');
   await expect(page.getByRole('heading', { name: 'Vehicle document dates' })).toBeVisible();
   const vehicleDocumentRows = page.getByRole('row').filter({ hasText: `E2E-${suffix}` });
   await expect(vehicleDocumentRows).toHaveCount(3);
