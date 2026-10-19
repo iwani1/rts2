@@ -1,4 +1,4 @@
-CREATE TABLE "Customer" (
+CREATE TABLE IF NOT EXISTS "Customer" (
   "id" TEXT NOT NULL,
   "companyId" TEXT NOT NULL,
   "reference" TEXT,
@@ -18,14 +18,12 @@ CREATE TABLE "Customer" (
   CONSTRAINT "Customer_displayName_nonempty" CHECK (length(trim("displayName")) > 0),
   CONSTRAINT "Customer_reference_nonempty" CHECK ("reference" IS NULL OR length(trim("reference")) > 0)
 );
-CREATE UNIQUE INDEX "Customer_companyId_reference_key" ON "Customer"("companyId", "reference");
-CREATE INDEX "Customer_companyId_archivedAt_displayName_idx" ON "Customer"("companyId", "archivedAt", "displayName");
-CREATE INDEX "Customer_companyId_customerType_idx" ON "Customer"("companyId", "customerType");
+CREATE UNIQUE INDEX IF NOT EXISTS "Customer_companyId_reference_key" ON "Customer"("companyId", "reference");
+CREATE INDEX IF NOT EXISTS "Customer_companyId_archivedAt_displayName_idx" ON "Customer"("companyId", "archivedAt", "displayName");
+CREATE INDEX IF NOT EXISTS "Customer_companyId_customerType_idx" ON "Customer"("companyId", "customerType");
 
--- Add customer-specific grants to the approved role matrix.
+-- The base role catalog already seeds customer:manage for these four roles.
+-- Add only the Dispatcher enquiry-context grant that was approved with CUS-01.
 INSERT INTO "RolePermission" ("roleCode", "permission", "scope") VALUES
-  ('SUPER_ADMIN', 'customer:manage', 'GLOBAL'),
-  ('OPS_MANAGER', 'customer:manage', 'COMPANY'),
-  ('DISPATCHER', 'customer:manage', 'ENQUIRY_CONTEXT'),
-  ('RENTAL_CUSTOMER', 'customer:manage', 'OWN_PROFILE'),
-  ('FINANCE_OFFICER', 'customer:manage', 'BILLING_CONTEXT');
+  ('DISPATCHER', 'customer:manage', 'ENQUIRY_CONTEXT')
+ON CONFLICT ("roleCode", "permission", "scope") DO NOTHING;
