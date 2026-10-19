@@ -87,6 +87,12 @@ test('authorized staff can import records, review vehicle document dates, edit c
   await page.getByLabel('Document type').selectOption('Insurance');
   await page.getByRole('button', { name: 'Apply filters' }).click();
   await expect(page.getByRole('row').filter({ hasText: `E2E-${suffix}` })).toHaveCount(1);
+  await page.getByLabel('Search vehicles').fill(`no-match-${suffix}`);
+  await page.getByRole('button', { name: 'Apply filters' }).click();
+  await expect(page.getByRole('heading', { name: 'No vehicles found' })).toBeVisible();
+  await page.getByRole('link', { name: 'Clear filters' }).click();
+  await expect(page).toHaveURL('/fleet/vehicles/documents');
+  await expect(page.getByRole('row').filter({ hasText: `E2E-${suffix}` })).toHaveCount(3);
 
   await page.goto('/fleet/drivers/import');
   const driverCsv = csv(
