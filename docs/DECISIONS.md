@@ -116,3 +116,15 @@
 - **Source:** Owner selected the recommended option on 2026-10-19.
 - **Reason:** Prevent partially imported customer/fleet master data and ambiguous retries while preserving row-level correction details.
 - **Limits:** This determines batch commit behavior only. It does not approve field defaults, generated identifiers, duplicate merging, overwriting existing records, or any unapproved customer/vehicle/driver policies.
+
+
+## D-025 — Warning-only possible duplicate names in driver imports
+- **Decision:** Driver CSV preview warns when a name matches another row in the same CSV or an existing company driver record. These are advisory possible matches only; names do not prove identity. After operator confirmation, every valid row is imported as a separate new record. Do not automatically skip, merge, update, block, or deduplicate any row based on a name match.
+- **Source:** Owner approved this policy on 2026-10-19.
+- **Limits:** This adds no unique driver identifier, identity verification, merge/update pathway, or broader duplicate policy for other record types. Matching is case-insensitive and ignores leading, trailing, and repeated whitespace; all warnings remain non-blocking and do not change `canImport` or all-or-nothing validation of genuinely invalid rows.
+
+## D-026 — Defer RNT-03 until availability rules are approved
+- **Decision:** Do not implement rental availability or resource-conflict prevention until the owner defines which request/reservation/assignment states reserve vehicles and drivers, the applicable conflict horizon, and any between-job buffer. D-023 remains limited to Draft → Submitted; do not infer that Draft or Submitted reserves resources.
+- **Source:** Owner approved this recommendation on 2026-10-19.
+- **Reason:** An assumed rule could produce false availability, unnecessarily block a resource, or permit a double-booking.
+- **Limits:** This defers RNT-03 behavior only. It does not define the future reservation lifecycle or conflict policy and approves no later rental-request transition.

@@ -103,6 +103,33 @@ test('authorized staff can import CSV records, edit customer history, link a usu
   await expect(page.getByRole('status').filter({ hasText: 'Vehicle record saved.' })).toBeVisible();
   await expect(importedVehicle.getByText(driverName)).toBeVisible();
 
+  // Same-name match against the existing company driver is advisory, not an import blocker.
+  await page.goto('/fleet/drivers/import');
+  const repeatedDriverCsv = csv(
+    ['fullName', 'licenceClass', 'licenceExpiresAt', 'qualifications', 'availability', 'status'],
+    { fullName: driverName },
+  );
+  await page.getByLabel('Driver CSV file').setInputFiles({ name: 'same-name-driver.csv', mimeType: 'text/csv', buffer: Buffer.from(repeatedDriverCsv) });
+  await page.getByRole('button', { name: 'Preview CSV' }).click();
+  await expect(page.getByText(/Possible name match in an existing company driver record/)).toBeVisible();
+  await page.getByLabel('Reason for this import').fill('Import reviewed same-name browser-test driver');
+  await page.getByRole('button', { name: 'Import 1 driver' }).click();
+  await expect(page.getByRole('status').filter({ hasText: '1 driver record imported.' })).toBeVisible();
+
+  // Repeated names inside one CSV also warn, but both valid rows are imported separately.
+  await page.goto('/fleet/drivers/import');
+  const repeatedRowsCsv = [
+    'fullName,licenceClass,licenceExpiresAt,qualifications,availability,status',
+    `${driverName},,,,,`,
+    `${driverName},,,,,`,
+  ].join('\r\n');
+  await page.getByLabel('Driver CSV file').setInputFiles({ name: 'same-name-rows.csv', mimeType: 'text/csv', buffer: Buffer.from(repeatedRowsCsv) });
+  await page.getByRole('button', { name: 'Preview CSV' }).click();
+  await expect(page.getByText(/Possible name match in another row in this CSV/)).toHaveCount(2);
+  await page.getByLabel('Reason for this import').fill('Import reviewed same-name rows from browser test');
+  await page.getByRole('button', { name: 'Import all 2 drivers' }).click();
+  await expect(page.getByRole('status').filter({ hasText: '2 driver records imported.' })).toBeVisible();
+
   await page.goto('/');
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page).toHaveURL('/login');

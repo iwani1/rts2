@@ -7,22 +7,26 @@ const authSecret = process.env.AUTH_SECRET;
 const email = process.env.TMS_E2E_EMAIL;
 const password = process.env.TMS_E2E_PASSWORD;
 
-if (!databaseUrl || !authSecret || authSecret.length < 32 || !email || !password) {
-  throw new Error('Set DATABASE_URL, AUTH_SECRET (32+ characters), TMS_E2E_EMAIL, and TMS_E2E_PASSWORD in the local test environment.');
-}
+const isDiscoveryCommand = process.argv.includes('--list') || process.argv.includes('--help');
 
-const parsedDatabaseUrl = new URL(databaseUrl);
-if (!['localhost', '127.0.0.1', '::1'].includes(parsedDatabaseUrl.hostname)) {
-  throw new Error('Browser tests are restricted to a local PostgreSQL database.');
-}
-const databaseName = decodeURIComponent(parsedDatabaseUrl.pathname.slice(1));
-if (!databaseName.endsWith('_test')) {
-  throw new Error('Browser tests refuse to run unless DATABASE_URL names a disposable database ending in _test.');
-}
+if (!isDiscoveryCommand) {
+  if (!databaseUrl || !authSecret || authSecret.length < 32 || !email || !password) {
+    throw new Error('Set DATABASE_URL, AUTH_SECRET (32+ characters), TMS_E2E_EMAIL, and TMS_E2E_PASSWORD in the local test environment.');
+  }
 
-const parsedBaseURL = new URL(baseURL);
-if (!['localhost', '127.0.0.1', '::1'].includes(parsedBaseURL.hostname)) {
-  throw new Error('Browser tests are restricted to a local application URL.');
+  const parsedDatabaseUrl = new URL(databaseUrl);
+  if (!['localhost', '127.0.0.1', '::1'].includes(parsedDatabaseUrl.hostname)) {
+    throw new Error('Browser tests are restricted to a local PostgreSQL database.');
+  }
+  const databaseName = decodeURIComponent(parsedDatabaseUrl.pathname.slice(1));
+  if (!databaseName.endsWith('_test')) {
+    throw new Error('Browser tests refuse to run unless DATABASE_URL names a disposable database ending in _test.');
+  }
+
+  const parsedBaseURL = new URL(baseURL);
+  if (!['localhost', '127.0.0.1', '::1'].includes(parsedBaseURL.hostname)) {
+    throw new Error('Browser tests are restricted to a local application URL.');
+  }
 }
 
 export default defineConfig({
@@ -46,8 +50,8 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 120_000,
     env: {
-      DATABASE_URL: databaseUrl,
-      AUTH_SECRET: authSecret,
+      DATABASE_URL: databaseUrl ?? '',
+      AUTH_SECRET: authSecret ?? '',
       APP_URL: baseURL,
       NODE_ENV: 'development',
     },

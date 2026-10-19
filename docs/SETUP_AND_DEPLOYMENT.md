@@ -46,7 +46,7 @@ The Playwright tests use only a disposable local database. `e2e/rental-request-s
 2. Apply the test SQL migrations with `TMS_TEST_DATABASE_URL="$TEST_DATABASE_URL" npm run db:test:migrate`.
 3. In an interactive terminal, bootstrap a Super Administrator and the Richie Transport Services company against that same test DB. For both commands, set `DATABASE_URL="$TEST_DATABASE_URL"`, `APP_URL=http://localhost:3000`, and a local `AUTH_SECRET` of at least 32 characters. The admin CLI asks for the password with hidden terminal input. Set `TMS_E2E_EMAIL` to that account's email for the browser test.
 4. Install the browser once with `npx playwright install chromium`.
-5. Stop any existing app on port 3000. In the same shell, set `DATABASE_URL="$TEST_DATABASE_URL"`, `APP_URL=http://localhost:3000`, `AUTH_SECRET`, `TMS_E2E_EMAIL`, and `TMS_E2E_PASSWORD`, then run `npm run test:e2e`.
+5. Stop any existing app on port 3000. In the same shell, set `DATABASE_URL="$TEST_DATABASE_URL"`, `APP_URL=http://localhost:3000`, `AUTH_SECRET`, `TMS_E2E_EMAIL`, and `TMS_E2E_PASSWORD`, then run `npm run test:e2e`. To discover the test names without configuring or contacting a database, run `npm run test:e2e -- --list`.
 
 The Playwright configuration refuses non-local application/database hosts and database names without the `_test` suffix. It starts its own Next development server and will fail rather than reuse an already-running server. Never use live customer records or production credentials for this test.
 

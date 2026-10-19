@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { driverImportHeaders } from './driver-import-constants';
-import { parseDriverImportCsv } from './driver-import';
+import { createDriverImportNameWarnings, parseDriverImportCsv } from './driver-import';
 
 type DriverCsvField = typeof driverImportHeaders[number];
 const row = (values: Partial<Record<DriverCsvField, string>>) => driverImportHeaders.map((header) => values[header] ?? '').join(',');
@@ -31,5 +31,32 @@ describe('driver CSV preview parser', () => {
     const result = parseDriverImportCsv(`${header}\n\n${row({ fullName: 'Verified Driver Name' })}`);
     expect(result.rows).toHaveLength(2);
     expect(result.rows[0]).toMatchObject({ rowNumber: 2, errors: [expect.stringContaining('Expected 6 columns')] });
+  });
+});
+
+
+describe('driver import possible-duplicate warnings', () => {
+  it('matches case-insensitively with normalized whitespace and warns without implying identity', () => {
+    const warningsForName = createDriverImportNameWarnings(
+      [' Ama   Mensah ', 'ama mensah', 'Unrelated Driver'],
+      ['Kofi Anane'],
+    );
+
+    expect(warningsForName('AMA Mensah')).toEqual([
+      'Possible name match in another row in this CSV. This is advisory only; every valid row remains a separate record.',
+    ]);
+    expect(warningsForName('  kofi   anane ')).toEqual([
+      'Possible name match in an existing company driver record. This is advisory only; no record will be merged or updated.',
+    ]);
+    expect(warningsForName('Unique Driver')).toEqual([]);
+  });
+
+  it('shows both warning sources when the name matches a CSV row and an existing company record', () => {
+    const warningsForName = createDriverImportNameWarnings(
+      ['Amina Owusu', ' amina   owusu '],
+      ['AMINA OWUSU'],
+    );
+
+    expect(warningsForName('Amina Owusu')).toHaveLength(2);
   });
 });

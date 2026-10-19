@@ -110,6 +110,25 @@ describe('driver register with PostgreSQL persistence', () => {
     expect(audit?.summary).toEqual({ reason: 'Import verified driver roster rows', source: 'CSV_IMPORT', rowNumber: 2 });
   });
 
+  it('warns on possible same-name matches without blocking or deduplicating valid rows', async () => {
+    const existingName = `Existing Match ${randomUUID()}`;
+    const csvDuplicateName = `CSV Match ${randomUUID()}`;
+    await prisma.driver.create({ data: { companyId, fullName: existingName } });
+    const csv = `${driverImportHeaders.join(',')}\n${existingName.toUpperCase()},,,,,\n${csvDuplicateName},,,,,\n  ${csvDuplicateName.toLowerCase()}  ,,,,,\n`;
+    const preview = await previewDriverImport({ actorId: fleetManagerId, companyId, csv });
+    expect(preview).toMatchObject({ totalRows: 3, validRows: 3, invalidRows: 0, canImport: true });
+    expect(preview.rows[0]?.warnings.join(' ')).toContain('existing company driver record');
+    expect(preview.rows[1]?.warnings.join(' ')).toContain('another row in this CSV');
+    expect(preview.rows[2]?.warnings.join(' ')).toContain('another row in this CSV');
+
+    const result = await importDriversFromCsv({
+      actorId: fleetManagerId, companyId, csv, reason: 'Import roster after reviewing name warnings',
+    });
+    expect(result.importedCount).toBe(3);
+    expect(new Set(result.drivers.map((driver: { id: string }) => driver.id)).size).toBe(3);
+    expect(await prisma.driver.count({ where: { companyId, fullName: { in: [existingName.toUpperCase(), csvDuplicateName, csvDuplicateName.toLowerCase()] } } })).toBe(3);
+  });
+
   it('updates and archives through audited operations while retaining the driver record', async () => {
     const current = await prisma.driver.findFirstOrThrow({ where: { companyId } });
     const updated = await updateDriver(driverInput({

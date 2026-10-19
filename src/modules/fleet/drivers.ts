@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { PermissionDeniedError, resolvePermission } from '@/modules/auth/permissions';
 import { getPrisma } from '@/server/prisma';
 import { driverInputSchema, driverListQuerySchema, driverRequestSchema } from './driver-schema';
-import { parseDriverImportCsv } from './driver-import';
+import { createDriverImportNameWarnings, parseDriverImportCsv } from './driver-import';
 
 const companyIdSchema = z.string().trim().min(1).max(128);
 const driverIdSchema = z.string().trim().min(1).max(128);
@@ -29,7 +29,7 @@ export type DriverImportPreview = {
   fileErrors: string[];
   rows: Array<{
     rowNumber: number; fullName: string; licenceClass: string; licenceExpiresAt: string;
-    qualifications: string; availability: string; status: string; errors: string[];
+    qualifications: string; availability: string; status: string; errors: string[]; warnings: string[];
   }>;
 };
 
@@ -91,13 +91,15 @@ async function accessFor(actorId: string, companyId: string) {
   return { canManage };
 }
 
-function evaluateDriverImport(csv: string): { rows: ReturnType<typeof parseDriverImportCsv>['rows']; preview: DriverImportPreview } {
-  const parsed = parseDriverImportCsv(csv);
+function evaluateDriverImport(
+  parsed: ReturnType<typeof parseDriverImportCsv>, existingNames: readonly string[] = [],
+): { rows: ReturnType<typeof parseDriverImportCsv>['rows']; preview: DriverImportPreview } {
   if (parsed.fileErrors.length > 0) return {
     rows: parsed.rows,
     preview: { totalRows: 0, validRows: 0, invalidRows: 0, canImport: false, fileErrors: parsed.fileErrors, rows: [] },
   };
   const validRows = parsed.rows.filter((row) => row.errors.length === 0 && row.data).length;
+  const warningsForName = createDriverImportNameWarnings(parsed.rows.map(({ fullName }) => fullName), existingNames);
   return {
     rows: parsed.rows,
     preview: {
@@ -108,9 +110,21 @@ function evaluateDriverImport(csv: string): { rows: ReturnType<typeof parseDrive
       fileErrors: [],
       rows: parsed.rows.map(({ rowNumber, fullName, licenceClass, licenceExpiresAt, qualifications, availability, status, errors }) => ({
         rowNumber, fullName, licenceClass, licenceExpiresAt, qualifications, availability, status, errors,
+        warnings: warningsForName(fullName),
       })),
     },
   };
+}
+
+async function evaluateDriverImportForCompany(csv: string, companyId: string) {
+  const parsed = parseDriverImportCsv(csv);
+  if (parsed.fileErrors.length > 0 || !parsed.rows.some(({ fullName }) => fullName.trim().length > 0)) {
+    return evaluateDriverImport(parsed);
+  }
+  const existing: Array<{ fullName: string }> = await getPrisma().driver.findMany({
+    where: { companyId }, select: { fullName: true },
+  });
+  return evaluateDriverImport(parsed, existing.map(({ fullName }) => fullName));
 }
 
 export async function previewDriverImport(input: { actorId: string; companyId: string; csv: string }) {
@@ -120,7 +134,7 @@ export async function previewDriverImport(input: { actorId: string; companyId: s
     csv: z.string().min(1).max(2_000_000),
   }).strict().parse(input);
   await accessFor(data.actorId, data.companyId);
-  return evaluateDriverImport(data.csv).preview;
+  return (await evaluateDriverImportForCompany(data.csv, data.companyId)).preview;
 }
 
 export async function importDriversFromCsv(input: { actorId: string; companyId: string; csv: string; reason: string }) {
@@ -131,9 +145,9 @@ export async function importDriversFromCsv(input: { actorId: string; companyId: 
     reason: z.string().trim().min(8).max(500),
   }).strict().parse(input);
   await accessFor(data.actorId, data.companyId);
-  const evaluated = evaluateDriverImport(data.csv);
-  if (!evaluated.preview.canImport) throw new DriverImportValidationError(evaluated.preview);
+  const evaluated = await evaluateDriverImportForCompany(data.csv, data.companyId);
   const prisma = getPrisma();
+  if (!evaluated.preview.canImport) throw new DriverImportValidationError(evaluated.preview);
   return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const imported: Array<{ id: string; fullName: string }> = [];
     for (const row of evaluated.rows) {

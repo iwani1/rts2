@@ -17,6 +17,30 @@ export type DriverImportRow = {
   data?: DriverInput;
 };
 
+function normalizeDriverName(name: string) {
+  return name.normalize('NFC').trim().replace(/\s+/gu, ' ').toLowerCase();
+}
+
+export function createDriverImportNameWarnings(csvNames: readonly string[], existingNames: readonly string[]) {
+  const csvNameCounts = new Map<string, number>();
+  for (const name of csvNames) {
+    const key = normalizeDriverName(name);
+    if (key) csvNameCounts.set(key, (csvNameCounts.get(key) ?? 0) + 1);
+  }
+  const existingNameKeys = new Set(existingNames.map(normalizeDriverName));
+  return (fullName: string) => {
+    const key = normalizeDriverName(fullName);
+    return [
+      ...((csvNameCounts.get(key) ?? 0) > 1
+        ? ['Possible name match in another row in this CSV. This is advisory only; every valid row remains a separate record.']
+        : []),
+      ...(existingNameKeys.has(key)
+        ? ['Possible name match in an existing company driver record. This is advisory only; no record will be merged or updated.']
+        : []),
+    ];
+  };
+}
+
 export function parseDriverImportCsv(csv: string): { rows: DriverImportRow[]; fileErrors: string[] } {
   const parsed = parseFixedCsv(csv, driverImportHeaders, ['fullName']);
   if (parsed.fileErrors.length > 0) return { rows: [], fileErrors: parsed.fileErrors };

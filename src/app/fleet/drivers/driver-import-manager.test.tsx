@@ -12,7 +12,7 @@ beforeEach(() => router.refresh.mockReset());
 const csv = 'fullName,licenceClass,licenceExpiresAt,qualifications,availability,status\nAma Driver,B,2027-09-30,,,Active';
 const validPreview = {
   totalRows: 1, validRows: 1, invalidRows: 0, canImport: true, fileErrors: [],
-  rows: [{ rowNumber: 2, fullName: 'Ama Driver', errors: [] }],
+  rows: [{ rowNumber: 2, fullName: 'Ama Driver', errors: [], warnings: ['Possible name match in another row in this CSV. This is advisory only; every valid row remains a separate record.'] }],
 };
 function uploadedCsv() {
   const file = new File([csv], 'drivers.csv', { type: 'text/csv' });
@@ -31,8 +31,11 @@ describe('DriverImportManager', () => {
     await user.upload(screen.getByLabelText('Driver CSV file'), uploadedCsv());
     await user.click(screen.getByRole('button', { name: 'Preview CSV' }));
     expect(await screen.findByText('Ama Driver')).toBeTruthy();
+    expect(await screen.findByText(/Possible name match in another row in this CSV/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Import 1 driver' })).toBeTruthy();
     expect((screen.getByRole('button', { name: 'Import 1 driver' }) as HTMLButtonElement).disabled).toBe(true);
     await user.type(screen.getByLabelText('Reason for this import'), 'Verified driver roster data');
+    expect((screen.getByRole('button', { name: 'Import 1 driver' }) as HTMLButtonElement).disabled).toBe(false);
     await user.click(screen.getByRole('button', { name: 'Import 1 driver' }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain('/drivers/import/preview');
@@ -50,8 +53,8 @@ describe('DriverImportManager', () => {
     vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ preview: {
       totalRows: 2, validRows: 1, invalidRows: 1, canImport: false, fileErrors: [],
       rows: [
-        { rowNumber: 2, fullName: 'Ama Driver', errors: [] },
-        { rowNumber: 3, fullName: '', errors: ['fullName: required'] },
+        { rowNumber: 2, fullName: 'Ama Driver', errors: [], warnings: [] },
+        { rowNumber: 3, fullName: '', errors: ['fullName: required'], warnings: [] },
       ],
     } }), { status: 200 })));
     render(<DriverImportManager companyId="company-1" />);

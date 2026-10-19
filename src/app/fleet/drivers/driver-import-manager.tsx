@@ -98,12 +98,14 @@ export function DriverImportManager({ companyId }: { companyId: string }) {
       <h3 id="driver-import-preview-title">Preview and validation</h3>
       {preview.fileErrors.length > 0 ? <ul className="form-error-list" role="alert">{preview.fileErrors.map((message) => <li key={message}>{message}</li>)}</ul> : <>
         <p role="status">{preview.totalRows} rows found: {preview.validRows} valid, {preview.invalidRows} with errors.</p>
+        <p className="form-help">Possible same-name matches are warnings only. A name is not proof of identity; every valid row will be created separately, with no automatic skip, merge, or update.</p>
         <div className="vehicle-table-wrap" role="region" aria-label="Driver import row validation" tabIndex={0}>
           <table className="vehicle-table"><caption className="sr-only">Driver CSV rows and validation results</caption>
-            <thead><tr><th scope="col">CSV row</th><th scope="col">Driver name</th><th scope="col">Licence class</th><th scope="col">Licence expiry</th><th scope="col">Qualifications</th><th scope="col">Availability</th><th scope="col">Status</th><th scope="col">Validation</th></tr></thead>
+            <thead><tr><th scope="col">CSV row</th><th scope="col">Driver name</th><th scope="col">Licence class</th><th scope="col">Licence expiry</th><th scope="col">Qualifications</th><th scope="col">Availability</th><th scope="col">Status</th><th scope="col">Validation</th><th scope="col">Possible duplicate warning</th></tr></thead>
             <tbody>{preview.rows.map((row) => <tr key={row.rowNumber}>
               <td>{row.rowNumber}</td><td>{row.fullName || 'Name missing'}</td><td>{row.licenceClass || '—'}</td><td>{row.licenceExpiresAt || '—'}</td><td>{row.qualifications || '—'}</td><td>{row.availability || '—'}</td><td>{row.status || '—'}</td>
               <td>{row.errors.length === 0 ? 'Valid' : <ul className="form-error-list">{row.errors.map((message) => <li key={message}>{message}</li>)}</ul>}</td>
+              <td>{row.warnings.length === 0 ? '—' : <ul>{row.warnings.map((message) => <li key={message}>{message}</li>)}</ul>}</td>
             </tr>)}</tbody>
           </table>
         </div>
