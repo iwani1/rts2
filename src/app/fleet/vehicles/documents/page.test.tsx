@@ -67,7 +67,7 @@ describe('VehicleDocumentsPage', () => {
     render(page);
 
     expect(screen.getByRole('heading', { name: 'Vehicle document dates' })).toBeTruthy();
-    const table = screen.getByRole('table', { name: 'Recorded vehicle document expiry dates, earliest first' });
+    const table = screen.getByRole('table', { name: 'Recorded vehicle document expiry dates on this page, earliest first' });
     const documentCells = Array.from(table.querySelectorAll('tbody tr td:nth-child(2)'));
     expect(documentCells.map((cell) => cell.textContent)).toEqual(['Roadworthiness', 'Vehicle Registration', 'Insurance']);
     expect(screen.getByText('2026-12-30')).toBeTruthy();
@@ -87,7 +87,7 @@ describe('VehicleDocumentsPage', () => {
     render(page);
 
     expect(screen.getByLabelText('Document type')).toHaveProperty('value', 'Insurance');
-    const table = screen.getByRole('table', { name: 'Recorded insurance expiry dates, earliest first' });
+    const table = screen.getByRole('table', { name: 'Recorded insurance expiry dates on this page, earliest first' });
     const rows = table.querySelectorAll('tbody tr');
     expect(rows).toHaveLength(1);
     expect(rows[0]?.textContent).toContain('Insurance');

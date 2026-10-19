@@ -95,7 +95,7 @@ export default async function VehicleDocumentsPage({ searchParams }: PageProps) 
           {(params.q || selectedDocumentType) && <Link className="button-link" href="/fleet/vehicles/documents">Clear filters</Link>}
         </div> : <div className="vehicle-table-wrap" role="region" aria-label="Vehicle document expiry dates" tabIndex={0}>
           <table className="vehicle-table">
-            <caption className="sr-only">{selectedDocumentType ? `Recorded ${selectedDocumentType.toLowerCase()} expiry dates, earliest first` : 'Recorded vehicle document expiry dates, earliest first'}</caption>
+            <caption className="sr-only">{selectedDocumentType ? `Recorded ${selectedDocumentType.toLowerCase()} expiry dates on this page, earliest first` : 'Recorded vehicle document expiry dates on this page, earliest first'}</caption>
             <thead><tr><th scope="col">Expiry date</th><th scope="col">Document</th><th scope="col">Vehicle</th><th scope="col">Registration</th><th scope="col">Record</th></tr></thead>
             <tbody>{documents.map((document) => <tr key={`${document.vehicleId}-${document.documentType}`}>
               <td>{document.expiryDate}</td>
