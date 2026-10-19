@@ -2,7 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { assignRole, PermissionDeniedError } from '@/modules/auth/permissions';
 import { getPrisma } from '@/server/prisma';
-import { archiveDriver, createDriver, getDriver, listDrivers, updateDriver } from './drivers';
+import {
+  archiveDriver, createDriver, getDriver, importDriversFromCsv, listDrivers, previewDriverImport,
+  updateDriver, DriverImportValidationError,
+} from './drivers';
+import { driverImportHeaders } from './driver-import-constants';
 
 const prisma = getPrisma();
 let companyId = '';
@@ -76,6 +80,34 @@ describe('driver register with PostgreSQL persistence', () => {
     await expect(listDrivers({ actorId: dispatcherId, companyId })).rejects.toBeInstanceOf(PermissionDeniedError);
     await expect(getDriver({ actorId: dispatcherId, companyId, driverId: driver.id })).rejects.toBeInstanceOf(PermissionDeniedError);
     await expect(listDrivers({ actorId: driverUserId, companyId })).rejects.toBeInstanceOf(PermissionDeniedError);
+  });
+
+  it('previews every row and imports no driver when any row is invalid', async () => {
+    const beforeCount = await prisma.driver.count({ where: { companyId } });
+    const csv = `${driverImportHeaders.join(',')}\nValid Import Driver,,,,,\n,,,,,\n`;
+    const preview = await previewDriverImport({ actorId: fleetManagerId, companyId, csv });
+    expect(preview).toMatchObject({ totalRows: 2, validRows: 1, invalidRows: 1, canImport: false });
+    expect(preview.rows[1]?.errors.join(' ')).toContain('fullName');
+    await expect(importDriversFromCsv({
+      actorId: fleetManagerId, companyId, csv, reason: 'Import verified driver roster rows',
+    })).rejects.toBeInstanceOf(DriverImportValidationError);
+    expect(await prisma.driver.count({ where: { companyId } })).toBe(beforeCount);
+  });
+
+  it('imports all valid driver rows atomically and records an audit event per row', async () => {
+    const fullName = `Imported Driver ${randomUUID()}`;
+    const csv = `${driverImportHeaders.join(',')}\n${fullName},Class B,2027-09-30,Qualification A,Availability note,Status note\n`;
+    const result = await importDriversFromCsv({
+      actorId: fleetManagerId, companyId, csv, reason: 'Import verified driver roster rows',
+    });
+    expect(result.importedCount).toBe(1);
+    const imported = result.drivers[0]!;
+    expect(imported.fullName).toBe(fullName);
+    const stored = await prisma.driver.findUniqueOrThrow({ where: { id: imported.id } });
+    expect(stored.companyId).toBe(companyId);
+    expect(stored.status).toBe('Status note');
+    const audit = await prisma.auditEvent.findFirst({ where: { entityType: 'DRIVER', entityId: imported.id, action: 'DRIVER_IMPORTED' } });
+    expect(audit?.summary).toEqual({ reason: 'Import verified driver roster rows', source: 'CSV_IMPORT', rowNumber: 2 });
   });
 
   it('updates and archives through audited operations while retaining the driver record', async () => {

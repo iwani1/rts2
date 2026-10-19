@@ -34,6 +34,7 @@ test('authorized staff can save a Draft, see missing submission fields, then sub
   await page.getByRole('button', { name: 'Save Draft' }).click();
   await expect(page.getByText('Rental request saved as Draft.')).toBeVisible();
 
+  await expect(page.getByRole('table', { name: 'Rental request records' })).toBeVisible();
   const requestRow = page.getByRole('row').filter({ hasText: customerName });
   await expect(requestRow).toContainText('Draft');
   await requestRow.getByRole('link', { name: 'View / edit' }).click();

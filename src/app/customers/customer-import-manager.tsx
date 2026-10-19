@@ -1,18 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CustomerImportPreview } from '@/modules/customers/customers';
 import { MAX_CUSTOMER_IMPORT_BYTES, customerImportHeaders } from '@/modules/customers/customer-import-constants';
 
 export function CustomerImportManager({ companyId }: { companyId: string }) {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<CustomerImportPreview | null>(null);
   const [reason, setReason] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [importedRecords, setImportedRecords] = useState<Array<{ displayName: string; reference: string | null }>>([]);
   const template = `${customerImportHeaders.join(',')}\r\n`;
   const templateUrl = `data:text/csv;charset=utf-8,${encodeURIComponent(template)}`;
 
@@ -62,7 +64,7 @@ export function CustomerImportManager({ companyId }: { companyId: string }) {
         body: JSON.stringify({ csv, reason }),
       });
       const body = await response.json() as {
-        result?: { importedCount: number };
+        result?: { importedCount: number; customers?: Array<{ id: string; displayName: string; reference: string | null }> };
         preview?: CustomerImportPreview;
         error?: string;
       };
@@ -70,8 +72,11 @@ export function CustomerImportManager({ companyId }: { companyId: string }) {
         if (body.preview) setPreview(body.preview);
         throw new Error(body.error || 'Unable to import this CSV file.');
       }
-      setNotice(`${body.result?.importedCount ?? 0} customer records imported.`);
+      const count = body.result?.importedCount ?? 0;
+      setImportedRecords((body.result?.customers ?? []).map(({ displayName, reference }) => ({ displayName, reference })));
+      setNotice(`${count === 1 ? '1 customer record' : `${count} customer records`} imported.`);
       setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       setPreview(null);
       setReason('');
       router.refresh();
@@ -82,7 +87,7 @@ export function CustomerImportManager({ companyId }: { companyId: string }) {
     }
   }
 
-  return <section className="vehicle-editor customer-import-manager" aria-labelledby="customer-import-title">
+  return <section className="vehicle-editor csv-import-manager" aria-labelledby="customer-import-title">
     <div className="vehicle-editor-heading">
       <div><p className="eyebrow">Customer register</p><h2 id="customer-import-title">Import customers from CSV</h2></div>
       <a className="button-link" href="/customers">Back to customer register</a>
@@ -90,9 +95,10 @@ export function CustomerImportManager({ companyId }: { companyId: string }) {
     <p className="muted">Upload new customer records only. The file must use the supplied field names. This importer does not update, merge or archive existing records.</p>
     <p><a className="button-link" href={templateUrl} download="richie-customer-import-template.csv">Download CSV template</a></p>
     <label>Customer CSV file<input
+      ref={fileInputRef}
       type="file"
       accept=".csv,text/csv"
-      onChange={(event) => { setFile(event.target.files?.[0] ?? null); setPreview(null); setError(''); setNotice(''); }}
+      onChange={(event) => { setFile(event.target.files?.[0] ?? null); setPreview(null); setError(''); setNotice(''); setImportedRecords([]); }}
       disabled={pending}
     /></label>
     {file && <p className="form-help">Selected: {file.name} ({file.size.toLocaleString()} bytes)</p>}
@@ -100,15 +106,17 @@ export function CustomerImportManager({ companyId }: { companyId: string }) {
       <button className="button-primary" type="button" disabled={pending || !file} onClick={previewFile}>{pending ? 'Working…' : 'Preview CSV'}</button>
     </div>
 
-    {preview && <section className="import-preview" aria-labelledby="customer-import-preview-title">
+    {preview && <section className="import-preview customer-import-preview" aria-labelledby="customer-import-preview-title">
       <h3 id="customer-import-preview-title">Preview and validation</h3>
       {preview.fileErrors.length > 0 ? <ul className="form-error-list" role="alert">{preview.fileErrors.map((message) => <li key={message}>{message}</li>)}</ul> : <>
         <p role="status">{preview.totalRows} rows found: {preview.validRows} valid, {preview.invalidRows} with errors.</p>
         <div className="vehicle-table-wrap" role="region" aria-label="Customer import row validation" tabIndex={0}>
           <table className="vehicle-table"><caption className="sr-only">CSV rows and validation results</caption>
-            <thead><tr><th scope="col">CSV row</th><th scope="col">Customer name</th><th scope="col">Reference</th><th scope="col">Validation</th></tr></thead>
+            <thead><tr><th scope="col">CSV row</th><th scope="col">Customer name</th><th scope="col">Reference</th><th scope="col">Contact person</th><th scope="col">Telephone</th><th scope="col">Email</th><th scope="col">Billing details</th><th scope="col">Customer type</th><th scope="col">Status</th><th scope="col">Notes</th><th scope="col">Validation</th></tr></thead>
             <tbody>{preview.rows.map((row) => <tr key={row.rowNumber}>
-              <td>{row.rowNumber}</td><td>{row.displayName || 'Name missing'}</td><td>{row.reference ?? 'Not supplied'}</td>
+              <td>{row.rowNumber}</td><td>{row.displayName || 'Name missing'}</td><td>{row.reference ?? '—'}</td>
+              <td>{row.contactPerson ?? '—'}</td><td>{row.telephone ?? '—'}</td><td>{row.email ?? '—'}</td><td>{row.billingDetails ?? '—'}</td>
+              <td>{row.customerType ?? '—'}</td><td>{row.status ?? '—'}</td><td>{row.notes ?? '—'}</td>
               <td>{row.errors.length === 0 ? 'Valid' : <ul className="form-error-list">{row.errors.map((message) => <li key={message}>{message}</li>)}</ul>}</td>
             </tr>)}</tbody>
           </table>
@@ -130,5 +138,9 @@ export function CustomerImportManager({ companyId }: { companyId: string }) {
     </>}
     {error && <p className="form-error" role="alert">{error}</p>}
     {notice && <p className="form-success" role="status">{notice}</p>}
+    {importedRecords.length > 0 && <section className="import-success-summary" aria-labelledby="customer-import-summary-title">
+      <h3 id="customer-import-summary-title">Imported customer records</h3>
+      <ul>{importedRecords.map((record, index) => <li key={`${record.reference ?? record.displayName}-${index}`}><strong>{record.displayName}</strong>{record.reference && <span>Reference: {record.reference}</span>}</li>)}</ul>
+    </section>}
   </section>;
 }

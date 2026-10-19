@@ -23,3 +23,5 @@ export const driverListQuerySchema = z.object({
   search: z.string().trim().max(100).optional(),
   cursor: z.string().min(1).max(128).optional(),
 }).strict();
+
+export type DriverInput = z.infer<typeof driverInputSchema>;

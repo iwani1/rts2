@@ -1,7 +1,9 @@
+import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { PermissionDeniedError, resolvePermission } from '@/modules/auth/permissions';
 import { getPrisma } from '@/server/prisma';
 import { driverInputSchema, driverListQuerySchema, driverRequestSchema } from './driver-schema';
+import { parseDriverImportCsv } from './driver-import';
 
 const companyIdSchema = z.string().trim().min(1).max(128);
 const driverIdSchema = z.string().trim().min(1).max(128);
@@ -17,6 +19,28 @@ export class DriverNotFoundError extends Error {
 export class InvalidDriverCursorError extends Error {
   readonly code = 'INVALID_DRIVER_CURSOR';
   constructor() { super('Invalid driver cursor.'); this.name = 'InvalidDriverCursorError'; }
+}
+
+export type DriverImportPreview = {
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  canImport: boolean;
+  fileErrors: string[];
+  rows: Array<{
+    rowNumber: number; fullName: string; licenceClass: string; licenceExpiresAt: string;
+    qualifications: string; availability: string; status: string; errors: string[];
+  }>;
+};
+
+export class DriverImportValidationError extends Error {
+  readonly code = 'DRIVER_IMPORT_VALIDATION_FAILED';
+  constructor(readonly preview: DriverImportPreview) {
+    super(preview.fileErrors.length > 0
+      ? 'Fix the driver CSV file errors before importing; no drivers were imported.'
+      : `Fix all ${preview.invalidRows} invalid driver CSV row(s) before importing; no drivers were imported.`);
+    this.name = 'DriverImportValidationError';
+  }
 }
 
 export type DriverRecord = {
@@ -65,6 +89,70 @@ async function accessFor(actorId: string, companyId: string) {
   // Dispatcher field-level projection and driver/user linking remain unresolved; fail closed for non-manager scopes.
   if (!canManage) throw new PermissionDeniedError();
   return { canManage };
+}
+
+function evaluateDriverImport(csv: string): { rows: ReturnType<typeof parseDriverImportCsv>['rows']; preview: DriverImportPreview } {
+  const parsed = parseDriverImportCsv(csv);
+  if (parsed.fileErrors.length > 0) return {
+    rows: parsed.rows,
+    preview: { totalRows: 0, validRows: 0, invalidRows: 0, canImport: false, fileErrors: parsed.fileErrors, rows: [] },
+  };
+  const validRows = parsed.rows.filter((row) => row.errors.length === 0 && row.data).length;
+  return {
+    rows: parsed.rows,
+    preview: {
+      totalRows: parsed.rows.length,
+      validRows,
+      invalidRows: parsed.rows.length - validRows,
+      canImport: parsed.rows.length > 0 && validRows === parsed.rows.length,
+      fileErrors: [],
+      rows: parsed.rows.map(({ rowNumber, fullName, licenceClass, licenceExpiresAt, qualifications, availability, status, errors }) => ({
+        rowNumber, fullName, licenceClass, licenceExpiresAt, qualifications, availability, status, errors,
+      })),
+    },
+  };
+}
+
+export async function previewDriverImport(input: { actorId: string; companyId: string; csv: string }) {
+  const data = z.object({
+    actorId: z.string().trim().min(1).max(128),
+    companyId: companyIdSchema,
+    csv: z.string().min(1).max(2_000_000),
+  }).strict().parse(input);
+  await accessFor(data.actorId, data.companyId);
+  return evaluateDriverImport(data.csv).preview;
+}
+
+export async function importDriversFromCsv(input: { actorId: string; companyId: string; csv: string; reason: string }) {
+  const data = z.object({
+    actorId: z.string().trim().min(1).max(128),
+    companyId: companyIdSchema,
+    csv: z.string().min(1).max(2_000_000),
+    reason: z.string().trim().min(8).max(500),
+  }).strict().parse(input);
+  await accessFor(data.actorId, data.companyId);
+  const evaluated = evaluateDriverImport(data.csv);
+  if (!evaluated.preview.canImport) throw new DriverImportValidationError(evaluated.preview);
+  const prisma = getPrisma();
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const imported: Array<{ id: string; fullName: string }> = [];
+    for (const row of evaluated.rows) {
+      if (!row.data) throw new Error('Validated driver import row is missing normalized data.');
+      const driver = await tx.driver.create({ data: { ...toDriverData(row.data), companyId: data.companyId } });
+      await tx.auditEvent.create({
+        data: {
+          actorId: data.actorId,
+          companyId: data.companyId,
+          action: 'DRIVER_IMPORTED',
+          entityType: 'DRIVER',
+          entityId: driver.id,
+          summary: { reason: data.reason, source: 'CSV_IMPORT', rowNumber: row.rowNumber },
+        },
+      });
+      imported.push({ id: driver.id, fullName: driver.fullName });
+    }
+    return { importedCount: imported.length, drivers: imported };
+  });
 }
 
 export async function listDrivers(input: { actorId: string; companyId: string; search?: string; cursor?: string }): Promise<{

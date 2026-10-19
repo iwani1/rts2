@@ -58,6 +58,8 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
       <Link className="wordmark" href="/" aria-label="Richie TMS home">R<span>.</span>TS</Link>
       <nav className="account-area" aria-label="Account">
         <Link className="header-link" href="/">Workspace</Link>
+        <Link className="header-link" href="/admin/users">User roles</Link>
+        <Link className="header-link" href="/admin/settings">Policy settings</Link>
         <span>{session.user.name || session.user.email}</span>
         <LogoutButton />
       </nav>

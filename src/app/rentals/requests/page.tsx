@@ -67,7 +67,7 @@ export default async function RentalRequestsPage({ searchParams }: PageProps) {
           <form className="fleet-search" method="get"><label htmlFor="request-search">Search requests</label><div><input id="request-search" type="search" name="q" maxLength={100} defaultValue={params.q ?? ''} placeholder="Customer, pickup or destination"/><button className="button-link" type="submit">Search</button></div></form>
         </div>
         {result.requests.length === 0 ? <div className="fleet-empty"><h3>No rental requests found</h3><p>{params.q ? 'Try another search or clear the search term.' : 'No requests have been recorded yet.'}</p></div> : <div className="vehicle-table-wrap" role="region" aria-label="Rental request records" tabIndex={0}>
-          <table className="vehicle-table"><thead><tr><th>Customer</th><th>Service date</th><th>Journey</th><th>Status</th><th>Record</th></tr></thead>
+          <table className="vehicle-table"><caption className="sr-only">Rental request records</caption><thead><tr><th scope="col">Customer</th><th scope="col">Service date</th><th scope="col">Journey</th><th scope="col">Status</th><th scope="col">Record</th></tr></thead>
             <tbody>{result.requests.map((request) => <tr key={request.id}>
               <td><strong>{request.customerName}</strong></td>
               <td>{request.serviceDate ?? 'Not recorded'}{request.departureTime && <span className="vehicle-secondary">Departure: {request.departureTime}</span>}</td>

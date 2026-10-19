@@ -70,7 +70,7 @@ export type RentalRequestRecord = {
   updatedAt: Date;
 };
 
-type RentalRequestDbShape = Omit<RentalRequestRecord, 'serviceDate' | 'customerArchived'> & {
+type RentalRequestDbShape = Omit<RentalRequestRecord, 'serviceDate' | 'customerArchived' | 'customerName'> & {
   serviceDate: Date | null;
   customer: { displayName: string; archivedAt: Date | null };
 };

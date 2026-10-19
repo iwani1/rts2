@@ -55,7 +55,7 @@ export default async function DriversPage({ searchParams }: PageProps) {
     <div className="fleet-content">
       <div className="fleet-title-row">
         <div><p className="eyebrow">{company.name}</p><h1>Driver register</h1><p className="muted">The approved driver register fields are shown here. Personal contact details and notes are not collected.</p></div>
-        <Link className="button-link" href="/">Back to workspace</Link>
+        <div className="fleet-title-actions">{result.canManage && <Link className="button-primary" href="/fleet/drivers/import">Import drivers</Link>}<Link className="button-link" href="/">Back to workspace</Link></div>
       </div>
       <section className="fleet-list-panel" aria-labelledby="driver-list-title">
         <div className="fleet-list-heading">
@@ -63,7 +63,7 @@ export default async function DriversPage({ searchParams }: PageProps) {
           <form className="fleet-search" method="get"><label htmlFor="driver-search">Search drivers</label><div><input id="driver-search" type="search" name="q" maxLength={100} defaultValue={params.q ?? ''} placeholder="Name, licence class, qualification"/><button className="button-link" type="submit">Search</button></div></form>
         </div>
         {result.drivers.length === 0 ? <div className="fleet-empty"><h3>No drivers found</h3><p>{params.q ? 'Try a different search, or clear the search term.' : 'No driver records have been entered yet.'}</p></div> : <div className="vehicle-table-wrap" role="region" aria-label="Driver records" tabIndex={0}>
-          <table className="vehicle-table"><thead><tr><th>Name</th><th>Licence</th><th>Qualifications</th><th>Availability</th><th>Status</th>{result.canManage && <th>Record</th>}</tr></thead>
+          <table className="vehicle-table"><caption className="sr-only">Driver register records</caption><thead><tr><th scope="col">Name</th><th scope="col">Licence</th><th scope="col">Qualifications</th><th scope="col">Availability</th><th scope="col">Status</th>{result.canManage && <th scope="col">Record</th>}</tr></thead>
             <tbody>{result.drivers.map((driver) => <tr key={driver.id}>
               <td><strong>{driver.fullName}</strong>{driver.licenceExpiresAt && <span className="vehicle-secondary">Licence expires: {driver.licenceExpiresAt}</span>}</td>
               <td>{driver.licenceClass ?? 'Not recorded'}</td><td>{driver.qualifications ?? 'Not recorded'}</td>

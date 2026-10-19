@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { resolvePermission } from '@/modules/auth/permissions';
+import { isActiveSuperAdmin, resolvePermission } from '@/modules/auth/permissions';
 import { mayStartSession } from '@/modules/auth/policy';
 import { getAuth } from '@/server/auth';
 import { getPrisma } from '@/server/prisma';
@@ -16,6 +16,7 @@ export default async function Home() {
   const currentUser = await prisma.user.findUnique({ where: { id: session.user.id }, select: { status: true } });
   if (!mayStartSession(currentUser?.status)) redirect('/login');
   const auditAccess = await resolvePermission({ userId: session.user.id, permission: 'audit:read' });
+  const canManageUserRoles = await isActiveSuperAdmin(session.user.id);
   const company = await prisma.company.findFirst({ where: { status: 'ACTIVE' }, select: { id: true } });
   const fleetAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'fleet:manage' }) : { allowed: false, scopes: [] };
   const driverAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'driver:manage' }) : { allowed: false, scopes: [] };
@@ -28,6 +29,8 @@ export default async function Home() {
     <header className="app-header">
       <Link className="wordmark" href="/" aria-label="Richie TMS home">R<span>.</span>TS</Link>
       <nav className="account-area" aria-label="Account">
+        {canManageUserRoles && <Link className="header-link" href="/admin/users">User roles</Link>}
+        {canManageUserRoles && <Link className="header-link" href="/admin/settings">Policy settings</Link>}
         {auditAccess.scopes.includes('GLOBAL') && <Link className="header-link" href="/admin/audit">Audit activity</Link>}
         {fleetAccess.allowed && <Link className="header-link" href="/fleet/vehicles">Vehicle register</Link>}
         {canReadDriverRegister && <Link className="header-link" href="/fleet/drivers">Driver register</Link>}

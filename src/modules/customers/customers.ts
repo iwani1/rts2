@@ -81,7 +81,9 @@ export type CustomerImportPreview = {
   invalidRows: number;
   canImport: boolean;
   fileErrors: string[];
-  rows: Array<Pick<CustomerImportRow, 'rowNumber' | 'displayName' | 'reference' | 'errors'>>;
+  rows: Array<Pick<CustomerImportRow,
+    'rowNumber' | 'displayName' | 'reference' | 'contactPerson' | 'telephone' | 'email' | 'billingDetails' | 'customerType' | 'status' | 'notes' | 'errors'
+  >>;
 };
 
 export class CustomerImportValidationError extends Error {
@@ -136,7 +138,9 @@ async function evaluateCustomerImport(
     invalidRows: parsed.rows.length - validRows,
     canImport: parsed.rows.length > 0 && validRows === parsed.rows.length,
     fileErrors: [],
-    rows: parsed.rows.map(({ rowNumber, displayName, reference, errors }) => ({ rowNumber, displayName, reference, errors })),
+    rows: parsed.rows.map(({ rowNumber, displayName, reference, contactPerson, telephone, email, billingDetails, customerType, status, notes, errors }) => ({
+      rowNumber, displayName, reference, contactPerson, telephone, email, billingDetails, customerType, status, notes, errors,
+    })),
   };
   return { rows: parsed.rows, preview };
 }

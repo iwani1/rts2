@@ -10,5 +10,4 @@ export const customerImportHeaders = [
   'notes',
 ] as const;
 
-export const MAX_CUSTOMER_IMPORT_BYTES = 2_000_000;
-export const MAX_CUSTOMER_IMPORT_ROWS = 1_000;
+export { MAX_IMPORT_CSV_BYTES as MAX_CUSTOMER_IMPORT_BYTES, MAX_IMPORT_CSV_ROWS as MAX_CUSTOMER_IMPORT_ROWS } from '@/modules/imports/csv-constants';

@@ -2,7 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getPrisma } from '@/server/prisma';
 import { assignRole, PermissionDeniedError } from '@/modules/auth/permissions';
-import { archiveVehicle, createVehicle, getVehicle, InvalidUsualDriverError, listVehicles, updateVehicle } from './vehicles';
+import {
+  archiveVehicle, createVehicle, getVehicle, importVehiclesFromCsv, InvalidUsualDriverError, listVehicles,
+  previewVehicleImport, updateVehicle, VehicleImportValidationError,
+} from './vehicles';
+import { vehicleImportHeaders } from './vehicle-import-constants';
 
 const prisma = getPrisma();
 let companyId = '';
@@ -96,6 +100,37 @@ describe('vehicle register with PostgreSQL persistence', () => {
     }), fleetManagerId, companyId, vehicle.id);
     expect(cleared.usualDriverId).toBeNull();
     expect((await prisma.vehicle.findUniqueOrThrow({ where: { id: vehicle.id } })).usualDriverCompanyId).toBeNull();
+  });
+
+  it('previews vehicle CSV rows and imports no rows when any row is invalid', async () => {
+    const beforeCount = await prisma.vehicle.count({ where: { companyId } });
+    const csv = `${vehicleImportHeaders.join(',')}\nGR 1111-26,Make,Model,Van,,,,,,,,,,\n,Make,Model,Van,,,,,,,,,,\n`;
+    const preview = await previewVehicleImport({ actorId: fleetManagerId, companyId, csv });
+    expect(preview).toMatchObject({ totalRows: 2, validRows: 1, invalidRows: 1, canImport: false });
+    expect(preview.rows[1]?.errors.join(' ')).toContain('registrationNumber');
+    await expect(importVehiclesFromCsv({
+      actorId: fleetManagerId, companyId, csv, reason: 'Import vehicle rows after verification',
+    })).rejects.toBeInstanceOf(VehicleImportValidationError);
+    expect(await prisma.vehicle.count({ where: { companyId } })).toBe(beforeCount);
+  });
+
+  it('imports valid vehicle CSV records atomically and audits each row', async () => {
+    const registration = `GH ${randomUUID().slice(0, 8)}`;
+    const csv = `${vehicleImportHeaders.join(',')}\n${registration},Imported Make,Model,Bus,,,,,,,,,,Import note\n`;
+    const result = await importVehiclesFromCsv({
+      actorId: fleetManagerId, companyId, csv, reason: 'Import verified vehicle register data',
+    });
+    expect(result.importedCount).toBe(1);
+    const imported = result.vehicles[0]!;
+    expect(imported.registrationNumber).toBe(registration.toLocaleUpperCase('en'));
+    const stored = await prisma.vehicle.findUniqueOrThrow({ where: { id: imported.id } });
+    expect(stored.companyId).toBe(companyId);
+    expect(stored.usualDriverId).toBeNull();
+    const audit = await prisma.auditEvent.findFirst({ where: { entityType: 'VEHICLE', entityId: imported.id, action: 'VEHICLE_IMPORTED' } });
+    expect(audit?.summary).toEqual({
+      registrationNumber: imported.registrationNumber,
+      reason: 'Import verified vehicle register data', source: 'CSV_IMPORT', rowNumber: 2,
+    });
   });
 
   it('limits dispatcher reads, denies dispatcher mutations, and supports audited update/archive', async () => {

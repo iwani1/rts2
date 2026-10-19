@@ -5,6 +5,10 @@ const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
   const date = new Date(`${value}T00:00:00.000Z`);
   return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
 }, 'Use a valid calendar date.').nullable();
+export function normalizeVehicleRegistrationNumber(value: string) {
+  return value.trim().replace(/\s+/g, ' ').toLocaleUpperCase('en');
+}
+
 const positiveSeatCount = z.number().int().min(1).max(10000).nullable();
 const odometerValue = z.number().finite().min(0).max(9999999999.99).refine(
   (value) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-7,

@@ -14,10 +14,13 @@ afterEach(() => {
 });
 beforeEach(() => router.refresh.mockReset());
 
-const csv = 'displayName,reference,contactPerson,telephone,email,billingDetails,customerType,status,notes\nAma Transport,AC-1,,,,Organisation,,Active,';
+const csv = 'displayName,reference,contactPerson,telephone,email,billingDetails,customerType,status,notes\nAma Transport,AC-1,Ama Contact,+233 20 000 0000,ama@example.invalid,Accounts Office,Organisation,Active,Import review';
 const validPreview = {
   totalRows: 1, validRows: 1, invalidRows: 0, canImport: true, fileErrors: [],
-  rows: [{ rowNumber: 2, displayName: 'Ama Transport', reference: 'AC-1', errors: [] }],
+  rows: [{
+    rowNumber: 2, displayName: 'Ama Transport', reference: 'AC-1', contactPerson: 'Ama Contact', telephone: '+233 20 000 0000',
+    email: 'ama@example.invalid', billingDetails: 'Accounts Office', customerType: 'Organisation', status: 'Active', notes: 'Import review', errors: [],
+  }],
 };
 
 function uploadedCsv() {
@@ -31,13 +34,16 @@ describe('CustomerImportManager', () => {
     const user = userEvent.setup();
     const fetchMock = vi.fn<typeof fetch>()
       .mockResolvedValueOnce(new Response(JSON.stringify({ preview: validPreview }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ result: { importedCount: 1 } }), { status: 201 }));
+      .mockResolvedValueOnce(new Response(JSON.stringify({ result: { importedCount: 1, customers: [{ id: 'customer-1', displayName: 'Ama Transport', reference: 'AC-1' }] } }), { status: 201 }));
     vi.stubGlobal('fetch', fetchMock);
     render(<CustomerImportManager companyId="company-1" />);
 
     await user.upload(screen.getByLabelText('Customer CSV file'), uploadedCsv());
     await user.click(screen.getByRole('button', { name: 'Preview CSV' }));
     expect(await screen.findByText('Ama Transport')).toBeTruthy();
+    expect(screen.getByRole('columnheader', { name: 'Billing details' })).toBeTruthy();
+    expect(screen.getByText('+233 20 000 0000')).toBeTruthy();
+    expect(screen.getByText('Accounts Office')).toBeTruthy();
     expect((screen.getByRole('button', { name: 'Import 1 customer' }) as HTMLButtonElement).disabled).toBe(true);
     await user.type(screen.getByLabelText('Reason for this import'), 'Verified existing customer records');
     await user.click(screen.getByRole('button', { name: 'Import 1 customer' }));
@@ -46,7 +52,11 @@ describe('CustomerImportManager', () => {
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain('/customers/import/preview');
     expect(String(fetchMock.mock.calls[1]?.[0])).toContain('/customers/import');
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toMatchObject({ csv, reason: 'Verified existing customer records' });
-    expect(await screen.findByText('1 customer records imported.')).toBeTruthy();
+    expect(await screen.findByText('1 customer record imported.')).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Imported customer records' })).toBeTruthy();
+    expect(screen.getByText('Reference: AC-1')).toBeTruthy();
+    expect((screen.getByLabelText('Customer CSV file') as HTMLInputElement).value).toBe('');
+    expect((screen.getByRole('button', { name: 'Preview CSV' }) as HTMLButtonElement).disabled).toBe(true);
     expect(router.refresh).toHaveBeenCalledOnce();
   });
 

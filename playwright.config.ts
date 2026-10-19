@@ -42,7 +42,7 @@ export default defineConfig({
   },
   webServer: {
     command: 'npm run dev',
-    url: `${baseURL}/api/health`,
+    url: `${baseURL}/api/health/ready`,
     reuseExistingServer: false,
     timeout: 120_000,
     env: {

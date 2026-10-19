@@ -74,7 +74,7 @@ export default async function CustomersPage({ searchParams }: PageProps) {
           <form className="fleet-search" method="get"><label htmlFor="customer-search">Search customers</label><div><input id="customer-search" type="search" name="q" maxLength={100} defaultValue={params.q ?? ''} placeholder="Name, reference or contact"/><button className="button-link" type="submit">Search</button></div></form>
         </div>
         {result.customers.length === 0 ? <div className="fleet-empty"><h3>No customers found</h3><p>{params.q ? 'Try a different search or clear the search term.' : 'No customer records have been entered yet.'}</p></div> : <div className="vehicle-table-wrap" role="region" aria-label="Customer records" tabIndex={0}>
-          <table className="vehicle-table"><thead><tr><th>Customer</th><th>Type</th><th>Status</th><th>Contact</th><th>Record</th></tr></thead>
+          <table className="vehicle-table"><caption className="sr-only">Customer register records</caption><thead><tr><th scope="col">Customer</th><th scope="col">Type</th><th scope="col">Status</th><th scope="col">Contact</th><th scope="col">Record</th></tr></thead>
             <tbody>{result.customers.map((customer) => <tr key={customer.id}>
               <td><strong>{customer.displayName}</strong><span className="vehicle-secondary">{customer.reference ?? 'No reference recorded'}</span></td>
               <td>{customer.customerType ?? 'Not recorded'}</td><td>{customer.status ?? 'Not recorded'}</td>

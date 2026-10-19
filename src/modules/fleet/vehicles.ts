@@ -1,7 +1,10 @@
+import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { resolvePermission, PermissionDeniedError } from '@/modules/auth/permissions';
 import { getPrisma } from '@/server/prisma';
-import { vehicleInputSchema, vehicleListQuerySchema, vehicleRequestSchema } from './vehicle-schema';
+import { normalizeVehicleRegistrationNumber, vehicleInputSchema, vehicleListQuerySchema, vehicleRequestSchema } from './vehicle-schema';
+import { parseVehicleImportCsv } from './vehicle-import';
+import type { VehicleImportFields } from './vehicle-import-constants';
 
 const companyIdSchema = z.string().trim().min(1).max(128);
 const vehicleIdSchema = z.string().trim().min(1).max(128);
@@ -23,8 +26,23 @@ export class InvalidUsualDriverError extends Error {
   constructor() { super('Select an active driver in this operator company.'); this.name = 'InvalidUsualDriverError'; }
 }
 
-function normalizeRegistrationNumber(value: string) {
-  return value.trim().replace(/\s+/g, ' ').toLocaleUpperCase('en');
+export type VehicleImportPreview = {
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  canImport: boolean;
+  fileErrors: string[];
+  rows: Array<{ rowNumber: number; values: VehicleImportFields; registrationNumber: string; make: string; model: string; category: string; errors: string[] }>;
+};
+
+export class VehicleImportValidationError extends Error {
+  readonly code = 'VEHICLE_IMPORT_VALIDATION_FAILED';
+  constructor(readonly preview: VehicleImportPreview) {
+    super(preview.fileErrors.length > 0
+      ? 'Fix the vehicle CSV file errors before importing; no vehicles were imported.'
+      : `Fix all ${preview.invalidRows} invalid vehicle CSV row(s) before importing; no vehicles were imported.`);
+    this.name = 'VehicleImportValidationError';
+  }
 }
 
 async function accessFor(actorId: string, companyId: string) {
@@ -38,6 +56,50 @@ async function accessFor(actorId: string, companyId: string) {
   };
 }
 
+async function evaluateVehicleImport(
+  db: Pick<Prisma.TransactionClient, 'vehicle'>,
+  companyId: string,
+  csv: string,
+) {
+  const parsed = parseVehicleImportCsv(csv);
+  if (parsed.fileErrors.length > 0) return {
+    rows: parsed.rows,
+    preview: { totalRows: 0, validRows: 0, invalidRows: 0, canImport: false, fileErrors: parsed.fileErrors, rows: [] } satisfies VehicleImportPreview,
+  };
+  const registrations = [...new Set(parsed.rows.flatMap((row) => row.data?.registrationNumber ? [row.data.registrationNumber] : []))];
+  const existingRows = registrations.length > 0
+    ? await db.vehicle.findMany({ where: { companyId, registrationNumber: { in: registrations } }, select: { registrationNumber: true } })
+    : [];
+  const existing = new Set(existingRows.map((row: { registrationNumber: string }) => row.registrationNumber));
+  for (const row of parsed.rows) {
+    if (row.data?.registrationNumber && existing.has(row.data.registrationNumber)) {
+      row.errors.push(`Registration ${row.data.registrationNumber} already exists in this company.`);
+    }
+  }
+  const validRows = parsed.rows.filter((row) => row.errors.length === 0 && row.data).length;
+  const preview: VehicleImportPreview = {
+    totalRows: parsed.rows.length,
+    validRows,
+    invalidRows: parsed.rows.length - validRows,
+    canImport: parsed.rows.length > 0 && validRows === parsed.rows.length,
+    fileErrors: [],
+    rows: parsed.rows.map(({ rowNumber, values, registrationNumber, make, model, category, errors }) => ({
+      rowNumber, values, registrationNumber, make, model, category, errors,
+    })),
+  };
+  return { rows: parsed.rows, preview };
+}
+
+export async function previewVehicleImport(input: { actorId: string; companyId: string; csv: string }) {
+  const data = z.object({
+    actorId: z.string().trim().min(1).max(128),
+    companyId: companyIdSchema,
+    csv: z.string().min(1).max(2_000_000),
+  }).strict().parse(input);
+  await accessFor(data.actorId, data.companyId);
+  return (await evaluateVehicleImport(getPrisma(), data.companyId, data.csv)).preview;
+}
+
 async function canManageDriverRecords(actorId: string, companyId: string) {
   const access = await resolvePermission({ userId: actorId, companyId, permission: 'driver:manage' });
   return access.allowed && (access.scopes.includes('GLOBAL') || access.scopes.includes('COMPANY'));
@@ -45,7 +107,7 @@ async function canManageDriverRecords(actorId: string, companyId: string) {
 
 function asVehicleInput(input: z.infer<typeof vehicleInputSchema>, companyId: string) {
   return {
-    registrationNumber: normalizeRegistrationNumber(input.registrationNumber),
+    registrationNumber: normalizeVehicleRegistrationNumber(input.registrationNumber),
     make: input.make,
     model: input.model,
     category: input.category,
@@ -176,6 +238,51 @@ export async function getVehicle(input: { actorId: string; companyId: string; ve
   });
   if (!vehicle) throw new VehicleNotFoundError();
   return { vehicle: presentVehicle(vehicle, canManageDrivers), canManage: true, canManageDrivers };
+}
+
+export async function importVehiclesFromCsv(input: {
+  actorId: string; companyId: string; csv: string; reason: string;
+}) {
+  const data = z.object({
+    actorId: z.string().trim().min(1).max(128),
+    companyId: companyIdSchema,
+    csv: z.string().min(1).max(2_000_000),
+    reason: z.string().trim().min(8).max(500),
+  }).strict().parse(input);
+  const access = await accessFor(data.actorId, data.companyId);
+  if (!access.canManage) throw new PermissionDeniedError();
+  const prisma = getPrisma();
+  try {
+    return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const evaluated = await evaluateVehicleImport(tx, data.companyId, data.csv);
+      if (!evaluated.preview.canImport || evaluated.preview.fileErrors.length > 0) {
+        throw new VehicleImportValidationError(evaluated.preview);
+      }
+      const imported: Array<{ id: string; registrationNumber: string; make: string; model: string }> = [];
+      for (const row of evaluated.rows) {
+        if (!row.data) throw new Error('Validated vehicle import row is missing normalized data.');
+        const vehicle = await tx.vehicle.create({
+          data: { ...asVehicleInput(row.data, data.companyId), companyId: data.companyId },
+        });
+        await tx.auditEvent.create({
+          data: {
+            actorId: data.actorId,
+            companyId: data.companyId,
+            action: 'VEHICLE_IMPORTED',
+            entityType: 'VEHICLE',
+            entityId: vehicle.id,
+            summary: { registrationNumber: vehicle.registrationNumber, reason: data.reason, source: 'CSV_IMPORT', rowNumber: row.rowNumber },
+          },
+        });
+        imported.push({ id: vehicle.id, registrationNumber: vehicle.registrationNumber, make: vehicle.make, model: vehicle.model });
+      }
+      return { importedCount: imported.length, vehicles: imported };
+    });
+  } catch (error) {
+    if (!isUniqueVehicleError(error)) throw error;
+    const refreshed = await evaluateVehicleImport(prisma, data.companyId, data.csv);
+    throw new VehicleImportValidationError(refreshed.preview);
+  }
 }
 
 export async function createVehicle(input: unknown, actorId: string, companyIdInput: string) {
