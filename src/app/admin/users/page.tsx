@@ -52,7 +52,7 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
         <label htmlFor="admin-user-search">Search users by name or email</label>
         <div><input id="admin-user-search" type="search" name="q" maxLength={100} defaultValue={query} /><button className="button-link" type="submit">Search</button></div>
       </form>
-      {visibleUsers.length === 0 ? <div className="audit-empty" role="status"><h2>No users found</h2><p>{query ? 'Try another name or email search.' : 'No user accounts exist yet.'}</p></div> : <div className="audit-table-wrap" role="region" aria-label="User accounts" tabIndex={0}>
+      {visibleUsers.length === 0 ? <div className="audit-empty" role="status"><h2>No users found</h2><p>{query ? 'Try another name or email search.' : 'No user accounts exist yet.'}</p>{query && <Link className="button-link" href="/admin/users">Clear search</Link>}</div> : <div className="audit-table-wrap" role="region" aria-label="User accounts" tabIndex={0}>
         <table className="audit-table admin-user-table">
           <caption className="visually-hidden">Existing user accounts and role-management links</caption>
           <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Account status</th><th scope="col">Account created</th><th scope="col">Roles</th></tr></thead>
