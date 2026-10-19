@@ -8,6 +8,7 @@ import type { RentalRequestRecord } from '@/modules/rentals/rental-requests';
 import { getAuth } from '@/server/auth';
 import { getPrisma } from '@/server/prisma';
 import { RequestManager } from './request-manager';
+import { RentalRequestTransitionManager } from './rental-request-transition-manager';
 
 export const dynamic = 'force-dynamic';
 type PageProps = { searchParams: Promise<{ q?: string; cursor?: string; edit?: string }> };
@@ -80,12 +81,13 @@ export default async function RentalRequestsPage({ searchParams }: PageProps) {
         {result.nextCursor && <div className="fleet-pagination"><span className="muted">More requests available.</span><Link className="button-link" href={`/rentals/requests?${params.q ? `q=${encodeURIComponent(params.q)}&` : ''}cursor=${encodeURIComponent(result.nextCursor)}`}>Next page</Link></div>}
       </section>
       {result.canManage && (!editing || editing.status === 'Draft') && <RequestManager companyId={company.id} request={editing} />}
-      {editing && editing.status !== 'Draft' && <p className="fleet-limits">This request has been submitted. Further status actions are not implemented.</p>}
+      {result.canManage && editing && editing.status !== 'Draft' && <RentalRequestTransitionManager companyId={company.id} request={editing} />}
+      {editing && editing.status !== 'Draft' && <p className="fleet-limits">This request has been submitted. Only the explicitly approved review and decline transitions are currently available; quotation, confirmation, assignment, cancellation and dispatch are not enabled.</p>}
       {editing && <section className="fleet-list-panel" aria-labelledby="request-history-title">
-        <div className="fleet-list-heading"><div><h2 id="request-history-title">Status history</h2><p className="muted">This record is currently editable only while it remains a Draft.</p></div></div>
+        <div className="fleet-list-heading"><div><h2 id="request-history-title">Status history</h2><p className="muted">Draft details are editable only before submission. Approved status changes are separately audited here.</p></div></div>
         <ol className="customer-history-list">{history.map((entry, index) => <li key={`${entry.createdAt.toISOString()}-${index}`}><strong>{entry.fromStatus ? `${entry.fromStatus} → ${entry.toStatus}` : `Created as ${entry.toStatus}`}</strong><span>{accraDateTime.format(entry.createdAt)} · {entry.actorName}</span><p>{entry.reason}</p></li>)}</ol>
       </section>}
-      <p className="fleet-limits">Draft creation/editing and the approved Draft → Submitted action are available. Further transitions, quotations, availability checks, assignments, reservations, cancellations and dispatch are not implemented. {customerAccess.allowed ? '' : 'Customer record access is not granted to this role.'}</p>
+      <p className="fleet-limits">Draft creation/editing and the explicit Draft → Submitted → Under Review → Declined subset are available. Further quotation, availability, confirmation, assignment, reservation, cancellation and dispatch workflows are not implemented. {customerAccess.allowed ? '' : 'Customer record access is not granted to this role.'}</p>
     </div>
   </main>;
 }

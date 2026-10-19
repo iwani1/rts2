@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { ZodError } from 'zod';
 import { getPrisma } from '@/server/prisma';
 import { assignRole, PermissionDeniedError } from '@/modules/auth/permissions';
 import {
   createRentalRequest, getRentalRequest, listRentalRequests, RentalCustomerNotFoundError,
   RentalRequestMissingSubmissionFieldsError, RentalRequestNotDraftError, RentalRequestNotFoundError,
-  submitRentalRequest, updateRentalRequestDraft,
+  RentalRequestTransitionNotAllowedError, submitRentalRequest, transitionRentalRequest, updateRentalRequestDraft,
 } from './rental-requests';
 
 const prisma = getPrisma();
@@ -143,6 +144,31 @@ describe('staff rental request Draft persistence with PostgreSQL', () => {
     await expect(updateRentalRequestDraft(ready, managerId, companyId, draft.id)).rejects.toBeInstanceOf(RentalRequestNotDraftError);
     await expect(submitRentalRequest({ reason: 'Submit it again after completion' }, managerId, companyId, draft.id))
       .rejects.toBeInstanceOf(RentalRequestNotDraftError);
+  });
+
+  it('enforces and audits the reviewed rental request transitions without enabling reservation states', async () => {
+    const draft = await createRentalRequest(draftInput(customerId), managerId, companyId);
+    const ready = draftInput(customerId, {
+      serviceDate: '2026-11-01', departureTime: '08:30', durationMinutes: 90,
+      pickupLocation: 'Accra', destination: 'Kumasi', passengerCount: 12, requestSource: 'PHONE',
+      reason: 'Complete required submission details',
+    });
+    await updateRentalRequestDraft(ready, managerId, companyId, draft.id);
+    await submitRentalRequest({ reason: 'Submit complete rental request' }, managerId, companyId, draft.id);
+
+    await expect(transitionRentalRequest({ toStatus: 'Under Review', reason: 'Dispatcher review attempt' }, dispatcherId, companyId, draft.id))
+      .rejects.toBeInstanceOf(PermissionDeniedError);
+    const underReview = await transitionRentalRequest({ toStatus: 'Under Review', reason: 'Ops manager begins review' }, managerId, companyId, draft.id);
+    expect(underReview.status).toBe('Under Review');
+    await expect(transitionRentalRequest({ toStatus: 'Confirmed', reason: 'Attempt unapproved confirmation' }, managerId, companyId, draft.id))
+      .rejects.toBeInstanceOf(ZodError);
+    const declined = await transitionRentalRequest({ toStatus: 'Declined', reason: 'Unable to meet requested requirements' }, managerId, companyId, draft.id);
+    expect(declined.status).toBe('Declined');
+    const detail = await getRentalRequest({ actorId: managerId, companyId, requestId: draft.id });
+    expect(detail.history.map(({ toStatus }) => toStatus)).toEqual(['Declined', 'Under Review', 'Submitted', 'Draft']);
+    expect(await prisma.auditEvent.count({ where: { entityType: 'RENTAL_REQUEST', entityId: draft.id, action: 'RENTAL_REQUEST_STATUS_CHANGED' } })).toBe(2);
+    await expect(transitionRentalRequest({ toStatus: 'Under Review', reason: 'Attempt to reopen declined request' }, managerId, companyId, draft.id))
+      .rejects.toBeInstanceOf(RentalRequestTransitionNotAllowedError);
   });
 
   it('requires an explicit later return date for overnight submission and persists it', async () => {

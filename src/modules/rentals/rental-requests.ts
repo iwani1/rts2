@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { PermissionDeniedError, resolvePermission } from '@/modules/auth/permissions';
 import { getPrisma } from '@/server/prisma';
 import { missingRentalRequestSubmissionFields, rentalRequestDraftSchema, rentalRequestListQuerySchema, rentalRequestSubmitSchema } from './rental-request-schema';
+import { isAllowedRentalRequestTransition } from './rental-request-transitions';
 
 const companyIdSchema = z.string().trim().min(1).max(128);
 const requestIdSchema = z.string().trim().min(1).max(128);
@@ -26,6 +27,13 @@ export class RentalCustomerNotFoundError extends Error {
 export class RentalRequestNotDraftError extends Error {
   readonly code = 'RENTAL_REQUEST_NOT_DRAFT';
   constructor() { super('Only a Draft request may be changed or submitted.'); this.name = 'RentalRequestNotDraftError'; }
+}
+export class RentalRequestTransitionNotAllowedError extends Error {
+  readonly code = 'RENTAL_REQUEST_TRANSITION_NOT_ALLOWED';
+  constructor(readonly fromStatus: string, readonly toStatus: string) {
+    super(`The transition from ${fromStatus} to ${toStatus} is not allowed.`);
+    this.name = 'RentalRequestTransitionNotAllowedError';
+  }
 }
 export class RentalRequestMissingSubmissionFieldsError extends Error {
   readonly code = 'RENTAL_REQUEST_MISSING_SUBMISSION_FIELDS';
@@ -295,6 +303,51 @@ export async function submitRentalRequest(input: unknown, actorId: string, compa
     });
     await tx.auditEvent.create({
       data: { actorId, companyId, action: 'RENTAL_REQUEST_SUBMITTED', entityType: 'RENTAL_REQUEST', entityId: requestId, summary: { reason: data.reason } },
+    });
+    const request = await tx.rentalRequest.findUniqueOrThrow({
+      where: { id: requestId }, include: { customer: { select: { displayName: true, archivedAt: true } } },
+    });
+    return presentRequest(request);
+  });
+}
+
+const rentalRequestTransitionSchema = z.object({
+  toStatus: z.enum(['Under Review', 'Declined']),
+  reason: z.string().trim().min(8).max(500),
+}).strict();
+
+/** Applies only the explicit, non-reserving review/decline transitions approved in D-032. */
+export async function transitionRentalRequest(input: unknown, actorId: string, companyIdInput: string, requestIdInput: string) {
+  const data = rentalRequestTransitionSchema.parse(input);
+  const companyId = companyIdSchema.parse(companyIdInput);
+  const requestId = requestIdSchema.parse(requestIdInput);
+  await accessFor(actorId, companyId);
+  const prisma = getPrisma();
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const rows = await tx.$queryRaw<Array<{ status: string }>>`
+      SELECT "status" FROM "RentalRequest"
+      WHERE "id" = ${requestId} AND "companyId" = ${companyId}
+      FOR UPDATE
+    `;
+    const current = rows[0];
+    if (!current) throw new RentalRequestNotFoundError();
+    if (!isAllowedRentalRequestTransition(current.status, data.toStatus)) {
+      throw new RentalRequestTransitionNotAllowedError(current.status, data.toStatus);
+    }
+
+    const changed = await tx.rentalRequest.updateMany({
+      where: { id: requestId, companyId, status: current.status },
+      data: { status: data.toStatus },
+    });
+    if (changed.count !== 1) throw new RentalRequestTransitionNotAllowedError(current.status, data.toStatus);
+    await tx.rentalRequestStatusHistory.create({
+      data: { companyId, requestId, actorId, fromStatus: current.status, toStatus: data.toStatus, reason: data.reason },
+    });
+    await tx.auditEvent.create({
+      data: {
+        actorId, companyId, action: 'RENTAL_REQUEST_STATUS_CHANGED', entityType: 'RENTAL_REQUEST', entityId: requestId,
+        summary: { fromStatus: current.status, toStatus: data.toStatus, reason: data.reason },
+      },
     });
     const request = await tx.rentalRequest.findUniqueOrThrow({
       where: { id: requestId }, include: { customer: { select: { displayName: true, archivedAt: true } } },

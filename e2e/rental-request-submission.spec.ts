@@ -6,7 +6,7 @@ function upcomingDate(days: number) {
   return date.toISOString().slice(0, 10);
 }
 
-test('authorized staff can save a Draft, see missing submission fields, then submit it', async ({ page }) => {
+test('authorized staff can submit a rental request, review it, then record a reasoned decline', async ({ page }) => {
   const email = process.env.TMS_E2E_EMAIL;
   const password = process.env.TMS_E2E_PASSWORD;
   if (!email || !password) throw new Error('Set TMS_E2E_EMAIL and TMS_E2E_PASSWORD in the local environment.');
@@ -60,4 +60,15 @@ test('authorized staff can save a Draft, see missing submission fields, then sub
   await expect(requestRow).toContainText('Submitted');
   await expect(requestRow).toContainText(upcomingDate(15));
   await expect(page.getByRole('button', { name: 'Submit request' })).toHaveCount(0);
+
+  await page.getByLabel('Reason for this status change').fill('Ops manager begins rental review');
+  await page.getByRole('button', { name: 'Start review' }).click();
+  await expect(page.getByText('Submitted → Under Review')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Decline request' })).toBeVisible();
+
+  await page.getByLabel('Reason for this status change').fill('Unable to meet customer requirements');
+  await page.getByRole('button', { name: 'Decline request' }).click();
+  await expect(page.getByText('Under Review → Declined')).toBeVisible();
+  await expect(requestRow).toContainText('Declined');
+  await expect(page.getByText(/Only the explicitly approved review and decline transitions are currently available/)).toBeVisible();
 });
