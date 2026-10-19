@@ -182,13 +182,14 @@ export async function getVehicleRegisterSummary(input: { actorId: string; compan
   const access = await accessFor(actorId, companyId);
   if (!access.canManage) throw new PermissionDeniedError();
 
-  const categories = await getPrisma().vehicle.groupBy({
-    by: ['category'],
-    where: { companyId, archivedAt: null },
-    _count: { _all: true },
-    orderBy: { category: 'asc' },
-  }) as Array<{ category: string; _count: { _all: number } }>;
-  const byCategory: VehicleRegisterCategoryCount[] = categories.map(({ category, _count }) => ({ category, count: _count._all }));
+  const categories: Array<{ category: string; count: bigint }> = await getPrisma().$queryRaw<Array<{ category: string; count: bigint }>>`
+    SELECT "category", COUNT(*) AS "count"
+    FROM "Vehicle"
+    WHERE "companyId" = ${companyId} AND "archivedAt" IS NULL
+    GROUP BY "category"
+    ORDER BY "category" ASC
+  `;
+  const byCategory: VehicleRegisterCategoryCount[] = categories.map(({ category, count }) => ({ category, count: Number(count) }));
   return {
     registeredVehicleCount: byCategory.reduce<number>((total, entry) => total + entry.count, 0),
     byCategory,
