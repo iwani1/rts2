@@ -2,7 +2,18 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getPrisma } from '@/server/prisma';
 import { assignRole } from '@/modules/auth/permissions';
-import { archiveCustomer, createCustomer, CustomerNotFoundError, getCustomer, listCustomers, updateCustomer } from './customers';
+import {
+  archiveCustomer,
+  createCustomer,
+  CustomerImportValidationError,
+  CustomerNotFoundError,
+  getCustomer,
+  importCustomersFromCsv,
+  listCustomers,
+  previewCustomerImport,
+  updateCustomer,
+} from './customers';
+import { customerImportHeaders } from './customer-import-constants';
 
 const prisma = getPrisma();
 let companyId = '';
@@ -80,6 +91,41 @@ describe('customer register with PostgreSQL persistence', () => {
     const otherCompanyManager = await makeUser('Other Customer Ops Manager');
     await assignRole({ actorId: adminId, targetUserId: otherCompanyManager.id, companyId: otherCompanyId, roleCode: 'OPS_MANAGER', reason: 'Other company access boundary test' });
     await expect(getCustomer({ actorId: otherCompanyManager.id, companyId: otherCompanyId, customerId: existing.id })).rejects.toMatchObject({ code: 'CUSTOMER_NOT_FOUND' });
+  });
+
+  it('previews all customer CSV rows and imports no rows when any row is invalid', async () => {
+    const beforeCount = await prisma.customer.count({ where: { companyId } });
+    const csv = `${customerImportHeaders.join(',')}\nValid Row,IMPORT-VALID,,,,,,,\n,IMPORT-INVALID,,,,,,,\n`;
+    const preview = await previewCustomerImport({ actorId: managerId, companyId, csv });
+    expect(preview).toMatchObject({ totalRows: 2, validRows: 1, invalidRows: 1, canImport: false });
+    expect(preview.rows[1]?.errors.join(' ')).toContain('displayName');
+    await expect(importCustomersFromCsv({
+      actorId: managerId, companyId, csv, reason: 'Import archived customer records',
+    })).rejects.toBeInstanceOf(CustomerImportValidationError);
+    expect(await prisma.customer.count({ where: { companyId } })).toBe(beforeCount);
+  });
+
+  it('imports a fully valid customer CSV atomically and audits each created record', async () => {
+    const csv = `${customerImportHeaders.join(',')}\nImported One,IMPORT-ONE,,,,,Organisation,Active,\nImported Two,,,,,,,,\n`;
+    const result = await importCustomersFromCsv({
+      actorId: managerId, companyId, csv, reason: 'Import verified customer register rows',
+    });
+    expect(result.importedCount).toBe(2);
+    const first = result.customers[0];
+    expect(first).toMatchObject({ displayName: 'Imported One', reference: 'IMPORT-ONE' });
+    const details = await getCustomer({ actorId: managerId, companyId, customerId: first!.id });
+    expect(details.customer).toMatchObject({ customerType: 'Organisation', status: 'Active' });
+    expect(details.history[0]).toMatchObject({ action: 'CUSTOMER_IMPORTED', reason: 'Import verified customer register rows' });
+    const event = await prisma.auditEvent.findFirst({ where: { entityId: first!.id, action: 'CUSTOMER_IMPORTED' } });
+    expect(event?.summary).toEqual({ reason: 'Import verified customer register rows', source: 'CSV_IMPORT', rowNumber: 2 });
+  });
+
+  it('rejects references already present in the company without allowing an import', async () => {
+    await createCustomer(customerInput({ reference: 'IMPORT-EXISTING' }), managerId, companyId);
+    const csv = `${customerImportHeaders.join(',')}\nAnother Name,IMPORT-EXISTING,,,,,,,\n`;
+    const preview = await previewCustomerImport({ actorId: managerId, companyId, csv });
+    expect(preview.canImport).toBe(false);
+    expect(preview.rows[0]?.errors.join(' ')).toContain('already exists in this company');
   });
 
   it('updates with audited history and archives without deleting the customer', async () => {

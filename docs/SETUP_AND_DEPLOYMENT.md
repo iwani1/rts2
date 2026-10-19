@@ -22,6 +22,12 @@ The current migrations contain auth, audit, company/settings scaffolding, the ow
 ## Quality gates
 `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`. For database-backed tests, use a disposable local database ending in `_test`: `TMS_TEST_DATABASE_URL=... npm run db:test:migrate`, then run `DATABASE_URL=... APP_URL=http://localhost:3000 AUTH_SECRET=<test-secret> npm run test:integration`. The raw-SQL migration helper refuses remote hosts and database names without the `_test` suffix; it is test-only and does not write Prisma migration history. CI uses PostgreSQL 16 and Prisma's native `migrate deploy`, then runs integration tests.
 
+## Customer CSV import (MIG-01 first slice)
+
+The customer register includes a CSV import link for Super Administrators and Ops Managers. Download the supplied header template, fill `displayName` (required) and any optional approved customer fields (`reference`, `contactPerson`, `telephone`, `email`, `billingDetails`, `customerType`, `status`, `notes`), then preview every row. The batch-level audit reason is entered in the application and is not a CSV column. Empty optional cells remain unset; no defaults are applied.
+
+Imports are all-or-nothing (D-024): any file/header/row error blocks every write until corrected and previewed again. Blank rows and duplicate references are reported rather than silently skipped. A reference already used in the company, including by an archived customer, cannot be reused; names are not treated as unique. Import creates new customer records only; it never merges or updates existing records. Technical limits are 2 MB and 1,000 data rows per batch. Vehicle and driver CSV import screens are not implemented yet.
+
 ## Browser end-to-end test (local disposable database only)
 
 The Playwright test `e2e/rental-request-submission.spec.ts` signs into the local app, creates a synthetic customer, creates an incomplete Draft, verifies submission is blocked with missing fields, fills the approved fields, then submits and checks status history. Test records remain in the disposable database.

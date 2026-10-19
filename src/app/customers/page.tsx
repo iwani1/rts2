@@ -63,7 +63,10 @@ export default async function CustomersPage({ searchParams }: PageProps) {
     <div className="fleet-content">
       <div className="fleet-title-row">
         <div><p className="eyebrow">{company.name}</p><h1>Customer register</h1><p className="muted">Individual and organisation customer records for staff enquiries. Only customer details entered by authorised staff are shown.</p></div>
-        <Link className="button-link" href="/">Back to workspace</Link>
+        <div className="customer-actions">
+          {result.canManage && <Link className="button-link" href="/customers/import">Import customers from CSV</Link>}
+          <Link className="button-link" href="/">Back to workspace</Link>
+        </div>
       </div>
       <section className="fleet-list-panel" aria-labelledby="customer-list-title">
         <div className="fleet-list-heading">

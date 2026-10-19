@@ -110,3 +110,9 @@
 - **Decision:** To submit a Draft, require the existing customer link, service date, departure time, pickup location, destination, positive passenger count, request source, and either return time or duration in whole minutes. Intermediate stops, luggage/special needs, purpose, requested vehicle type, driver requirement, trip contact, and notes remain optional. Only Ops Managers and Super Administrators may submit staff-entered Drafts; Dispatchers remain excluded until enquiry-context ownership and field projections are implemented.
 - **Source:** Owner selected the recommended required-field and actor boundary on 2026-10-19.
 - **Limits:** This approves only `Draft → Submitted`. No further transition, review, quote, availability, reservation, confirmation, dispatch, cancellation, or notification workflow is approved or implemented by this decision.
+
+## D-024 — CSV import batch atomicity
+- **Decision:** CSV imports are all-or-nothing. The system previews all rows and reports validation errors by row; it writes no records while any row is invalid. After correction and a clean preview, the operator explicitly confirms the complete batch. No row is silently skipped, and no automatic merge/update is performed.
+- **Source:** Owner selected the recommended option on 2026-10-19.
+- **Reason:** Prevent partially imported customer/fleet master data and ambiguous retries while preserving row-level correction details.
+- **Limits:** This determines batch commit behavior only. It does not approve field defaults, generated identifiers, duplicate merging, overwriting existing records, or any unapproved customer/vehicle/driver policies.

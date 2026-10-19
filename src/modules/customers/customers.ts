@@ -2,7 +2,8 @@ import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { PermissionDeniedError, resolvePermission } from '@/modules/auth/permissions';
 import { getPrisma } from '@/server/prisma';
-import { customerListQuerySchema, customerRequestSchema } from './customer-schema';
+import { customerInputSchema, customerListQuerySchema, customerRequestSchema } from './customer-schema';
+import { parseCustomerImportCsv, type CustomerImportRow } from './customer-import';
 
 const companyIdSchema = z.string().trim().min(1).max(128);
 const customerIdSchema = z.string().trim().min(1).max(128);
@@ -60,7 +61,7 @@ function presentCustomer(row: CustomerDbShape): CustomerRecord {
   };
 }
 
-function toCustomerData(input: z.infer<typeof customerRequestSchema>) {
+function toCustomerData(input: z.infer<typeof customerInputSchema>) {
   return {
     reference: input.reference || null,
     displayName: input.displayName,
@@ -74,6 +75,25 @@ function toCustomerData(input: z.infer<typeof customerRequestSchema>) {
   };
 }
 
+export type CustomerImportPreview = {
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  canImport: boolean;
+  fileErrors: string[];
+  rows: Array<Pick<CustomerImportRow, 'rowNumber' | 'displayName' | 'reference' | 'errors'>>;
+};
+
+export class CustomerImportValidationError extends Error {
+  readonly code = 'CUSTOMER_IMPORT_VALIDATION_FAILED';
+  constructor(readonly preview: CustomerImportPreview) {
+    super(preview.fileErrors.length > 0
+      ? 'Fix the CSV file errors before importing; no customers were imported.'
+      : `Fix all ${preview.invalidRows} invalid CSV row(s) before importing; no customers were imported.`);
+    this.name = 'CustomerImportValidationError';
+  }
+}
+
 async function accessFor(actorId: string, companyId: string) {
   const permission = await resolvePermission({ userId: actorId, companyId, permission: 'customer:manage' });
   if (!permission.allowed) throw new PermissionDeniedError();
@@ -83,6 +103,95 @@ async function accessFor(actorId: string, companyId: string) {
   // Limited enquiry, billing, and own-profile projections need field rules; deny until those are implemented.
   if (!canManage) throw new PermissionDeniedError();
   return { canManage };
+}
+
+async function evaluateCustomerImport(
+  db: Pick<Prisma.TransactionClient, 'customer'>,
+  companyId: string,
+  csv: string,
+) {
+  const parsed = parseCustomerImportCsv(csv);
+  if (parsed.fileErrors.length > 0) {
+    return { rows: parsed.rows, preview: {
+      totalRows: 0, validRows: 0, invalidRows: 0, canImport: false,
+      fileErrors: parsed.fileErrors, rows: [],
+    } satisfies CustomerImportPreview };
+  }
+
+  const references = [...new Set(parsed.rows.flatMap((row) => row.data?.reference ? [row.data.reference] : []))];
+  const existingReferences = references.length > 0
+    ? await db.customer.findMany({ where: { companyId, reference: { in: references } }, select: { reference: true } })
+    : [];
+  const existingSet = new Set(existingReferences.flatMap((row: { reference: string | null }) => row.reference ? [row.reference] : []));
+  for (const row of parsed.rows) {
+    if (row.data?.reference && existingSet.has(row.data.reference)) {
+      row.errors.push(`Reference "${row.data.reference}" already exists in this company.`);
+    }
+  }
+
+  const validRows = parsed.rows.filter((row) => row.errors.length === 0 && row.data).length;
+  const preview: CustomerImportPreview = {
+    totalRows: parsed.rows.length,
+    validRows,
+    invalidRows: parsed.rows.length - validRows,
+    canImport: parsed.rows.length > 0 && validRows === parsed.rows.length,
+    fileErrors: [],
+    rows: parsed.rows.map(({ rowNumber, displayName, reference, errors }) => ({ rowNumber, displayName, reference, errors })),
+  };
+  return { rows: parsed.rows, preview };
+}
+
+export async function previewCustomerImport(input: { actorId: string; companyId: string; csv: string }) {
+  const data = z.object({
+    actorId: z.string().trim().min(1).max(128),
+    companyId: companyIdSchema,
+    csv: z.string().min(1).max(2_000_000),
+  }).strict().parse(input);
+  await accessFor(data.actorId, data.companyId);
+  return (await evaluateCustomerImport(getPrisma(), data.companyId, data.csv)).preview;
+}
+
+export async function importCustomersFromCsv(input: {
+  actorId: string; companyId: string; csv: string; reason: string;
+}) {
+  const data = z.object({
+    actorId: z.string().trim().min(1).max(128),
+    companyId: companyIdSchema,
+    csv: z.string().min(1).max(2_000_000),
+    reason: z.string().trim().min(8).max(500),
+  }).strict().parse(input);
+  await accessFor(data.actorId, data.companyId);
+  const prisma = getPrisma();
+
+  try {
+    return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const evaluated = await evaluateCustomerImport(tx, data.companyId, data.csv);
+      if (!evaluated.preview.canImport || evaluated.preview.fileErrors.length > 0) {
+        throw new CustomerImportValidationError(evaluated.preview);
+      }
+      const imported: Array<{ id: string; displayName: string; reference: string | null }> = [];
+      for (const row of evaluated.rows) {
+        if (!row.data) throw new Error('Validated import row is missing normalized data.');
+        const customer = await tx.customer.create({ data: { ...toCustomerData(row.data), companyId: data.companyId } });
+        await tx.auditEvent.create({
+          data: {
+            actorId: data.actorId,
+            companyId: data.companyId,
+            action: 'CUSTOMER_IMPORTED',
+            entityType: 'CUSTOMER',
+            entityId: customer.id,
+            summary: { reason: data.reason, source: 'CSV_IMPORT', rowNumber: row.rowNumber },
+          },
+        });
+        imported.push({ id: customer.id, displayName: customer.displayName, reference: customer.reference });
+      }
+      return { importedCount: imported.length, customers: imported };
+    });
+  } catch (error) {
+    if (!isUniqueCustomerReferenceError(error)) throw error;
+    const refreshed = await evaluateCustomerImport(prisma, data.companyId, data.csv);
+    throw new CustomerImportValidationError(refreshed.preview);
+  }
 }
 
 export async function listCustomers(input: { actorId: string; companyId: string; search?: string; cursor?: string }): Promise<{
