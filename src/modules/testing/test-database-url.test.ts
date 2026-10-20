@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { assertIntegrationTestEnvironment, resolveTestDatabaseUrl } from './test-database-url';
+import { assertFreshTestSchema } from './test-schema-safety.mjs';
+
+describe('raw test migration schema safety', () => {
+  it('allows only an empty test schema', () => {
+    expect(() => assertFreshTestSchema([])).not.toThrow();
+  });
+
+  it.each(['customer', '_prisma_migrations', 'rental_request_id_seq'])(
+    'rejects a pre-existing relation: %s',
+    (relationName) => {
+      expect(() => assertFreshTestSchema([relationName])).toThrow(/database is not empty/);
+    },
+  );
+});
 
 describe('integration-test environment safety', () => {
   it('accepts a sufficiently long secret and local application URL', () => {

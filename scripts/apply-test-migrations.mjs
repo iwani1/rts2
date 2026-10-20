@@ -2,6 +2,7 @@ import pg from 'pg';
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertFreshTestSchema } from '../src/modules/testing/test-schema-safety.mjs';
 
 const connectionString = process.env.TMS_TEST_DATABASE_URL;
 if (!connectionString) throw new Error('TMS_TEST_DATABASE_URL must point to a disposable local PostgreSQL database');
@@ -28,9 +29,7 @@ try {
       AND relation.relkind IN ('r', 'p', 'v', 'm', 'S', 'f')
     LIMIT 1
   `);
-  if (existingObjects.rowCount) {
-    throw new Error('Refusing test migration: the disposable test database is not empty. Create a fresh local *_test database before applying raw test migrations.');
-  }
+  assertFreshTestSchema(existingObjects.rows.map((row) => row.relname));
 
   for (const migration of migrations) {
     const sql = await readFile(path.join(migrationsDir, migration, 'migration.sql'), 'utf8');
