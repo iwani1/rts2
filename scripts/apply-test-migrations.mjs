@@ -20,6 +20,18 @@ const migrations = (await readdir(migrationsDir, { withFileTypes: true }))
 const client = new pg.Client({ connectionString });
 await client.connect();
 try {
+  const existingObjects = await client.query(`
+    SELECT relation.relname
+    FROM pg_class AS relation
+    JOIN pg_namespace AS namespace ON namespace.oid = relation.relnamespace
+    WHERE namespace.nspname = current_schema()
+      AND relation.relkind IN ('r', 'p', 'v', 'm', 'S', 'f')
+    LIMIT 1
+  `);
+  if (existingObjects.rowCount) {
+    throw new Error('Refusing test migration: the disposable test database is not empty. Create a fresh local *_test database before applying raw test migrations.');
+  }
+
   for (const migration of migrations) {
     const sql = await readFile(path.join(migrationsDir, migration, 'migration.sql'), 'utf8');
     await client.query('BEGIN');
