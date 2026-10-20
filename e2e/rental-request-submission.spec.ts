@@ -75,6 +75,13 @@ test('authorized staff can submit a rental request, review it, then record a rea
   await expect(requestRow).toContainText('Declined');
   await expect(page.getByText(/Only the explicitly approved review and decline transitions are currently available/)).toBeVisible();
 
+  await page.getByLabel('Search requests').fill(customerName);
+  await page.getByLabel('Filter by status').selectOption('Declined');
+  await page.getByRole('button', { name: 'Apply filters' }).click();
+  await expect(page).toHaveURL(/status=Declined/);
+  await expect(page.getByRole('table', { name: 'Rental request records' }).getByRole('row')).toHaveCount(2);
+  await expect(page.getByRole('table', { name: 'Rental request records' })).toContainText(customerName);
+
   await page.goto('/rentals/reports');
   await expect(page.getByRole('heading', { name: 'Rental request report' })).toBeVisible();
   await expect(page.getByText(/Requests ever submitted:/)).toBeVisible();
