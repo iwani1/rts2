@@ -13,6 +13,8 @@ test('Super Administrator can review read-only policy status and cannot change t
   await page.getByRole('link', { name: 'Policy settings' }).click();
   await expect(page).toHaveURL('/admin/settings');
   await expect(page.getByRole('heading', { name: 'Policy settings status' })).toBeVisible();
+  // SettingsRegistryStatus is a client component that fetches settings status asynchronously.
+  await expect(page.getByRole('region', { name: 'Required policy settings' })).toBeVisible();
   const policyRegistry = page.getByRole('region', { name: 'Required policy settings' });
   await expect(policyRegistry.getByRole('table', { name: 'Registered policy keys, configuration status and blocked features' })).toBeVisible();
   await expect(policyRegistry.locator('input, textarea, select')).toHaveCount(0);

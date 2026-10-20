@@ -21,6 +21,9 @@ test('authorized fleet manager applies and releases a safety block, then records
   await page.goto('/fleet/vehicles');
   await expect(page).toHaveURL('/fleet/vehicles');
   await expect(page.getByRole('heading', { name: 'Vehicle register' })).toBeVisible();
+  // VehicleManager (with the create form) only renders when the actor has fleet:manage
+  // with GLOBAL or COMPANY scope. Verify it is present before filling the form.
+  await expect(page.getByLabel('Registration number')).toBeVisible();
   await page.getByLabel('Registration number').fill(registration);
   await page.getByLabel('Make', { exact: true }).fill('E2E test');
   await page.getByLabel('Model', { exact: true }).fill(`Safety ${suffix}`);
