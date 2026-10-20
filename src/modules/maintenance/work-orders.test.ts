@@ -122,9 +122,16 @@ describe('maintenance work-order intake', () => {
       where: { companyId: 'company-1' }, take: 100,
       select: expect.objectContaining({ statusHistory: expect.objectContaining({ take: 50, orderBy: { sequence: 'desc' } }) }),
     }));
-    await expect(listWorkOrders('manager-1', 'company-1', 'Reported')).resolves.toHaveLength(1);
-    expect(findMany).toHaveBeenLastCalledWith(expect.objectContaining({ where: { companyId: 'company-1', status: 'Reported' } }));
+    await expect(listWorkOrders('manager-1', 'company-1', 'Reported', 'door')).resolves.toHaveLength(1);
+    expect(findMany).toHaveBeenLastCalledWith(expect.objectContaining({
+      where: { companyId: 'company-1', status: 'Reported', OR: [
+        { reference: { contains: 'door', mode: 'insensitive' } },
+        { reportedFault: { contains: 'door', mode: 'insensitive' } },
+        { vehicle: { is: { registrationNumber: { contains: 'door', mode: 'insensitive' } } } },
+      ] },
+    }));
     await expect(listWorkOrders('manager-1', 'company-1', 'Fictitious')).rejects.toThrow();
+    await expect(listWorkOrders('manager-1', 'company-1', undefined, 'x'.repeat(101))).rejects.toThrow();
   });
 
   it('advances only valid statuses and records sequenced status history plus audit atomically', async () => {

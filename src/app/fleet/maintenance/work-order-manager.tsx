@@ -27,11 +27,12 @@ const nextStatuses: Record<string, string[]> = {
   'In Progress': ['Awaiting Parts', 'Awaiting Review'], 'Awaiting Parts': ['In Progress'], 'Awaiting Review': ['Completed'], Completed: ['Closed'], Closed: [], Cancelled: [],
 };
 
-export function WorkOrderManager({ companyId, vehicles, initialWorkOrders, statusFilter }: {
+export function WorkOrderManager({ companyId, vehicles, initialWorkOrders, statusFilter, searchQuery }: {
   companyId: string;
   vehicles: VehicleOption[];
   initialWorkOrders: WorkOrder[];
   statusFilter?: string;
+  searchQuery?: string;
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -130,13 +131,15 @@ export function WorkOrderManager({ companyId, vehicles, initialWorkOrders, statu
     </section>
     <section className="fleet-list-panel" aria-labelledby="work-order-list-title">
       <div className="fleet-list-heading">
-        <div><h2 id="work-order-list-title">Work orders</h2><p className="muted">Showing the latest 100 records{statusFilter ? ` currently at ${statusFilter}` : ' across all statuses'}.</p></div>
-        <form className="fleet-search" method="get" aria-label="Filter work orders by status">
+        <div><h2 id="work-order-list-title">Work orders</h2><p className="muted">Showing up to the latest 100 matches{statusFilter ? ` at ${statusFilter}` : ''}{searchQuery ? ` for “${searchQuery}”` : ''}.</p></div>
+        <form className="fleet-search work-order-search" method="get" aria-label="Search and filter work orders">
+          <label htmlFor="work-order-search-query">Search reference, fault or registration</label>
+          <input id="work-order-search-query" type="search" name="q" maxLength={100} defaultValue={searchQuery ?? ''} placeholder="Reference, fault or vehicle" />
           <label htmlFor="work-order-status-filter">Filter by current status</label>
-          <div><select id="work-order-status-filter" name="status" defaultValue={statusFilter ?? ''}><option value="">All statuses</option>{workOrderStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select><button className="button-link" type="submit">Apply filter</button></div>
+          <div><select id="work-order-status-filter" name="status" defaultValue={statusFilter ?? ''}><option value="">All statuses</option>{workOrderStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select><button className="button-link" type="submit">Apply filters</button></div>
         </form>
       </div>
-      {initialWorkOrders.length === 0 ? <div className="fleet-empty"><h3>No work orders recorded</h3><p>Non-safety maintenance reports will appear here.</p></div> : <div className="vehicle-table-wrap" role="region" aria-label="Maintenance work orders" tabIndex={0}>
+      {initialWorkOrders.length === 0 ? <div className="fleet-empty"><h3>{statusFilter || searchQuery ? 'No work orders match these filters' : 'No work orders recorded'}</h3><p>{statusFilter || searchQuery ? 'Change or clear the search and status filters to see other records.' : 'Non-safety maintenance reports will appear here.'}</p></div> : <div className="vehicle-table-wrap" role="region" aria-label="Maintenance work orders" tabIndex={0}>
         <table className="vehicle-table"><caption className="sr-only">Maintenance work orders</caption><thead><tr><th scope="col">Reference</th><th scope="col">Reported</th><th scope="col">Vehicle</th><th scope="col">Fault</th><th scope="col">Work type</th><th scope="col">Priority</th><th scope="col">Status</th></tr></thead>
           <tbody>{initialWorkOrders.map((item) => <tr key={item.id}><td><strong>{item.reference}</strong></td><td>{dateOnly(item.dateReported)}</td><td>{item.vehicle.registrationNumber} — {item.vehicle.make} {item.vehicle.model}</td><td>{item.reportedFault}</td><td>{item.workType ?? 'Not recorded'}</td><td>{item.priority ?? 'Not recorded'}</td><td>{item.status}</td></tr>)}</tbody>
         </table>

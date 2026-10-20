@@ -104,17 +104,26 @@ async function requireMaintenanceManager(actorId: string, companyId: string) {
 }
 
 /** Lists work orders for authorized company maintenance managers. */
-export async function listWorkOrders(actorIdInput: string, companyIdInput: string, statusInput?: string) {
+export async function listWorkOrders(actorIdInput: string, companyIdInput: string, statusInput?: string, searchInput?: string) {
   const actorId = idSchema.parse(actorIdInput);
   const companyId = idSchema.parse(companyIdInput);
   const status = statusInput ? workOrderStatusSchema.parse(statusInput) : undefined;
+  const search = searchInput === undefined ? undefined : z.string().trim().max(100).parse(searchInput) || undefined;
   await requireMaintenanceManager(actorId, companyId);
   const prisma = getPrisma();
   const company = await prisma.company.findUnique({ where: { id: companyId }, select: { status: true } });
   if (company?.status !== 'ACTIVE') throw new WorkOrderNotFoundError();
   const store = prisma as unknown as WorkOrderStore;
   const rows = await store.maintenanceWorkOrder.findMany({
-    where: { companyId, ...(status ? { status } : {}) },
+    where: {
+      companyId,
+      ...(status ? { status } : {}),
+      ...(search ? { OR: [
+        { reference: { contains: search, mode: 'insensitive' } },
+        { reportedFault: { contains: search, mode: 'insensitive' } },
+        { vehicle: { is: { registrationNumber: { contains: search, mode: 'insensitive' } } } },
+      ] } : {}),
+    },
     orderBy: [{ dateReported: 'desc' }, { createdAt: 'desc' }],
     take: 100,
     select: {

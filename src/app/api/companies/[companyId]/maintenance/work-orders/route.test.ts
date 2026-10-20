@@ -37,9 +37,9 @@ describe('maintenance work-order API', () => {
   it('passes an explicit status filter to the tenant-scoped list service', async () => {
     mocks.getSession.mockResolvedValue({ user: { id: 'fleet-manager-1' } });
     mocks.listWorkOrders.mockResolvedValue([]);
-    const response = await GET(new Request('https://example.test?status=Awaiting%20Review'), context);
+    const response = await GET(new Request('https://example.test?status=Awaiting%20Review&q=door'), context);
     expect(response.status).toBe(200);
-    expect(mocks.listWorkOrders).toHaveBeenCalledWith('fleet-manager-1', 'company-1', 'Awaiting Review');
+    expect(mocks.listWorkOrders).toHaveBeenCalledWith('fleet-manager-1', 'company-1', 'Awaiting Review', 'door');
   });
 
   it('derives actor and tenant from the authenticated route and returns the Reported record', async () => {
