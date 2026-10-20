@@ -52,6 +52,7 @@ export default async function Home() {
       <h1>Welcome, {session.user.name || 'team member'}</h1>
       <p>Your account is authenticated. Use the available registers to maintain verified company records.</p>
       <p className="notice">Phase 1A is in progress. Vehicle, driver and customer registers plus rental Draft entry are available. Ops Managers and Super Administrators can submit Drafts; quotation, finance and operational assignment workflows are not yet available.</p>
+      {companies.length !== 1 && <p className="notice" role="status">Company-specific registers are hidden until exactly one active operator company is configured.</p>}
     </section>
   </main>;
 }

@@ -30,6 +30,7 @@ describe('workspace company selection', () => {
     render(page);
     expect(screen.getByRole('link', { name: 'Vehicle register' }).getAttribute('href')).toBe('/fleet/vehicles');
     expect(screen.getByRole('link', { name: 'Rental requests' }).getAttribute('href')).toBe('/rentals/requests');
+    expect(screen.queryByRole('status')).toBeNull();
     expect(mocks.findCompanies).toHaveBeenCalledWith(expect.objectContaining({ take: 2, where: { status: 'ACTIVE' } }));
   });
 
@@ -39,6 +40,7 @@ describe('workspace company selection', () => {
     render(page);
     expect(screen.queryByRole('link', { name: 'Vehicle register' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Rental requests' })).toBeNull();
+    expect(screen.getByRole('status').textContent).toContain('exactly one active operator company');
     expect(mocks.resolvePermission).toHaveBeenCalledOnce();
     expect(mocks.resolvePermission).toHaveBeenCalledWith({ userId: 'user-1', permission: 'audit:read' });
   });
@@ -48,6 +50,7 @@ describe('workspace company selection', () => {
     const page = await Home();
     render(page);
     expect(screen.queryByRole('link', { name: 'Vehicle register' })).toBeNull();
+    expect(screen.getByRole('status').textContent).toContain('exactly one active operator company');
     expect(mocks.resolvePermission).toHaveBeenCalledOnce();
     expect(mocks.resolvePermission).toHaveBeenCalledWith({ userId: 'user-1', permission: 'audit:read' });
   });
