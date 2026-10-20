@@ -65,6 +65,7 @@ describe('WorkOrderManager', () => {
       id: 'vehicle-1', registrationNumber: 'GT-0001-26', make: 'Toyota', model: 'Hiace', odometerUnit: 'KM',
     }]} initialWorkOrders={[]} />);
     fireEvent.change(screen.getByLabelText('Find vehicle by registration, make or model'), { target: { value: 'GT-5555' } });
+    expect(screen.getByLabelText('Vehicle')).toHaveProperty('disabled', true);
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     expect(screen.getByLabelText('Vehicle')).toHaveProperty('disabled', true);
     resolveResponse(new Response(JSON.stringify({ vehicles: [match], hasMore: false }), { status: 200 }));
