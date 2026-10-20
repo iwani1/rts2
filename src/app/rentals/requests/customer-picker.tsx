@@ -12,6 +12,15 @@ export function CustomerPicker({ companyId, current }: { companyId: string; curr
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
+  // On client-side navigation (e.g. list -> edit draft), `current` changes without remounting.
+  // useState(current) only initialises on mount, so sync selected when the customer id changes.
+  useEffect(() => {
+    const currentId = current?.id ?? null;
+    if (currentId && (!selected || selected.id !== currentId)) {
+      setSelected(current);
+    }
+  }, [current?.id]);
+
   useEffect(() => {
     const term = query.trim();
     if (!term) {
