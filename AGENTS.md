@@ -1,0 +1,3 @@
+# Richie TMS Agent Brief
+
+The stable implementation brief is maintained in `richie-tms-standing-brief.md`. Read it and follow its integrity rules and session protocol. Phase 0 is complete and owner-approved. Phase 1A is authorized but incomplete; use `richie-tms-phase-prompts.md` and implement one vertical slice at a time. Stop for owner review at the Phase 1A gate; do not begin Phase 1B until all Phase 1A exit criteria are demonstrated by tests and the owner approves. Keep feature progress honest, leave unknown policy settings unset, and obtain owner decisions before implementing dependent business rules.

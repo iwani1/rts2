@@ -1,0 +1,66 @@
+// @vitest-environment jsdom
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { WorkOrderManager } from './work-order-manager';
+
+const mocks = vi.hoisted(() => ({ refresh: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: mocks.refresh }) }));
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+describe('WorkOrderManager', () => {
+  it('requires non-safety confirmation and creates an audited non-safety report with explicit fields', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ workOrder: {
+      id: 'wo-1', reference: 'WO-AABBCCDDEEFF0011', status: 'Reported',
+    } }), { status: 201 }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<WorkOrderManager companyId="company-1" vehicles={[{
+      id: 'vehicle-1', registrationNumber: 'GT-1234-25', make: 'Toyota', model: 'Hiace', odometerUnit: 'KM',
+    }]} initialWorkOrders={[]} />);
+
+    fireEvent.change(screen.getByLabelText('Vehicle'), { target: { value: 'vehicle-1' } });
+    fireEvent.change(screen.getByLabelText('Work type (optional)'), { target: { value: 'Inspection' } });
+    fireEvent.change(screen.getByLabelText('Priority (optional; enter the operator’s priority label)'), { target: { value: 'Routine' } });
+    fireEvent.change(screen.getByLabelText('Date reported'), { target: { value: '2026-10-20' } });
+    fireEvent.change(screen.getByLabelText(/Odometer reading/), { target: { value: '34567.5' } });
+    fireEvent.change(screen.getByLabelText('Odometer unit (required when a reading is entered)'), { target: { value: 'KM' } });
+    fireEvent.change(screen.getByLabelText('Reported fault'), { target: { value: 'Front left door latch sticks when opened' } });
+    fireEvent.change(screen.getByLabelText('Reason for creating this work order'), { target: { value: 'Record a routine non-safety door inspection' } });
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: 'Record work order' }));
+
+    expect(await screen.findByText(/WO-AABBCCDDEEFF0011 recorded as Reported/)).toBeTruthy();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      vehicleId: 'vehicle-1', reportedFault: 'Front left door latch sticks when opened', workType: 'Inspection',
+      priority: 'Routine', dateReported: '2026-10-20', odometerValue: 34567.5, odometerUnit: 'KM', safetyRelated: false,
+      reason: 'Record a routine non-safety door inspection',
+    });
+    expect(mocks.refresh).toHaveBeenCalledOnce();
+  });
+
+  it('submits a reasoned transition only to a displayed next status', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ workOrder: {
+      id: 'wo-1', reference: 'WO-AABBCCDDEEFF0011', status: 'Awaiting Inspection',
+    } }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<WorkOrderManager companyId="company-1" vehicles={[]} initialWorkOrders={[{
+      id: 'wo-1', reference: 'WO-AABBCCDDEEFF0011', vehicleId: 'vehicle-1', reportedFault: 'Front latch is sticking',
+      workType: null, priority: null, dateReported: '2026-10-20', status: 'Reported',
+      vehicle: { registrationNumber: 'GT-1234-25', make: 'Toyota', model: 'Hiace' }, statusHistory: [{
+        sequence: 1, fromStatus: null, toStatus: 'Reported', reason: 'Record routine maintenance fault',
+        createdAt: '2026-10-20T10:00:00.000Z', actorName: 'Fleet Manager',
+      }],
+    }]} />);
+    expect(screen.getByText('Record routine maintenance fault')).toBeTruthy();
+    expect(screen.getByText(/Fleet Manager ·/)).toBeTruthy();
+    fireEvent.click(screen.getByText('WO-AABBCCDDEEFF0011: transition from Reported'));
+    fireEvent.change(screen.getByLabelText('Next status'), { target: { value: 'Awaiting Inspection' } });
+    fireEvent.change(screen.getByLabelText('Reason for transition'), { target: { value: 'Move the vehicle to inspection queue' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Record transition' }));
+    expect(await screen.findByText(/moved to Awaiting Inspection/)).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith('/api/companies/company-1/maintenance/work-orders/wo-1', expect.objectContaining({
+      method: 'PATCH', body: JSON.stringify({ toStatus: 'Awaiting Inspection', reason: 'Move the vehicle to inspection queue' }),
+    }));
+    expect(mocks.refresh).toHaveBeenCalled();
+  });
+});

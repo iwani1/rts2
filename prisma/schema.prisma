@@ -1,0 +1,394 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id              String               @id @default(cuid())
+  name            String
+  status          String               @default("ACTIVE")
+  createdAt       DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime             @updatedAt @db.Timestamptz(6)
+  settings        Setting[]
+  auditEvents     AuditEvent[]
+  roleAssignments UserRoleAssignment[]
+  vehicles        Vehicle[]
+  drivers         Driver[]
+  customers       Customer[]
+  rentalRequests  RentalRequest[]
+  pricingWorksheets RentalPricingWorksheet[]
+  maintenanceWorkOrders MaintenanceWorkOrder[]
+  maintenanceWorkOrderStatusHistory MaintenanceWorkOrderStatusHistory[]
+  vehicleSafetyBlocks  VehicleSafetyBlock[]
+}
+
+model User {
+  id                  String               @id @default(cuid())
+  name                String
+  email               String               @unique
+  emailVerified       Boolean              @default(false)
+  image               String?
+  status              String               @default("ACTIVE")
+  createdAt           DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime             @updatedAt @db.Timestamptz(6)
+  sessions            Session[]
+  accounts            Account[]
+  auditEvents         AuditEvent[]
+  roleAssignments     UserRoleAssignment[] @relation("RoleAssignee")
+  assignedRoleChanges UserRoleAssignment[] @relation("RoleAssignmentActor")
+  rentalRequestStatusChanges RentalRequestStatusHistory[]
+  createdPricingWorksheets RentalPricingWorksheet[]
+  createdMaintenanceWorkOrders MaintenanceWorkOrder[] @relation("WorkOrderCreator")
+  maintenanceWorkOrderStatusChanges MaintenanceWorkOrderStatusHistory[]
+  appliedVehicleSafetyBlocks   VehicleSafetyBlock[] @relation("SafetyBlockAppliedBy")
+  releasedVehicleSafetyBlocks  VehicleSafetyBlock[] @relation("SafetyBlockReleasedBy")
+}
+
+model Role {
+  code        String               @id
+  name        String
+  assignments UserRoleAssignment[]
+  grants      RolePermission[]
+}
+
+model RolePermission {
+  roleCode   String
+  permission String
+  scope      String
+  role       Role   @relation(fields: [roleCode], references: [code], onDelete: Restrict)
+
+  @@id([roleCode, permission, scope])
+  @@index([permission, scope])
+}
+
+model UserRoleAssignment {
+  id           String    @id @default(cuid())
+  userId       String
+  companyId    String?
+  roleCode     String
+  assignedById String?
+  reason       String
+  createdAt    DateTime  @default(now()) @db.Timestamptz(6)
+  revokedAt    DateTime? @db.Timestamptz(6)
+  user         User      @relation("RoleAssignee", fields: [userId], references: [id], onDelete: Restrict)
+  company      Company?  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  role         Role      @relation(fields: [roleCode], references: [code], onDelete: Restrict)
+  assignedBy   User?     @relation("RoleAssignmentActor", fields: [assignedById], references: [id], onDelete: SetNull)
+
+  @@index([userId, revokedAt])
+  @@index([companyId, roleCode, revokedAt])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime @db.Timestamptz(6)
+  token     String   @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime? @db.Timestamptz(6)
+  refreshTokenExpiresAt DateTime? @db.Timestamptz(6)
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(6)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime @db.Timestamptz(6)
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([identifier])
+}
+
+model AuditEvent {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  companyId  String?
+  company    Company? @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  action     String
+  entityType String
+  entityId   String
+  summary    Json
+  ipAddress  String?
+  requestId  String?
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([companyId, createdAt])
+  @@index([entityType, entityId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model RateLimit {
+  id          String @id @default(cuid())
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+}
+
+model Setting {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  key         String
+  value       Json?
+  configured  Boolean  @default(false)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+  updatedById String?
+
+  @@unique([companyId, key])
+  @@index([companyId, configured])
+}
+
+model Vehicle {
+  id                        String    @id @default(cuid())
+  companyId                 String
+  registrationNumber        String
+  make                      String
+  model                     String
+  category                  String
+  seatCount                 Int?
+  fuelType                  String?
+  ownershipType             String?
+  odometerValue             Decimal?  @db.Decimal(12, 2)
+  odometerUnit              String?
+  insuranceExpiresAt        DateTime? @db.Date
+  roadworthinessExpiresAt   DateTime? @db.Date
+  registrationExpiresAt     DateTime? @db.Date
+  nextServiceAt             DateTime? @db.Date
+  notes                     String?
+  usualDriverCompanyId      String?
+  usualDriverId             String?
+  archivedAt                DateTime? @db.Timestamptz(6)
+  createdAt                 DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt                 DateTime  @updatedAt @db.Timestamptz(6)
+  company                   Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  usualDriver               Driver?   @relation("VehicleUsualDriver", fields: [usualDriverCompanyId, usualDriverId], references: [companyId, id], onDelete: Restrict)
+  maintenanceWorkOrders     MaintenanceWorkOrder[]
+  safetyBlocks              VehicleSafetyBlock[]
+
+  @@unique([companyId, registrationNumber])
+  @@unique([companyId, id])
+  @@index([companyId, archivedAt, registrationNumber])
+  @@index([companyId, category])
+  @@index([companyId, usualDriverId])
+}
+
+model Driver {
+  id                String    @id @default(cuid())
+  companyId         String
+  fullName          String
+  licenceClass      String?
+  licenceExpiresAt  DateTime? @db.Date
+  qualifications    String?
+  availability      String?
+  status            String?
+  archivedAt        DateTime? @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @db.Timestamptz(6)
+  company           Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  usualVehicles     Vehicle[] @relation("VehicleUsualDriver")
+
+  @@unique([companyId, id])
+  @@index([companyId, archivedAt, fullName])
+  @@index([companyId, licenceExpiresAt])
+}
+
+model Customer {
+  id             String    @id @default(cuid())
+  companyId      String
+  reference      String?
+  displayName    String
+  contactPerson  String?
+  telephone      String?
+  email          String?
+  billingDetails String?
+  customerType   String?
+  status         String?
+  notes          String?
+  archivedAt     DateTime? @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(6)
+  company        Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  rentalRequests RentalRequest[]
+
+  @@unique([companyId, id])
+  @@unique([companyId, reference])
+  @@index([companyId, archivedAt, displayName])
+  @@index([companyId, customerType])
+}
+
+model RentalRequest {
+  id                   String                       @id @default(cuid())
+  companyId            String
+  customerId           String
+  serviceDate          DateTime?                    @db.Date
+  departureTime         String?
+  returnTime            String?
+  returnDate            DateTime?                    @db.Date
+  durationMinutes      Int?
+  pickupLocation       String?
+  destination          String?
+  intermediateStops    String?
+  passengerCount       Int?
+  luggageSpecialNeeds  String?
+  purpose              String?
+  requestedVehicleType String?
+  driverRequirement    String?
+  tripContactName      String?
+  tripContactTelephone String?
+  tripContactEmail     String?
+  notes                String?
+  requestSource        String?
+  status               String
+  createdAt            DateTime                     @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime                     @updatedAt @db.Timestamptz(6)
+  company              Company                      @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  customer             Customer                     @relation(fields: [companyId, customerId], references: [companyId, id], onDelete: Restrict)
+  statusHistory        RentalRequestStatusHistory[]
+  pricingWorksheets    RentalPricingWorksheet[]
+
+  @@unique([companyId, id])
+  @@index([companyId, status, createdAt])
+  @@index([companyId, customerId, createdAt])
+  @@index([companyId, serviceDate])
+}
+
+model RentalRequestStatusHistory {
+  id          String        @id @default(cuid())
+  companyId   String
+  requestId   String
+  actorId     String
+  fromStatus  String?
+  toStatus    String
+  reason      String
+  createdAt   DateTime      @default(now()) @db.Timestamptz(6)
+  request     RentalRequest @relation(fields: [companyId, requestId], references: [companyId, id], onDelete: Restrict)
+  actor       User          @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, requestId, createdAt])
+}
+
+model RentalPricingWorksheet {
+  id                     String        @id @default(cuid())
+  companyId              String
+  requestId              String
+  version                Int
+  createdById            String
+  lines                  Json
+  preTaxSubtotalPesewas  BigInt
+  distanceMetres         Int?
+  durationMinutes        Int?
+  reason                 String        @db.VarChar(500)
+  createdAt              DateTime      @default(now()) @db.Timestamptz(6)
+  company                Company       @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  request                RentalRequest @relation(fields: [companyId, requestId], references: [companyId, id], onDelete: Restrict)
+  createdBy              User          @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, requestId, version])
+  @@index([companyId, requestId, createdAt])
+}
+
+model VehicleSafetyBlock {
+  id                 String    @id @default(cuid())
+  companyId          String
+  vehicleId          String
+  status              String
+  reason              String    @db.VarChar(500)
+  appliedById         String
+  appliedAt           DateTime  @default(now()) @db.Timestamptz(6)
+  releasedById        String?
+  releasedAt          DateTime? @db.Timestamptz(6)
+  releaseReason       String?   @db.VarChar(500)
+  workCompletedAt     DateTime? @db.Timestamptz(6)
+  inspectionResults   String?
+  inspectionPassed    Boolean?
+  company             Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  vehicle             Vehicle   @relation(fields: [companyId, vehicleId], references: [companyId, id], onDelete: Restrict)
+  appliedBy           User      @relation("SafetyBlockAppliedBy", fields: [appliedById], references: [id], onDelete: Restrict)
+  releasedBy          User?     @relation("SafetyBlockReleasedBy", fields: [releasedById], references: [id], onDelete: Restrict)
+
+  @@index([companyId, vehicleId, appliedAt])
+}
+
+model MaintenanceWorkOrderStatusHistory {
+  id           String              @id @default(cuid())
+  companyId    String
+  workOrderId  String
+  sequence     Int
+  actorId      String
+  fromStatus   String?
+  toStatus     String
+  reason       String              @db.VarChar(500)
+  createdAt    DateTime            @default(now()) @db.Timestamptz(6)
+  company      Company             @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  workOrder    MaintenanceWorkOrder @relation(fields: [companyId, workOrderId], references: [companyId, id], onDelete: Restrict)
+  actor        User                @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, workOrderId, sequence])
+  @@index([companyId, workOrderId, createdAt])
+}
+
+model MaintenanceWorkOrder {
+  id                   String    @id @default(cuid())
+  companyId            String
+  vehicleId            String
+  reference            String    @db.VarChar(32)
+  reportedFault        String    @db.VarChar(2000)
+  workType             String?   @db.VarChar(120)
+  priority             String?   @db.VarChar(40)
+  dateReported         DateTime  @db.Date
+  odometerValue        Decimal?  @db.Decimal(12, 2)
+  odometerUnit         String?
+  safetyRelated        Boolean
+  requiredWork         String?
+  parts                String?
+  labourCostPesewas   BigInt?
+  partsCostPesewas    BigInt?
+  otherCostPesewas    BigInt?
+  inspectionResults   String?
+  completionDate       DateTime? @db.Timestamptz(6)
+  status               String    @default("Reported")
+  reason               String    @db.VarChar(500)
+  createdById          String
+  createdAt            DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime  @updatedAt @db.Timestamptz(6)
+  company              Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  vehicle              Vehicle   @relation(fields: [companyId, vehicleId], references: [companyId, id], onDelete: Restrict)
+  createdBy            User      @relation("WorkOrderCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  statusHistory        MaintenanceWorkOrderStatusHistory[]
+
+  @@unique([companyId, id])
+  @@unique([companyId, reference])
+  @@index([companyId, status, dateReported])
+  @@index([companyId, vehicleId, dateReported])
+}

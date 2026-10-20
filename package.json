@@ -1,0 +1,53 @@
+{
+  "name": "richie-tms",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 0.0.0.0",
+    "build": "next build",
+    "start": "next start --hostname 0.0.0.0",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --exclude '**/*.integration.test.ts'",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:e2e": "playwright test",
+    "test:watch": "vitest",
+    "db:generate": "prisma generate",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:test:migrate": "node scripts/apply-test-migrations.mjs",
+    "bootstrap:super-admin": "tsx scripts/bootstrap-super-admin.ts",
+    "bootstrap:company": "tsx scripts/bootstrap-company.ts",
+    "seed:demo:vehicle": "tsx scripts/seed-demo-vehicle.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "better-auth": "^1.7.10",
+    "csv-parse": "^7.0.3",
+    "dotenv": "^17.4.2",
+    "next": "^15.3.2",
+    "pg": "^8.23.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "zod": "^3.25.28"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@playwright/test": "^1.64.1",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
+    "@types/node": "^22.15.21",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.1.6",
+    "@types/react-dom": "^19.1.6",
+    "eslint": "^9.28.0",
+    "eslint-config-next": "^15.3.2",
+    "jsdom": "^30.1.3",
+    "prisma": "^6.19.3",
+    "tailwindcss": "^4.1.8",
+    "tsx": "^4.23.15",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.3"
+  }
+}

@@ -1,0 +1,83 @@
+import { z } from 'zod';
+
+const optionalText = (max: number) => z.string().trim().max(max).nullable();
+const timeOfDay = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/, 'Use a 24-hour time such as 09:30.').nullable();
+const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
+}, 'Use a valid calendar date.').nullable();
+const positiveInteger = z.number().int().min(1).max(2_147_483_647).nullable();
+const requestSource = z.enum(['APP', 'PHONE', 'EMAIL', 'OTHER']).nullable();
+
+const rentalRequestFields = z.object({
+  customerId: z.string().trim().min(1).max(128),
+  serviceDate: dateOnly,
+  departureTime: timeOfDay,
+  returnTime: timeOfDay,
+  returnDate: dateOnly.optional(),
+  durationMinutes: positiveInteger,
+  pickupLocation: optionalText(500),
+  destination: optionalText(500),
+  intermediateStops: optionalText(2000),
+  passengerCount: positiveInteger,
+  luggageSpecialNeeds: optionalText(2000),
+  purpose: optionalText(500),
+  requestedVehicleType: optionalText(100),
+  driverRequirement: optionalText(300),
+  tripContactName: optionalText(160),
+  tripContactTelephone: optionalText(80),
+  tripContactEmail: z.string().trim().max(254).email().nullable(),
+  notes: optionalText(2000),
+  requestSource,
+}).strict();
+
+export const rentalRequestInputSchema = rentalRequestFields;
+export const rentalRequestDraftSchema = rentalRequestFields.extend({
+  reason: z.string().trim().min(8).max(500),
+}).strict();
+export const rentalRequestListQuerySchema = z.object({
+  search: z.string().trim().max(100).optional(),
+  cursor: z.string().min(1).max(128).optional(),
+}).strict();
+export const rentalRequestSubmitSchema = z.object({
+  reason: z.string().trim().min(8).max(500),
+}).strict();
+
+export function missingRentalRequestSubmissionFields(input: {
+  serviceDate: Date | null;
+  departureTime: string | null;
+  returnTime: string | null;
+  returnDate: Date | null;
+  durationMinutes: number | null;
+  pickupLocation: string | null;
+  destination: string | null;
+  passengerCount: number | null;
+  requestSource: string | null;
+}) {
+  const missingFields: string[] = [];
+  if (!input.serviceDate) missingFields.push('service date');
+  if (!input.departureTime) missingFields.push('departure time');
+  if (!input.pickupLocation?.trim()) missingFields.push('pickup location');
+  if (!input.destination?.trim()) missingFields.push('destination');
+  if (!input.passengerCount) missingFields.push('passenger count');
+  if (!input.requestSource) missingFields.push('request source');
+  if (!input.returnTime && !input.durationMinutes) missingFields.push('return time or duration');
+  const serviceDate = input.serviceDate?.toISOString().slice(0, 10) ?? null;
+  const returnDate = input.returnDate?.toISOString().slice(0, 10) ?? null;
+  if (input.returnDate && !input.returnTime) missingFields.push('return time for return date');
+  if (serviceDate && returnDate && returnDate < serviceDate) missingFields.push('return date on or after service date');
+  if (input.returnTime && input.departureTime && input.returnTime < input.departureTime) {
+    if (!returnDate) missingFields.push('return date for overnight trip');
+    else if (!serviceDate || returnDate <= serviceDate) missingFields.push('return date after service date for overnight trip');
+  }
+  return missingFields;
+}
+
+/** The owner-approved return-time-or-duration prerequisite for Draft submission. */
+export const rentalRequestTimeSubmissionSchema = z.object({
+  returnTime: timeOfDay,
+  durationMinutes: positiveInteger,
+}).refine(({ returnTime, durationMinutes }) => Boolean(returnTime || durationMinutes), {
+  message: 'Provide a return time or duration before submitting.',
+  path: ['returnTime'],
+});
