@@ -1,16 +1,26 @@
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
+import { ZodError } from 'zod';
 import { PermissionDeniedError, resolvePermission } from '@/modules/auth/permissions';
 import { mayStartSession } from '@/modules/auth/policy';
-import { DriverCompanyNotFoundError, DriverNotFoundError, getDriver, listDrivers } from '@/modules/fleet/drivers';
+import { DriverCompanyNotFoundError, DriverNotFoundError, InvalidDriverCursorError, getDriver, listDrivers } from '@/modules/fleet/drivers';
 import type { DriverRecord } from '@/modules/fleet/drivers';
 import { getAuth } from '@/server/auth';
 import { getPrisma } from '@/server/prisma';
 import { DriverManager } from './driver-manager';
 
 export const dynamic = 'force-dynamic';
-type PageProps = { searchParams: Promise<{ q?: string; cursor?: string; edit?: string }> };
+type PageProps = { searchParams: Promise<{ q?: string; cursor?: string; cursorHistory?: string; edit?: string }> };
+function driverPageHref({ search, cursor, history, edit }: { search?: string; cursor?: string; history?: string[]; edit?: string }) {
+  const params = new URLSearchParams();
+  if (search) params.set('q', search);
+  if (cursor) params.set('cursor', cursor);
+  if (history?.length) params.set('cursorHistory', history.join('.'));
+  if (edit) params.set('edit', edit);
+  const query = params.toString();
+  return `/fleet/drivers${query ? `?${query}` : ''}`;
+}
 
 export default async function DriversPage({ searchParams }: PageProps) {
   const session = await getAuth().api.getSession({ headers: await headers() });
@@ -22,11 +32,16 @@ export default async function DriversPage({ searchParams }: PageProps) {
   if (companies.length !== 1) return <main className="fleet-page"><section className="fleet-empty"><h1>Driver register unavailable</h1><p>Exactly one active operator company must be provisioned for this installation.</p><Link className="button-link" href="/">Back to workspace</Link></section></main>;
   const company = companies[0];
   const params = await searchParams;
+  const cursorHistory = params.cursorHistory ? params.cursorHistory.split('.') : [];
+  if (cursorHistory.length > 50 || cursorHistory.some((token) => token !== 'ROOT' && !/^[A-Za-z0-9_-]{1,128}$/.test(token))) {
+    redirect('/fleet/drivers');
+  }
   let result: Awaited<ReturnType<typeof listDrivers>>;
   try {
     result = await listDrivers({ actorId: session.user.id, companyId: company.id, search: params.q, cursor: params.cursor });
   } catch (error) {
     if (error instanceof DriverCompanyNotFoundError) notFound();
+    if (error instanceof InvalidDriverCursorError || error instanceof ZodError) redirect('/fleet/drivers');
     if (error instanceof PermissionDeniedError) redirect('/');
     throw error;
   }
@@ -42,6 +57,9 @@ export default async function DriversPage({ searchParams }: PageProps) {
     }
   }
   const vehicleAccess = await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'fleet:manage' });
+  const previousToken = cursorHistory[cursorHistory.length - 1];
+  const previousHref = driverPageHref({ search: params.q, cursor: previousToken && previousToken !== 'ROOT' ? previousToken : undefined, history: cursorHistory.slice(0, -1) });
+  const nextHistory = params.cursor ? [...cursorHistory.slice(-49), params.cursor] : ['ROOT'];
 
   return <main className="fleet-page">
     <header className="fleet-page-header">
@@ -62,17 +80,21 @@ export default async function DriversPage({ searchParams }: PageProps) {
           <div><h2 id="driver-list-title">Drivers</h2><p className="muted">Showing up to 50 active records per page.</p></div>
           <form className="fleet-search" method="get"><label htmlFor="driver-search">Search drivers</label><div><input id="driver-search" type="search" name="q" maxLength={100} defaultValue={params.q ?? ''} placeholder="Name, licence class, qualification"/><button className="button-link" type="submit">Search</button></div></form>
         </div>
-        {result.drivers.length === 0 ? <div className="fleet-empty"><h3>No drivers found</h3><p>{params.q ? 'Try a different search, or clear the search term.' : 'No driver records have been entered yet.'}</p></div> : <div className="vehicle-table-wrap" role="region" aria-label="Driver records" tabIndex={0}>
+        {result.drivers.length === 0 ? <div className="fleet-empty"><h3>No drivers found</h3><p>{params.q ? <>Try a different search, or clear the search term. <Link className="button-link" href="/fleet/drivers">Clear search</Link></> : 'No driver records have been entered yet.'}</p></div> : <div className="vehicle-table-wrap" role="region" aria-label="Driver records" tabIndex={0}>
           <table className="vehicle-table"><caption className="sr-only">Driver register records</caption><thead><tr><th scope="col">Name</th><th scope="col">Licence</th><th scope="col">Qualifications</th><th scope="col">Availability</th><th scope="col">Status</th>{result.canManage && <th scope="col">Record</th>}</tr></thead>
             <tbody>{result.drivers.map((driver) => <tr key={driver.id}>
               <td><strong>{driver.fullName}</strong>{driver.licenceExpiresAt && <span className="vehicle-secondary">Licence expires: {driver.licenceExpiresAt}</span>}</td>
               <td>{driver.licenceClass ?? 'Not recorded'}</td><td>{driver.qualifications ?? 'Not recorded'}</td>
               <td>{driver.availability ?? 'Not recorded'}</td><td>{driver.status ?? 'Not recorded'}</td>
-              {result.canManage && <td><Link className="button-link vehicle-edit-link" href={`/fleet/drivers?edit=${encodeURIComponent(driver.id)}${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`}>Edit</Link></td>}
+              {result.canManage && <td><Link className="button-link vehicle-edit-link" href={driverPageHref({ search: params.q, cursor: params.cursor, history: cursorHistory, edit: driver.id })}>Edit</Link></td>}
             </tr>)}</tbody>
           </table>
         </div>}
-        {result.nextCursor && <div className="fleet-pagination"><span className="muted">More records available.</span><Link className="button-link" href={`/fleet/drivers?${params.q ? `q=${encodeURIComponent(params.q)}&` : ''}cursor=${encodeURIComponent(result.nextCursor)}`}>Next page</Link></div>}
+        {(params.cursor || result.nextCursor) && <nav className="fleet-pagination" aria-label="Driver pages">
+          {params.cursor && <Link className="button-link" href={previousHref}>Previous page</Link>}
+          <span className="muted">Showing up to 50 drivers per page.</span>
+          {result.nextCursor && <Link className="button-link" href={driverPageHref({ search: params.q, cursor: result.nextCursor, history: nextHistory })}>Next page</Link>}
+        </nav>}
       </section>
       {result.canManage && <DriverManager companyId={company.id} driver={editing} />}
       {!result.canManage && <p className="form-help">Your role can view the limited operational driver fields above, but cannot view contact details or edit driver records.</p>}
