@@ -22,6 +22,7 @@ vi.mock('@/modules/auth/permissions', () => ({
 }));
 vi.mock('@/modules/rentals/rental-requests', () => ({
   RentalCompanyNotFoundError: class RentalCompanyNotFoundError extends Error {},
+  InvalidRentalRequestCursorError: class InvalidRentalRequestCursorError extends Error {},
   RentalRequestNotFoundError: class RentalRequestNotFoundError extends Error {},
   getRentalRequest: mocks.getRentalRequest,
   listRentalRequests: mocks.listRentalRequests,
@@ -33,6 +34,7 @@ vi.mock('./rental-request-details', () => ({ RentalRequestDetails: () => <div>Re
 vi.mock('./quotation-readiness', () => ({ QuotationReadiness: () => <div>Quotation readiness</div> }));
 vi.mock('./pricing-preview', () => ({ RentalPricingPreview: () => <div>Pricing preview</div> }));
 
+import { InvalidRentalRequestCursorError } from '@/modules/rentals/rental-requests';
 import RentalRequestsPage from './page';
 
 afterEach(cleanup);
@@ -66,6 +68,11 @@ describe('RentalRequestsPage pagination', () => {
 
     expect(screen.getByRole('heading', { name: 'No rental requests found' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Clear search' }).getAttribute('href')).toBe('/rentals/requests');
+  });
+
+  it('clears a stale or foreign company cursor instead of surfacing a server error', async () => {
+    mocks.listRentalRequests.mockRejectedValue(new InvalidRentalRequestCursorError());
+    await expect(RentalRequestsPage({ searchParams: Promise.resolve({ cursor: 'stale-cursor' }) })).rejects.toThrow('NEXT_REDIRECT:/rentals/requests');
   });
 
   it('rejects malformed cursor-history tokens before listing requests', async () => {

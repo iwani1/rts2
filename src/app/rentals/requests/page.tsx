@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
+import { ZodError } from 'zod';
 import { isActiveSuperAdmin, PermissionDeniedError, resolvePermission } from '@/modules/auth/permissions';
 import { mayStartSession } from '@/modules/auth/policy';
-import { getRentalRequest, listRentalRequests, RentalCompanyNotFoundError, RentalRequestNotFoundError } from '@/modules/rentals/rental-requests';
+import { getRentalRequest, listRentalRequests, InvalidRentalRequestCursorError, RentalCompanyNotFoundError, RentalRequestNotFoundError } from '@/modules/rentals/rental-requests';
 import type { RentalRequestRecord } from '@/modules/rentals/rental-requests';
 import { getAuth } from '@/server/auth';
 import { getPrisma } from '@/server/prisma';
@@ -46,6 +47,7 @@ export default async function RentalRequestsPage({ searchParams }: PageProps) {
     result = await listRentalRequests({ actorId: session.user.id, companyId: company.id, search: params.q, cursor: params.cursor });
   } catch (error) {
     if (error instanceof RentalCompanyNotFoundError) notFound();
+    if (error instanceof InvalidRentalRequestCursorError || error instanceof ZodError) redirect('/rentals/requests');
     if (error instanceof PermissionDeniedError) redirect('/');
     throw error;
   }
