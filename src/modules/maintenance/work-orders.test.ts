@@ -104,8 +104,8 @@ describe('maintenance work-order intake', () => {
     expect(findMany).toHaveBeenCalledOnce();
   });
 
-  it('denies vehicle-option searches before reading company or vehicle records', async () => {
-    mocks.resolvePermission.mockResolvedValue({ allowed: false, scopes: [] });
+  it('denies vehicle-option searches to read-only scopes before reading company or vehicle records', async () => {
+    mocks.resolvePermission.mockResolvedValue({ allowed: true, scopes: ['READ_ASSIGN_SUBSET'] });
     await expect(listWorkOrderVehicleOptions('manager-1', 'company-1', 'GT-1234')).rejects.toThrow('Access denied');
     expect(mocks.getPrisma).not.toHaveBeenCalled();
   });
