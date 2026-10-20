@@ -52,7 +52,7 @@ describe('WorkOrderManager', () => {
     expect(screen.getByLabelText('Vehicle')).toHaveProperty('value', 'vehicle-51');
     fireEvent.change(screen.getByLabelText('Find vehicle by registration, make or model'), { target: { value: '' } });
     await waitFor(() => expect(screen.getByLabelText('Vehicle')).toHaveProperty('value', 'vehicle-51'));
-    expect(fetchMock).toHaveBeenCalledWith('/api/companies/company-1/maintenance/vehicle-options?q=GT-9999', expect.objectContaining({ signal: expect.any(AbortSignal) }));
+    expect(fetchMock).toHaveBeenCalledWith('/api/companies/company-1/maintenance/vehicle-options?q=GT-9999', expect.objectContaining({ signal: expect.any(AbortSignal), cache: 'no-store' }));
   });
 
   it('disables vehicle selection until the current search results arrive', async () => {

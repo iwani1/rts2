@@ -84,7 +84,7 @@ export function WorkOrderManager({ companyId, vehicles, vehiclesHaveMore = false
       setVehicleLoading(true);
       setVehicleSearchError('');
       try {
-        const response = await fetch(`/api/companies/${encodeURIComponent(companyId)}/maintenance/vehicle-options?q=${encodeURIComponent(search)}`, { signal: controller.signal });
+        const response = await fetch(`/api/companies/${encodeURIComponent(companyId)}/maintenance/vehicle-options?q=${encodeURIComponent(search)}`, { signal: controller.signal, cache: 'no-store' });
         const body = await response.json() as { vehicles?: VehicleOption[]; hasMore?: boolean; error?: string };
         if (controller.signal.aborted) return;
         if (!response.ok) throw new Error(body.error || 'Unable to search active vehicles.');
