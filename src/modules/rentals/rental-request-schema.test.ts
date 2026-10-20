@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { missingRentalRequestSubmissionFields, rentalRequestDraftSchema, rentalRequestTimeSubmissionSchema } from './rental-request-schema';
+import { missingRentalRequestSubmissionFields, rentalRequestDraftSchema, rentalRequestListQuerySchema, rentalRequestTimeSubmissionSchema } from './rental-request-schema';
 
 const partialDraft = {
   customerId: 'customer-1',
@@ -25,6 +25,14 @@ const partialDraft = {
 };
 
 describe('rental request draft schemas', () => {
+  it('accepts only the currently active rental-request statuses as list filters', () => {
+    for (const status of ['Draft', 'Submitted', 'Under Review', 'Declined']) {
+      expect(rentalRequestListQuerySchema.safeParse({ status }).success).toBe(true);
+    }
+    expect(rentalRequestListQuerySchema.safeParse({ status: 'Confirmed' }).success).toBe(false);
+    expect(rentalRequestListQuerySchema.safeParse({ status: '' }).success).toBe(false);
+  });
+
   it('accepts incomplete drafts without applying values or defaults', () => {
     expect(rentalRequestDraftSchema.parse(partialDraft)).toEqual(partialDraft);
     const preReturnDatePayload = Object.fromEntries(Object.entries(partialDraft).filter(([key]) => key !== 'returnDate'));

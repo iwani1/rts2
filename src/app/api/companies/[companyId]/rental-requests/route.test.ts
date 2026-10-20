@@ -37,10 +37,10 @@ describe('company rental request collection API', () => {
   it('passes tenant, search and session actor to the listing service', async () => {
     mocks.getSession.mockResolvedValue({ user: { id: 'user-1' } });
     mocks.listRentalRequests.mockResolvedValue({ requests: [], nextCursor: null, canManage: true });
-    const response = await GET(new Request('http://localhost/api/companies/company-1/rental-requests?search=Kumasi'), context);
+    const response = await GET(new Request('http://localhost/api/companies/company-1/rental-requests?search=Kumasi&status=Submitted'), context);
     expect(response.status).toBe(200);
     expect(response.headers.get('cache-control')).toBe('private, no-store');
-    expect(mocks.listRentalRequests).toHaveBeenCalledWith({ actorId: 'user-1', companyId: 'company-1', search: 'Kumasi', cursor: undefined });
+    expect(mocks.listRentalRequests).toHaveBeenCalledWith({ actorId: 'user-1', companyId: 'company-1', search: 'Kumasi', status: 'Submitted', cursor: undefined });
   });
 
   it('creates a request only using the actor from the authenticated session', async () => {

@@ -35,8 +35,11 @@ export const rentalRequestInputSchema = rentalRequestFields;
 export const rentalRequestDraftSchema = rentalRequestFields.extend({
   reason: z.string().trim().min(8).max(500),
 }).strict();
+export const RENTAL_REQUEST_STATUSES = ['Draft', 'Submitted', 'Under Review', 'Declined'] as const;
+const rentalRequestStatusSchema = z.enum(RENTAL_REQUEST_STATUSES);
 export const rentalRequestListQuerySchema = z.object({
   search: z.string().trim().max(100).optional(),
+  status: rentalRequestStatusSchema.optional(),
   cursor: z.string().min(1).max(128).optional(),
 }).strict();
 export const rentalRequestSubmitSchema = z.object({

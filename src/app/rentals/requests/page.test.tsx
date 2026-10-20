@@ -53,12 +53,14 @@ describe('RentalRequestsPage pagination', () => {
       id: 'request-1', customerName: 'Test Customer', serviceDate: null, departureTime: null,
       pickupLocation: null, destination: null, status: 'Submitted', returnTime: null, returnDate: null,
     }], nextCursor: 'request-next', canManage: true });
-    const page = await RentalRequestsPage({ searchParams: Promise.resolve({ q: 'Accra', cursor: 'request-current', cursorHistory: 'ROOT.request-prior' }) });
+    const page = await RentalRequestsPage({ searchParams: Promise.resolve({ q: 'Accra', status: 'Under Review', cursor: 'request-current', cursorHistory: 'ROOT.request-prior' }) });
     render(page);
 
-    expect(screen.getByRole('link', { name: 'Previous page' }).getAttribute('href')).toBe('/rentals/requests?q=Accra&cursor=request-prior&cursorHistory=ROOT');
-    expect(screen.getByRole('link', { name: 'Next page' }).getAttribute('href')).toBe('/rentals/requests?q=Accra&cursor=request-next&cursorHistory=ROOT.request-prior.request-current');
-    expect(screen.getByRole('link', { name: 'View / edit' }).getAttribute('href')).toBe('/rentals/requests?q=Accra&cursor=request-current&cursorHistory=ROOT.request-prior&edit=request-1');
+    expect(mocks.listRentalRequests).toHaveBeenCalledWith({ actorId: 'manager-1', companyId: 'company-1', search: 'Accra', status: 'Under Review', cursor: 'request-current' });
+    expect(screen.getByLabelText('Filter by status')).toHaveProperty('value', 'Under Review');
+    expect(screen.getByRole('link', { name: 'Previous page' }).getAttribute('href')).toBe('/rentals/requests?q=Accra&status=Under+Review&cursor=request-prior&cursorHistory=ROOT');
+    expect(screen.getByRole('link', { name: 'Next page' }).getAttribute('href')).toBe('/rentals/requests?q=Accra&status=Under+Review&cursor=request-next&cursorHistory=ROOT.request-prior.request-current');
+    expect(screen.getByRole('link', { name: 'View / edit' }).getAttribute('href')).toBe('/rentals/requests?q=Accra&status=Under+Review&cursor=request-current&cursorHistory=ROOT.request-prior&edit=request-1');
   });
 
   it('offers a clear-search action when no request matches', async () => {
@@ -67,7 +69,7 @@ describe('RentalRequestsPage pagination', () => {
     render(page);
 
     expect(screen.getByRole('heading', { name: 'No rental requests found' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Clear search' }).getAttribute('href')).toBe('/rentals/requests');
+    expect(screen.getByRole('link', { name: 'Clear filters' }).getAttribute('href')).toBe('/rentals/requests');
   });
 
   it('clears a stale or foreign company cursor instead of surfacing a server error', async () => {

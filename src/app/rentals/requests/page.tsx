@@ -5,6 +5,7 @@ import { ZodError } from 'zod';
 import { isActiveSuperAdmin, PermissionDeniedError, resolvePermission } from '@/modules/auth/permissions';
 import { mayStartSession } from '@/modules/auth/policy';
 import { getRentalRequest, listRentalRequests, InvalidRentalRequestCursorError, RentalCompanyNotFoundError, RentalRequestNotFoundError } from '@/modules/rentals/rental-requests';
+import { RENTAL_REQUEST_STATUSES } from '@/modules/rentals/rental-request-schema';
 import type { RentalRequestRecord } from '@/modules/rentals/rental-requests';
 import { getAuth } from '@/server/auth';
 import { getPrisma } from '@/server/prisma';
@@ -16,10 +17,11 @@ import { QuotationReadiness } from './quotation-readiness';
 import { RentalPricingPreview } from './pricing-preview';
 
 export const dynamic = 'force-dynamic';
-type PageProps = { searchParams: Promise<{ q?: string; cursor?: string; cursorHistory?: string; edit?: string }> };
-function requestPageHref({ search, cursor, history, edit }: { search?: string; cursor?: string; history?: string[]; edit?: string }) {
+type PageProps = { searchParams: Promise<{ q?: string; status?: string; cursor?: string; cursorHistory?: string; edit?: string }> };
+function requestPageHref({ search, status, cursor, history, edit }: { search?: string; status?: string; cursor?: string; history?: string[]; edit?: string }) {
   const params = new URLSearchParams();
   if (search) params.set('q', search);
+  if (status) params.set('status', status);
   if (cursor) params.set('cursor', cursor);
   if (history?.length) params.set('cursorHistory', history.join('.'));
   if (edit) params.set('edit', edit);
@@ -44,7 +46,7 @@ export default async function RentalRequestsPage({ searchParams }: PageProps) {
   }
   let result: Awaited<ReturnType<typeof listRentalRequests>>;
   try {
-    result = await listRentalRequests({ actorId: session.user.id, companyId: company.id, search: params.q, cursor: params.cursor });
+    result = await listRentalRequests({ actorId: session.user.id, companyId: company.id, search: params.q, status: params.status || undefined, cursor: params.cursor });
   } catch (error) {
     if (error instanceof RentalCompanyNotFoundError) notFound();
     if (error instanceof InvalidRentalRequestCursorError || error instanceof ZodError) redirect('/rentals/requests');
@@ -79,6 +81,7 @@ export default async function RentalRequestsPage({ searchParams }: PageProps) {
   const previousToken = cursorHistory[cursorHistory.length - 1];
   const previousHref = requestPageHref({
     search: params.q,
+    status: params.status || undefined,
     cursor: previousToken && previousToken !== 'ROOT' ? previousToken : undefined,
     history: cursorHistory.slice(0, -1),
   });
@@ -100,23 +103,23 @@ export default async function RentalRequestsPage({ searchParams }: PageProps) {
       <section className="fleet-list-panel" aria-labelledby="request-list-title">
         <div className="fleet-list-heading">
           <div><h2 id="request-list-title">Requests</h2><p className="muted">Showing up to 50 requests per page.</p></div>
-          <form className="fleet-search" method="get"><label htmlFor="request-search">Search requests</label><div><input id="request-search" type="search" name="q" maxLength={100} defaultValue={params.q ?? ''} placeholder="Customer, pickup or destination"/><button className="button-link" type="submit">Search</button></div></form>
+          <form className="fleet-search" method="get"><label htmlFor="request-search">Search requests</label><input id="request-search" type="search" name="q" maxLength={100} defaultValue={params.q ?? ''} placeholder="Customer, pickup or destination"/><label htmlFor="request-status-filter">Filter by status</label><div><select id="request-status-filter" name="status" defaultValue={params.status ?? ''}><option value="">All statuses</option>{RENTAL_REQUEST_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}</select><button className="button-link" type="submit">Apply filters</button></div></form>
         </div>
-        {result.requests.length === 0 ? <div className="fleet-empty"><h3>No rental requests found</h3><p>{params.q ? <>Try another search or clear the search term. <Link className="button-link" href="/rentals/requests">Clear search</Link></> : 'No requests have been recorded yet.'}</p></div> : <div className="vehicle-table-wrap" role="region" aria-label="Rental request records" tabIndex={0}>
+        {result.requests.length === 0 ? <div className="fleet-empty"><h3>No rental requests found</h3><p>{params.q || params.status ? <>Change or clear the search and status filters. <Link className="button-link" href="/rentals/requests">Clear filters</Link></> : 'No requests have been recorded yet.'}</p></div> : <div className="vehicle-table-wrap" role="region" aria-label="Rental request records" tabIndex={0}>
           <table className="vehicle-table"><caption className="sr-only">Rental request records</caption><thead><tr><th scope="col">Customer</th><th scope="col">Service date</th><th scope="col">Journey</th><th scope="col">Status</th><th scope="col">Record</th></tr></thead>
             <tbody>{result.requests.map((request) => <tr key={request.id}>
               <td><strong>{request.customerName}</strong></td>
               <td>{request.serviceDate ?? 'Not recorded'}{request.departureTime && <span className="vehicle-secondary">Departure: {request.departureTime}</span>}</td>
               <td>{request.pickupLocation ?? 'Pickup not recorded'} → {request.destination ?? 'Destination not recorded'}{request.returnTime && <span className="vehicle-secondary">Return: {request.returnDate ? `${request.returnDate} ` : ''}{request.returnTime}</span>}</td>
               <td><span className="request-status">{request.status}</span></td>
-              <td><Link className="button-link vehicle-edit-link" href={requestPageHref({ search: params.q, cursor: params.cursor, history: cursorHistory, edit: request.id })}>View / edit</Link></td>
+              <td><Link className="button-link vehicle-edit-link" href={requestPageHref({ search: params.q, status: params.status || undefined, cursor: params.cursor, history: cursorHistory, edit: request.id })}>View / edit</Link></td>
             </tr>)}</tbody>
           </table>
         </div>}
         {(params.cursor || result.nextCursor) && <nav className="fleet-pagination" aria-label="Rental request pages">
           {params.cursor && <Link className="button-link" href={previousHref}>Previous page</Link>}
           <span className="muted">Showing up to 50 requests per page.</span>
-          {result.nextCursor && <Link className="button-link" href={requestPageHref({ search: params.q, cursor: result.nextCursor, history: nextHistory })}>Next page</Link>}
+          {result.nextCursor && <Link className="button-link" href={requestPageHref({ search: params.q, status: params.status || undefined, cursor: result.nextCursor, history: nextHistory })}>Next page</Link>}
         </nav>}
       </section>
       {result.canManage && (!editing || editing.status === 'Draft') && <RequestManager companyId={company.id} request={editing} />}

@@ -150,11 +150,11 @@ async function accessFor(actorId: string, companyId: string) {
   return { canManage };
 }
 
-export async function listRentalRequests(input: { actorId: string; companyId: string; search?: string; cursor?: string }): Promise<{
+export async function listRentalRequests(input: { actorId: string; companyId: string; search?: string; status?: string; cursor?: string }): Promise<{
   requests: RentalRequestRecord[]; nextCursor: string | null; canManage: boolean;
 }> {
   const companyId = companyIdSchema.parse(input.companyId);
-  const query = rentalRequestListQuerySchema.parse({ search: input.search, cursor: input.cursor });
+  const query = rentalRequestListQuerySchema.parse({ search: input.search, status: input.status || undefined, cursor: input.cursor });
   const access = await accessFor(input.actorId, companyId);
   const prisma = getPrisma();
   if (query.cursor) {
@@ -163,6 +163,7 @@ export async function listRentalRequests(input: { actorId: string; companyId: st
   }
   const where = {
     companyId,
+    ...(query.status ? { status: query.status } : {}),
     ...(query.search ? { OR: [
       { customer: { is: { displayName: { contains: query.search, mode: 'insensitive' as const } } } },
       { pickupLocation: { contains: query.search, mode: 'insensitive' as const } },

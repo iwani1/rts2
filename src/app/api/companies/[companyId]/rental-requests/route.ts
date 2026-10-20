@@ -32,6 +32,7 @@ export async function GET(request: Request, context: RouteContext) {
       actorId: session.user.id,
       companyId,
       search: url.searchParams.get('search') ?? undefined,
+      status: url.searchParams.get('status') || undefined,
       cursor: url.searchParams.get('cursor') ?? undefined,
     });
     return NextResponse.json(result, { headers: { 'Cache-Control': 'private, no-store' } });
