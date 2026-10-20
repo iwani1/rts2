@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
 import { RentalReport } from './rental-report';
 
 const report = {
@@ -12,6 +12,8 @@ const report = {
     { metric: 'Vehicle utilisation', reason: 'Assignment records are not implemented.' },
   ],
 };
+
+afterEach(() => cleanup());
 
 describe('RentalReport', () => {
   it('shows persisted request aggregates and distinguishes unavailable metrics from zero', () => {
