@@ -27,6 +27,7 @@ describe('SafetyBlockControls', () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ block: { id: 'block-1', status: 'Pending Inspection', releasedAt } }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     render(<SafetyBlockControls companyId="company-1" vehicleId="vehicle-1" activeBlock={{ id: 'block-1', status: 'Pending Inspection', appliedAt: '2026-10-18T10:00:00.000Z' }} />);
+    expect(screen.getByText(`Applied ${formatAccraDateTime('2026-10-18T10:00:00.000Z')}`)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Record inspection and release' }));
     fireEvent.change(screen.getByLabelText('Work completed at'), { target: { value: '2026-10-18T11:00' } });
     fireEvent.change(screen.getByLabelText('Inspection results'), { target: { value: 'Brake test passed after replacement' } });

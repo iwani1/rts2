@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { formatAccraDateTime } from '@/modules/time/accra-date-time';
 import { RentalPricingPreview } from './pricing-preview';
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
@@ -40,6 +41,7 @@ describe('RentalPricingPreview', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Load saved worksheet history' }));
     expect(await screen.findByText(/Prepared pricing worksheet/)).toBeTruthy();
+    expect(screen.getByText((text) => text.includes(formatAccraDateTime('2026-10-19T12:00:00.000Z')))).toBeTruthy();
     expect(screen.getByText(/line total GHS 500.00/)).toBeTruthy();
     expect(String(fetchMock.mock.calls[3]?.[0])).toContain('/pricing-worksheets');
     expect(fetchMock.mock.calls[3]?.[1]).toMatchObject({ cache: 'no-store' });

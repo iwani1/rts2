@@ -60,7 +60,7 @@ export function SafetyBlockControls({ companyId, vehicleId, activeBlock }: {
   return <div className="safety-block-controls">
     {activeBlock ? <>
       <strong className="safety-block-status">Blocked: {activeBlock.status}</strong>
-      <span className="vehicle-secondary">Applied {new Date(activeBlock.appliedAt).toLocaleString()}</span>
+      <span className="vehicle-secondary">Applied {formatAccraDateTime(activeBlock.appliedAt)}</span>
       {mode !== 'release' ? <button className="button-link" type="button" onClick={() => { setError(''); setMode('release'); }}>Record inspection and release</button> : <form onSubmit={(event) => void release(event)}>
         <label>Work completed at<input type="datetime-local" name="workCompletedAt" step="0.001" required /></label>
         <label>Inspection results<textarea name="inspectionResults" minLength={8} maxLength={4000} required /></label>

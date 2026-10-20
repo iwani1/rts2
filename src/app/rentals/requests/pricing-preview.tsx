@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import type { RentalPricingModel } from '@/modules/settings/registry';
+import { formatAccraDateTime } from '@/modules/time/accra-date-time';
 
 type Preview = {
   lines: Array<{ lineId: string; modelCode: string; label: string; unit: RentalPricingModel['unit']; ratePesewas: number; amountPesewas: number }>;
@@ -123,7 +124,7 @@ export function RentalPricingPreview({ companyId, requestId }: { companyId: stri
       <button className="button-secondary" type="button" disabled={loading || reason.trim().length < 8} onClick={() => void saveWorksheet()}>{loading ? 'Saving…' : 'Save internal worksheet version'}</button>
       {savedWorksheet && <p className="form-success" role="status">Internal worksheet version {savedWorksheet.version} saved. It is not a quotation. Pre-tax amount: {formatMoney(savedWorksheet.preTaxSubtotalPesewas)}.</p>}
       <button className="button-secondary" type="button" disabled={loading} onClick={() => void loadWorksheetHistory()}>{loading ? 'Loading…' : 'Load saved worksheet history'}</button>
-      {worksheetHistory && (worksheetHistory.length === 0 ? <p>No saved worksheet versions for this request.</p> : <ol aria-label="Saved internal worksheet versions">{worksheetHistory.map((item) => <li key={item.id}><details><summary>Version {item.version} · {formatMoney(item.preTaxSubtotalPesewas)} pre-tax · {new Date(item.createdAt).toLocaleString()}</summary><p>Reason: {item.reason}</p><ul>{item.lines.map((line) => <li key={line.lineId}>{line.label} ({line.modelCode}) — rate {formatMoney(line.ratePesewas)} ({line.unit.toLowerCase().replaceAll('_', ' ')}); {line.quantity.distanceMetres !== undefined ? `${line.quantity.distanceMetres} metres` : line.quantity.durationMinutes !== undefined ? `${line.quantity.durationMinutes} minutes` : 'one unit'}; line total {formatMoney(line.amountPesewas)}</li>)}</ul></details></li>)}</ol>)}
+      {worksheetHistory && (worksheetHistory.length === 0 ? <p>No saved worksheet versions for this request.</p> : <ol aria-label="Saved internal worksheet versions">{worksheetHistory.map((item) => <li key={item.id}><details><summary>Version {item.version} · {formatMoney(item.preTaxSubtotalPesewas)} pre-tax · {formatAccraDateTime(item.createdAt)}</summary><p>Reason: {item.reason}</p><ul>{item.lines.map((line) => <li key={line.lineId}>{line.label} ({line.modelCode}) — rate {formatMoney(line.ratePesewas)} ({line.unit.toLowerCase().replaceAll('_', ' ')}); {line.quantity.distanceMetres !== undefined ? `${line.quantity.distanceMetres} metres` : line.quantity.durationMinutes !== undefined ? `${line.quantity.durationMinutes} minutes` : 'one unit'}; line total {formatMoney(line.amountPesewas)}</li>)}</ul></details></li>)}</ol>)}
     </div>}
   </section>;
 }
