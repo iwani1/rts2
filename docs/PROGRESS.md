@@ -2,6 +2,11 @@
 
 Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is tracked per ID; scaffolding and isolated helpers are not feature completion.
 
+## Dependency remediation and release check (2026-10-20)
+- Updated `vitest` to 5.0.5, added explicit `vite` 7.3.7 for the repository's legacy peer-dependency install mode, and overrode PostCSS to patched 8.5.31. `npm ci --ignore-scripts`, `npm test` (92 files / 337 tests), and `npm run lint` pass in this sandbox. `npm audit --omit=dev` reports zero vulnerabilities; full audit reports eight high findings in the Prisma and Next ESLint development/build chains.
+- Full local generation/typecheck, PostgreSQL integration, build, and browser E2E are not verified against this updated lockfile: this sandbox cannot reach Prisma's native engine download host and has no Docker/PostgreSQL. The latest successful branch CI (`a318e8e`) passed standard Prisma generation/migrations, typecheck, lint, unit/integration tests, and production build before these dependency updates; it did not run Playwright E2E.
+- Do not treat the demo as working or continue feature development until Fedora runs the updated lockfile through Prisma generation, typecheck/build, integration tests and all browser flows. The known 2/4 E2E run still needs trace-backed diagnosis for customer-create and driver-search waits.
+
 ## Phase 1A — integration-test database safeguards and Fedora verification (2026-10-20)
 - Dedicated integration configuration selects `TMS_TEST_DATABASE_URL` ahead of the normal application URL and rejects non-PostgreSQL, non-loopback, or non-`_test` targets. It also validates a 32-character minimum `AUTH_SECRET` and loopback `APP_URL` before test files load. Bracketed IPv6 loopback is accepted; unsupported protocols are tested as rejections.
 - The raw SQL test-migration helper refuses to apply migrations when its current schema already contains relations, preventing accidental reapplication to a previously used database. Fedora/Podman setup and fail-fast commands are documented.
