@@ -5,7 +5,7 @@ function localDateTime(value: Date) {
   return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}.${pad(value.getMilliseconds(), 3)}`;
 }
 
-test('authorized fleet manager applies and releases a safety block with inspection evidence', async ({ page }) => {
+test('authorized fleet manager applies and releases a safety block, then records and searches non-safety maintenance', async ({ page }) => {
   const email = process.env.TMS_E2E_EMAIL;
   const password = process.env.TMS_E2E_PASSWORD;
   if (!email || !password) throw new Error('Set TMS_E2E_EMAIL and TMS_E2E_PASSWORD in the local environment.');
@@ -43,4 +43,17 @@ test('authorized fleet manager applies and releases a safety block with inspecti
   await vehicleRow.getByLabel('Release reason').fill('E2E release after completed work and passed inspection');
   await vehicleRow.getByRole('button', { name: 'Record inspection and release' }).click();
   await expect(vehicleRow).toContainText('No active safety block recorded');
+
+  await page.goto('/fleet/maintenance');
+  await page.getByLabel('Vehicle').selectOption({ label: `${registration} — E2E test Safety ${suffix}` });
+  await page.getByLabel('Date reported').fill(new Date().toISOString().slice(0, 10));
+  await page.getByLabel('Reported fault').fill('E2E non-safety door hinge inspection');
+  await page.getByLabel('Reason for creating this work order').fill('Record an E2E non-safety maintenance report');
+  await page.getByRole('checkbox').check();
+  await page.getByRole('button', { name: 'Record work order' }).click();
+  await expect(page.getByRole('status')).toContainText('recorded as Reported');
+
+  await page.getByLabel('Search reference, fault or registration').fill(registration);
+  await page.getByRole('button', { name: 'Apply filters' }).click();
+  await expect(page.getByRole('row').filter({ hasText: registration })).toContainText('E2E non-safety door hinge inspection');
 });
