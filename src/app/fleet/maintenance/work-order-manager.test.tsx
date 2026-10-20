@@ -39,6 +39,22 @@ describe('WorkOrderManager', () => {
     expect(mocks.refresh).toHaveBeenCalledOnce();
   });
 
+  it('finds and selects an active vehicle beyond the initial bounded picker', async () => {
+    const match = { id: 'vehicle-51', registrationNumber: 'GT-9999-26', make: 'Toyota', model: 'Hilux', odometerUnit: 'KM' };
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ vehicles: [match], hasMore: false }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<WorkOrderManager companyId="company-1" vehicles={[{
+      id: 'vehicle-1', registrationNumber: 'GT-0001-26', make: 'Toyota', model: 'Hiace', odometerUnit: 'KM',
+    }]} vehiclesHaveMore initialWorkOrders={[]} />);
+    fireEvent.change(screen.getByLabelText('Find vehicle by registration, make or model'), { target: { value: 'GT-9999' } });
+    expect(await screen.findByRole('option', { name: /GT-9999-26/ })).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Vehicle'), { target: { value: 'vehicle-51' } });
+    expect(screen.getByLabelText('Vehicle')).toHaveProperty('value', 'vehicle-51');
+    fireEvent.change(screen.getByLabelText('Find vehicle by registration, make or model'), { target: { value: '' } });
+    await waitFor(() => expect(screen.getByLabelText('Vehicle')).toHaveProperty('value', 'vehicle-51'));
+    expect(fetchMock).toHaveBeenCalledWith('/api/companies/company-1/maintenance/vehicle-options?q=GT-9999', expect.objectContaining({ signal: expect.any(AbortSignal) }));
+  });
+
   it('submits a reasoned transition only to a displayed next status', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ workOrder: {
       id: 'wo-1', reference: 'WO-AABBCCDDEEFF0011', status: 'Awaiting Inspection',

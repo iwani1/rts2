@@ -57,6 +57,7 @@ export class WorkOrderPolicyError extends Error {
 export class InvalidWorkOrderCursorError extends Error {
   constructor() { super('Invalid work-order page cursor.'); this.name = 'InvalidWorkOrderCursorError'; }
 }
+export type WorkOrderVehicleOption = { id: string; registrationNumber: string; make: string; model: string; odometerUnit: string | null };
 
 export type WorkOrderRecord = {
   id: string;
@@ -105,6 +106,30 @@ async function requireMaintenanceManager(actorId: string, companyId: string) {
   if (!access.allowed || !access.scopes.some((scope) => ['COMPANY', 'GLOBAL', 'APPROVE_RELEASE'].includes(scope))) {
     throw new PermissionDeniedError();
   }
+}
+
+/** Returns a bounded, searchable picker projection for manager-only maintenance intake. */
+export async function listWorkOrderVehicleOptions(actorIdInput: string, companyIdInput: string, searchInput?: string) {
+  const actorId = idSchema.parse(actorIdInput);
+  const companyId = idSchema.parse(companyIdInput);
+  const search = searchInput === undefined ? undefined : z.string().trim().max(100).parse(searchInput) || undefined;
+  await requireMaintenanceManager(actorId, companyId);
+  const prisma = getPrisma();
+  const company = await prisma.company.findUnique({ where: { id: companyId }, select: { status: true } });
+  if (company?.status !== 'ACTIVE') throw new WorkOrderNotFoundError();
+  const rows = await prisma.vehicle.findMany({
+    where: {
+      companyId, archivedAt: null,
+      ...(search ? { OR: [
+        { registrationNumber: { contains: search, mode: 'insensitive' } },
+        { make: { contains: search, mode: 'insensitive' } },
+        { model: { contains: search, mode: 'insensitive' } },
+      ] } : {}),
+    },
+    orderBy: [{ registrationNumber: 'asc' }, { id: 'asc' }], take: 51,
+    select: { id: true, registrationNumber: true, make: true, model: true, odometerUnit: true },
+  });
+  return { vehicles: rows.slice(0, 50) as WorkOrderVehicleOption[], hasMore: rows.length > 50 };
 }
 
 /** Lists work orders for authorized company maintenance managers. */

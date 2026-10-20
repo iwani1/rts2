@@ -3,8 +3,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { PermissionDeniedError } from '@/modules/auth/permissions';
 import { ZodError } from 'zod';
-import { InvalidWorkOrderCursorError, listWorkOrders, WorkOrderNotFoundError } from '@/modules/maintenance/work-orders';
-import { listVehicles } from '@/modules/fleet/vehicles';
+import { InvalidWorkOrderCursorError, listWorkOrders, listWorkOrderVehicleOptions, WorkOrderNotFoundError } from '@/modules/maintenance/work-orders';
 import { mayStartSession } from '@/modules/auth/policy';
 import { getAuth } from '@/server/auth';
 import { getPrisma } from '@/server/prisma';
@@ -29,16 +28,15 @@ export default async function MaintenancePage({ searchParams }: PageProps) {
     redirect('/fleet/maintenance');
   }
   try {
-    const [workOrderPage, vehicleResult] = await Promise.all([
+    const [workOrderPage, vehicleOptions] = await Promise.all([
       listWorkOrders(session.user.id, company.id, params.status, params.q, params.cursor),
-      listVehicles({ actorId: session.user.id, companyId: company.id }),
+      listWorkOrderVehicleOptions(session.user.id, company.id),
     ]);
-    if (!vehicleResult.canManage) redirect('/');
     return <main className="fleet-page">
       <header className="fleet-page-header"><Link className="wordmark fleet-wordmark" href="/" aria-label="Richie TMS home">R<span>.</span>TS</Link><nav aria-label="Maintenance navigation"><Link href="/">Workspace</Link><Link href="/fleet/vehicles">Vehicle register</Link><span aria-current="page">Maintenance</span></nav></header>
       <div className="fleet-content">
         <div className="fleet-title-row"><div><p className="eyebrow">{company.name}</p><h1>Maintenance work orders</h1><p className="muted">Report and track non-safety maintenance faults.</p></div><div className="fleet-title-actions"><Link className="button-link" href="/fleet/vehicles">Vehicle register</Link><Link className="button-link" href="/">Back to workspace</Link></div></div>
-        <WorkOrderManager companyId={company.id} vehicles={vehicleResult.vehicles.map(({ id, registrationNumber, make, model, odometerUnit }) => ({ id, registrationNumber, make, model, odometerUnit }))} initialWorkOrders={workOrderPage.workOrders} statusFilter={params.status} searchQuery={params.q} pageCursor={params.cursor} cursorHistory={cursorHistory} nextCursor={workOrderPage.nextCursor} />
+        <WorkOrderManager companyId={company.id} vehicles={vehicleOptions.vehicles} vehiclesHaveMore={vehicleOptions.hasMore} initialWorkOrders={workOrderPage.workOrders} statusFilter={params.status} searchQuery={params.q} pageCursor={params.cursor} cursorHistory={cursorHistory} nextCursor={workOrderPage.nextCursor} />
         <p className="fleet-limits">The reason-audited work-order lifecycle records planned work, optional costs and manager-supplied completion inspection evidence. It does not assign technicians, independently verify inspection, or link work orders to safety-block release. Safety blocks remain separately managed from the vehicle register; assignment prevention is inactive until an assignment workflow exists.</p>
       </div>
     </main>;

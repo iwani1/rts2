@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 type VehicleOption = { id: string; registrationNumber: string; make: string; model: string; odometerUnit: string | null };
@@ -37,9 +37,10 @@ const nextStatuses: Record<string, string[]> = {
   'In Progress': ['Awaiting Parts', 'Awaiting Review'], 'Awaiting Parts': ['In Progress'], 'Awaiting Review': ['Completed'], Completed: ['Closed'], Closed: [], Cancelled: [],
 };
 
-export function WorkOrderManager({ companyId, vehicles, initialWorkOrders, statusFilter, searchQuery, pageCursor, cursorHistory = [], nextCursor = null }: {
+export function WorkOrderManager({ companyId, vehicles, vehiclesHaveMore = false, initialWorkOrders, statusFilter, searchQuery, pageCursor, cursorHistory = [], nextCursor = null }: {
   companyId: string;
   vehicles: VehicleOption[];
+  vehiclesHaveMore?: boolean;
   initialWorkOrders: WorkOrder[];
   statusFilter?: string;
   searchQuery?: string;
@@ -53,6 +54,12 @@ export function WorkOrderManager({ companyId, vehicles, initialWorkOrders, statu
   const [notice, setNotice] = useState('');
   const [transitioningId, setTransitioningId] = useState('');
   const [vehicleId, setVehicleId] = useState('');
+  const [selectedVehicleOption, setSelectedVehicleOption] = useState<VehicleOption | null>(null);
+  const [vehicleOptions, setVehicleOptions] = useState(vehicles);
+  const [optionsHaveMore, setOptionsHaveMore] = useState(vehiclesHaveMore);
+  const [vehicleQuery, setVehicleQuery] = useState('');
+  const [vehicleLoading, setVehicleLoading] = useState(false);
+  const [vehicleSearchError, setVehicleSearchError] = useState('');
   const previousToken = cursorHistory[cursorHistory.length - 1];
   const previousHref = workOrdersHref({
     status: statusFilter, search: searchQuery,
@@ -62,7 +69,36 @@ export function WorkOrderManager({ companyId, vehicles, initialWorkOrders, statu
   const nextHistory = pageCursor
     ? [...cursorHistory.slice(-49), pageCursor]
     : ['ROOT'];
-  const selectedVehicle = vehicles.find((vehicle) => vehicle.id === vehicleId);
+  const selectedVehicle = selectedVehicleOption;
+
+  useEffect(() => {
+    const search = vehicleQuery.trim();
+    if (!search) {
+      setVehicleOptions(selectedVehicle && !vehicles.some((vehicle) => vehicle.id === selectedVehicle.id) ? [selectedVehicle, ...vehicles] : vehicles);
+      setOptionsHaveMore(vehiclesHaveMore);
+      setVehicleSearchError('');
+      setVehicleLoading(false);
+      return;
+    }
+    const controller = new AbortController();
+    const timeout = window.setTimeout(async () => {
+      setVehicleLoading(true);
+      setVehicleSearchError('');
+      try {
+        const response = await fetch(`/api/companies/${encodeURIComponent(companyId)}/maintenance/vehicle-options?q=${encodeURIComponent(search)}`, { signal: controller.signal });
+        const body = await response.json() as { vehicles?: VehicleOption[]; hasMore?: boolean; error?: string };
+        if (!response.ok) throw new Error(body.error || 'Unable to search active vehicles.');
+        const matches = body.vehicles ?? [];
+        setVehicleOptions(selectedVehicle && !matches.some((vehicle) => vehicle.id === selectedVehicle.id) ? [selectedVehicle, ...matches] : matches);
+        setOptionsHaveMore(Boolean(body.hasMore));
+      } catch (caught) {
+        if (!controller.signal.aborted) setVehicleSearchError(caught instanceof Error ? caught.message : 'Unable to search active vehicles.');
+      } finally {
+        if (!controller.signal.aborted) setVehicleLoading(false);
+      }
+    }, 250);
+    return () => { window.clearTimeout(timeout); controller.abort(); };
+  }, [companyId, vehicleQuery, vehicles, vehiclesHaveMore, selectedVehicle]);
 
   async function transition(event: FormEvent<HTMLFormElement>, workOrder: WorkOrder) {
     event.preventDefault();
@@ -123,7 +159,8 @@ export function WorkOrderManager({ companyId, vehicles, initialWorkOrders, statu
       if (!response.ok) throw new Error(body.error || 'Unable to report this work order.');
       setNotice(`Work order ${body.workOrder?.reference ?? ''} recorded as Reported.`);
       formElement.reset();
-      setVehicleId('');
+      setVehicleId(''); setSelectedVehicleOption(null); setVehicleQuery('');
+      setVehicleOptions(vehicles); setOptionsHaveMore(vehiclesHaveMore);
       router.refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Unable to report this work order.');
@@ -137,7 +174,16 @@ export function WorkOrderManager({ companyId, vehicles, initialWorkOrders, statu
       {error && <p role="alert" className="form-error">{error}</p>}{notice && <p role="status" className="form-success">{notice}</p>}
       {vehicles.length === 0 ? <p className="fleet-empty">Add an active vehicle before reporting a work order.</p> : <form className="vehicle-form" onSubmit={(event) => void submit(event)}>
         <div className="vehicle-form-grid">
-          <label htmlFor="work-order-vehicle">Vehicle<select id="work-order-vehicle" required value={vehicleId} onChange={(event) => setVehicleId(event.target.value)}><option value="">Choose a vehicle</option>{vehicles.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.registrationNumber} — {vehicle.make} {vehicle.model}</option>)}</select></label>
+          <label htmlFor="work-order-vehicle-search">Find vehicle by registration, make or model<input id="work-order-vehicle-search" type="search" maxLength={100} value={vehicleQuery} onChange={(event) => setVehicleQuery(event.target.value)} placeholder="Search active vehicles" /></label>
+          <label htmlFor="work-order-vehicle">Vehicle<select id="work-order-vehicle" required value={vehicleId} onChange={(event) => {
+            const value = event.target.value;
+            setVehicleId(value);
+            setSelectedVehicleOption(vehicleOptions.find((vehicle) => vehicle.id === value) ?? null);
+          }}><option value="">Choose a vehicle</option>{vehicleOptions.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.registrationNumber} — {vehicle.make} {vehicle.model}</option>)}</select></label>
+          {vehicleLoading && <p className="form-help" role="status">Searching active vehicles…</p>}
+          {vehicleSearchError && <p className="form-error" role="alert">{vehicleSearchError}</p>}
+          {!vehicleLoading && optionsHaveMore && <p className="form-help">More than 50 active vehicles match. Search by registration, make or model to narrow the list.</p>}
+          {!vehicleLoading && vehicleOptions.length === 0 && <p className="form-help">No active vehicles match this search.</p>}
           <label>Work type (optional)<input name="workType" maxLength={120} /></label>
           <label>Priority (optional; enter the operator’s priority label)<input name="priority" maxLength={40} /></label>
           <label>Date reported<input name="dateReported" type="date" required /></label>

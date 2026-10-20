@@ -3,7 +3,7 @@ import { cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  getSession: vi.fn(), findUser: vi.fn(), findCompanies: vi.fn(), listWorkOrders: vi.fn(), listVehicles: vi.fn(),
+  getSession: vi.fn(), findUser: vi.fn(), findCompanies: vi.fn(), listWorkOrders: vi.fn(), listWorkOrderVehicleOptions: vi.fn(),
 }));
 
 vi.mock('next/headers', () => ({ headers: async () => new Headers() }));
@@ -18,8 +18,8 @@ vi.mock('@/modules/maintenance/work-orders', () => ({
   InvalidWorkOrderCursorError: class InvalidWorkOrderCursorError extends Error {},
   WorkOrderNotFoundError: class WorkOrderNotFoundError extends Error {},
   listWorkOrders: mocks.listWorkOrders,
+  listWorkOrderVehicleOptions: mocks.listWorkOrderVehicleOptions,
 }));
-vi.mock('@/modules/fleet/vehicles', () => ({ listVehicles: mocks.listVehicles }));
 vi.mock('./work-order-manager', () => ({ WorkOrderManager: () => <div>Maintenance register</div> }));
 
 import { InvalidWorkOrderCursorError } from '@/modules/maintenance/work-orders';
@@ -32,7 +32,7 @@ beforeEach(() => {
   mocks.findUser.mockResolvedValue({ status: 'ACTIVE' });
   mocks.findCompanies.mockResolvedValue([{ id: 'company-1', name: 'Richie Transport Services' }]);
   mocks.listWorkOrders.mockResolvedValue({ workOrders: [], nextCursor: null });
-  mocks.listVehicles.mockResolvedValue({ canManage: true, vehicles: [] });
+  mocks.listWorkOrderVehicleOptions.mockResolvedValue({ vehicles: [], hasMore: false });
 });
 
 describe('MaintenancePage cursor recovery', () => {

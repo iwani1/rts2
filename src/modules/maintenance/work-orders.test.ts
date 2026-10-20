@@ -7,7 +7,7 @@ vi.mock('@/modules/auth/permissions', () => ({
   resolvePermission: mocks.resolvePermission,
 }));
 
-import { createWorkOrder, listWorkOrders, transitionWorkOrder } from './work-orders';
+import { createWorkOrder, listWorkOrders, listWorkOrderVehicleOptions, transitionWorkOrder } from './work-orders';
 
 const input = {
   actorId: 'manager-1', companyId: 'company-1', vehicleId: 'vehicle-1', reportedFault: 'Front left door latch sticks when opened',
@@ -52,6 +52,29 @@ const transitionInput = { actorId: 'manager-1', companyId: 'company-1', workOrde
 
 describe('maintenance work-order intake', () => {
   beforeEach(() => vi.resetAllMocks());
+
+  it('provides a bounded active-vehicle picker with same-company searchable fields', async () => {
+    const vehicles = Array.from({ length: 51 }, (_, index) => ({
+      id: `vehicle-${index}`, registrationNumber: `GT-${index}`, make: 'Toyota', model: 'Hilux', odometerUnit: 'KM',
+    }));
+    const findMany = vi.fn().mockResolvedValue(vehicles);
+    mocks.getPrisma.mockReturnValue({
+      company: { findUnique: vi.fn().mockResolvedValue({ status: 'ACTIVE' }) },
+      vehicle: { findMany },
+    });
+    mocks.resolvePermission.mockResolvedValue({ allowed: true, scopes: ['COMPANY'] });
+    await expect(listWorkOrderVehicleOptions('manager-1', 'company-1', 'toyota')).resolves.toEqual({ vehicles: vehicles.slice(0, 50), hasMore: true });
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        companyId: 'company-1', archivedAt: null,
+        OR: [
+          { registrationNumber: { contains: 'toyota', mode: 'insensitive' } },
+          { make: { contains: 'toyota', mode: 'insensitive' } },
+          { model: { contains: 'toyota', mode: 'insensitive' } },
+        ],
+      }), orderBy: [{ registrationNumber: 'asc' }, { id: 'asc' }], take: 51,
+    }));
+  });
 
   it('records an explicitly non-safety report, initializes Reported, and audits in the same transaction', async () => {
     const { tx, workOrder } = createFixture();
