@@ -64,6 +64,9 @@ describe('corporate client register with PostgreSQL persistence', () => {
   });
 
   afterAll(async () => {
+    // AuditEvent is append-only: null FK references before removing users/companies
+    await prisma.auditEvent.updateMany({ where: { actorId: { in: [adminId, managerId] } }, data: { actorId: null } });
+    await prisma.auditEvent.updateMany({ where: { companyId: { in: [companyId, otherCompanyId] } }, data: { companyId: null } });
     await prisma.client.deleteMany({ where: { companyId: { in: [companyId, otherCompanyId] } } });
     await prisma.userRoleAssignment.deleteMany({ where: { userId: { in: [adminId, managerId] } } });
     await prisma.user.deleteMany({ where: { id: { in: [adminId, managerId] } } });
