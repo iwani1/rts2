@@ -23,10 +23,11 @@ export async function GET(request: Request, context: RouteContext) {
     const filters = new URL(request.url).searchParams;
     const status = filters.get('status') ?? undefined;
     const search = filters.get('q') ?? undefined;
-    const workOrders = status || search
-      ? await listWorkOrders(session.user.id, companyId, status, search)
+    const cursor = filters.get('cursor') ?? undefined;
+    const page = status || search || cursor
+      ? await listWorkOrders(session.user.id, companyId, status, search, cursor)
       : await listWorkOrders(session.user.id, companyId);
-    return NextResponse.json({ workOrders }, { headers: { 'Cache-Control': 'private, no-store' } });
+    return NextResponse.json(page, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     return respondError(error);
   }

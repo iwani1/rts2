@@ -5,6 +5,7 @@ import { WorkOrderManager } from './work-order-manager';
 
 const mocks = vi.hoisted(() => ({ refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: mocks.refresh }) }));
+vi.mock('next/link', () => ({ default: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) => <a href={href} {...props}>{children}</a> }));
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('WorkOrderManager', () => {
@@ -66,6 +67,12 @@ describe('WorkOrderManager', () => {
       method: 'PATCH', body: JSON.stringify({ toStatus: 'Awaiting Inspection', reason: 'Move the vehicle to inspection queue' }),
     }));
     expect(mocks.refresh).toHaveBeenCalled();
+  });
+
+  it('preserves filters and validated cursor history across previous and next pages', () => {
+    render(<WorkOrderManager companyId="company-1" vehicles={[]} initialWorkOrders={[]} statusFilter="Reported" searchQuery="door latch" pageCursor="current-cursor" cursorHistory={['ROOT', 'prior-cursor']} nextCursor="next-cursor" />);
+    expect(screen.getByRole('link', { name: 'Previous page' }).getAttribute('href')).toBe('/fleet/maintenance?status=Reported&q=door+latch&cursor=prior-cursor&cursorHistory=ROOT');
+    expect(screen.getByRole('link', { name: 'Next page' }).getAttribute('href')).toBe('/fleet/maintenance?status=Reported&q=door+latch&cursor=next-cursor&cursorHistory=ROOT.prior-cursor.current-cursor');
   });
 
   it('shows the persisted completion evidence and formats integer pesewas exactly', () => {

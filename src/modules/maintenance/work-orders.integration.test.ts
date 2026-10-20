@@ -46,7 +46,7 @@ describe('non-safety maintenance work orders with PostgreSQL', () => {
     });
     expect(created).toMatchObject({ status: 'Reported', safetyRelated: false, workType: null, priority: null, odometerValue: null, odometerUnit: null });
     const rows = await listWorkOrders(managerId, companyId);
-    expect(rows.some((row) => row.id === created.id && row.dateReported === '2026-10-20')).toBe(true);
+    expect(rows.workOrders.some((row) => row.id === created.id && row.dateReported === '2026-10-20')).toBe(true);
 
     const sequence = [
       ['Awaiting Inspection', 'Send for inspection before authorizing work'],

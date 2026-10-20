@@ -112,17 +112,19 @@ describe('maintenance work-order intake', () => {
     };
     const findMany = vi.fn().mockResolvedValue([row]);
     mocks.getPrisma.mockReturnValue({ company: { findUnique: vi.fn().mockResolvedValue({ status: 'ACTIVE' }) }, maintenanceWorkOrder: { findMany } });
-    await expect(listWorkOrders('manager-1', 'company-1')).resolves.toEqual([{
+    await expect(listWorkOrders('manager-1', 'company-1')).resolves.toEqual({
+      workOrders: [{
       ...row, dateReported: '2026-10-20', completionDate: '2026-10-21T11:00:00.000Z',
       labourCostPesewas: '12500', partsCostPesewas: null, otherCostPesewas: '250',
       statusHistory: [{ sequence: 6, fromStatus: 'Awaiting Review', toStatus: 'Completed',
         reason: 'Inspection passed and work is complete', createdAt: '2026-10-21T11:00:00.000Z', actorName: 'Manager' }],
-    }]);
+      }], nextCursor: null,
+    });
     expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { companyId: 'company-1' }, take: 100,
+      where: { companyId: 'company-1' }, take: 101, orderBy: [{ dateReported: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
       select: expect.objectContaining({ statusHistory: expect.objectContaining({ take: 50, orderBy: { sequence: 'desc' } }) }),
     }));
-    await expect(listWorkOrders('manager-1', 'company-1', 'Reported', 'door')).resolves.toHaveLength(1);
+    await expect(listWorkOrders('manager-1', 'company-1', 'Reported', 'door')).resolves.toMatchObject({ workOrders: [expect.objectContaining({ id: 'wo-1' })], nextCursor: null });
     expect(findMany).toHaveBeenLastCalledWith(expect.objectContaining({
       where: { companyId: 'company-1', status: 'Reported', OR: [
         { reference: { contains: 'door', mode: 'insensitive' } },
@@ -132,6 +134,28 @@ describe('maintenance work-order intake', () => {
     }));
     await expect(listWorkOrders('manager-1', 'company-1', 'Fictitious')).rejects.toThrow();
     await expect(listWorkOrders('manager-1', 'company-1', undefined, 'x'.repeat(101))).rejects.toThrow();
+  });
+
+  it('returns a bounded page and only accepts a cursor from the active tenant', async () => {
+    mocks.resolvePermission.mockResolvedValue({ allowed: true, scopes: ['COMPANY'] });
+    const rows = Array.from({ length: 101 }, (_, index) => ({
+      id: `wo-${index}`, reference: `WO-${index}`, vehicleId: 'vehicle-1', reportedFault: 'Door latch sticks',
+      workType: null, priority: null, dateReported: new Date('2026-10-20T00:00:00.000Z'), status: 'Reported',
+      requiredWork: null, parts: null, completionDate: null, inspectionResults: null,
+      labourCostPesewas: null, partsCostPesewas: null, otherCostPesewas: null,
+      vehicle: { registrationNumber: 'GT-1234-25', make: 'Test', model: 'Van' }, statusHistory: [],
+    }));
+    const findFirst = vi.fn().mockResolvedValue({ id: 'wo-cursor' });
+    const findMany = vi.fn().mockResolvedValue(rows);
+    mocks.getPrisma.mockReturnValue({ company: { findUnique: vi.fn().mockResolvedValue({ status: 'ACTIVE' }) }, maintenanceWorkOrder: { findFirst, findMany } });
+    const firstPage = await listWorkOrders('manager-1', 'company-1');
+    expect(firstPage.workOrders).toHaveLength(100);
+    expect(firstPage.nextCursor).toBe('wo-99');
+    await listWorkOrders('manager-1', 'company-1', undefined, undefined, 'wo-cursor');
+    expect(findFirst).toHaveBeenCalledWith({ where: { id: 'wo-cursor', companyId: 'company-1' }, select: { id: true } });
+    expect(findMany).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: { id: 'wo-cursor' }, skip: 1, take: 101 }));
+    findFirst.mockResolvedValue(null);
+    await expect(listWorkOrders('manager-1', 'company-1', undefined, undefined, 'foreign-cursor')).rejects.toThrow('not available');
   });
 
   it('advances only valid statuses and records sequenced status history plus audit atomically', async () => {

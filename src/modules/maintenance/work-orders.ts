@@ -88,6 +88,7 @@ type WorkOrderStore = {
   maintenanceWorkOrder: {
     create(args: unknown): Promise<CreatedWorkOrderRecord>;
     findMany(args: unknown): Promise<unknown[]>;
+    findFirst(args: unknown): Promise<{ id: string } | null>;
     updateMany(args: unknown): Promise<{ count: number }>;
   };
   maintenanceWorkOrderStatusHistory: {
@@ -104,16 +105,20 @@ async function requireMaintenanceManager(actorId: string, companyId: string) {
 }
 
 /** Lists work orders for authorized company maintenance managers. */
-export async function listWorkOrders(actorIdInput: string, companyIdInput: string, statusInput?: string, searchInput?: string) {
+export async function listWorkOrders(actorIdInput: string, companyIdInput: string, statusInput?: string, searchInput?: string, cursorInput?: string) {
   const actorId = idSchema.parse(actorIdInput);
   const companyId = idSchema.parse(companyIdInput);
   const status = statusInput ? workOrderStatusSchema.parse(statusInput) : undefined;
   const search = searchInput === undefined ? undefined : z.string().trim().max(100).parse(searchInput) || undefined;
+  const cursor = cursorInput ? idSchema.parse(cursorInput) : undefined;
   await requireMaintenanceManager(actorId, companyId);
   const prisma = getPrisma();
   const company = await prisma.company.findUnique({ where: { id: companyId }, select: { status: true } });
   if (company?.status !== 'ACTIVE') throw new WorkOrderNotFoundError();
   const store = prisma as unknown as WorkOrderStore;
+  if (cursor && !(await store.maintenanceWorkOrder.findFirst({ where: { id: cursor, companyId }, select: { id: true } }))) {
+    throw new WorkOrderNotFoundError();
+  }
   const rows = await store.maintenanceWorkOrder.findMany({
     where: {
       companyId,
@@ -124,8 +129,9 @@ export async function listWorkOrders(actorIdInput: string, companyIdInput: strin
         { vehicle: { is: { registrationNumber: { contains: search, mode: 'insensitive' } } } },
       ] } : {}),
     },
-    orderBy: [{ dateReported: 'desc' }, { createdAt: 'desc' }],
-    take: 100,
+    orderBy: [{ dateReported: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    take: 101,
     select: {
       id: true, reference: true, vehicleId: true, reportedFault: true, workType: true, priority: true,
       dateReported: true, status: true, requiredWork: true, parts: true, completionDate: true, inspectionResults: true,
@@ -144,15 +150,19 @@ export async function listWorkOrders(actorIdInput: string, companyIdInput: strin
     otherCostPesewas: bigint | null;
     statusHistory: Array<Omit<WorkOrderRecord['statusHistory'][number], 'createdAt' | 'actorName'> & { createdAt: Date; actor: { name: string } }>;
   }>;
-  return rows.map((row) => ({
-    ...row,
-    dateReported: row.dateReported.toISOString().slice(0, 10),
-    completionDate: row.completionDate?.toISOString() ?? null,
-    labourCostPesewas: row.labourCostPesewas?.toString() ?? null,
-    partsCostPesewas: row.partsCostPesewas?.toString() ?? null,
-    otherCostPesewas: row.otherCostPesewas?.toString() ?? null,
-    statusHistory: row.statusHistory.map(({ actor, ...event }) => ({ ...event, createdAt: event.createdAt.toISOString(), actorName: actor.name })),
-  }));
+  const pageRows = rows.slice(0, 100);
+  return {
+    workOrders: pageRows.map((row) => ({
+      ...row,
+      dateReported: row.dateReported.toISOString().slice(0, 10),
+      completionDate: row.completionDate?.toISOString() ?? null,
+      labourCostPesewas: row.labourCostPesewas?.toString() ?? null,
+      partsCostPesewas: row.partsCostPesewas?.toString() ?? null,
+      otherCostPesewas: row.otherCostPesewas?.toString() ?? null,
+      statusHistory: row.statusHistory.map(({ actor, ...event }) => ({ ...event, createdAt: event.createdAt.toISOString(), actorName: actor.name })),
+    })),
+    nextCursor: rows.length > 100 ? pageRows[pageRows.length - 1]?.id ?? null : null,
+  };
 }
 
 /** Creates a reported non-safety work order. Safety-blocked defects are refused until MNT-02 is active. */

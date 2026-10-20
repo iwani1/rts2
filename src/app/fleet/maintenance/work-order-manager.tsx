@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -22,17 +23,29 @@ function dateTimeGhana(value: string) {
   return new Intl.DateTimeFormat('en-GH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Accra' }).format(new Date(value));
 }
 const workOrderStatuses = ['Reported', 'Awaiting Inspection', 'Approved', 'In Progress', 'Awaiting Parts', 'Awaiting Review', 'Completed', 'Closed', 'Cancelled'];
+function workOrdersHref({ status, search, cursor, history }: { status?: string; search?: string; cursor?: string; history?: string[] }) {
+  const params = new URLSearchParams();
+  if (status) params.set('status', status);
+  if (search) params.set('q', search);
+  if (cursor) params.set('cursor', cursor);
+  if (history?.length) params.set('cursorHistory', history.join('.'));
+  const query = params.toString();
+  return `/fleet/maintenance${query ? `?${query}` : ''}`;
+}
 const nextStatuses: Record<string, string[]> = {
   Reported: ['Awaiting Inspection', 'Cancelled'], 'Awaiting Inspection': ['Approved', 'Cancelled'], Approved: ['In Progress'],
   'In Progress': ['Awaiting Parts', 'Awaiting Review'], 'Awaiting Parts': ['In Progress'], 'Awaiting Review': ['Completed'], Completed: ['Closed'], Closed: [], Cancelled: [],
 };
 
-export function WorkOrderManager({ companyId, vehicles, initialWorkOrders, statusFilter, searchQuery }: {
+export function WorkOrderManager({ companyId, vehicles, initialWorkOrders, statusFilter, searchQuery, pageCursor, cursorHistory = [], nextCursor = null }: {
   companyId: string;
   vehicles: VehicleOption[];
   initialWorkOrders: WorkOrder[];
   statusFilter?: string;
   searchQuery?: string;
+  pageCursor?: string;
+  cursorHistory?: string[];
+  nextCursor?: string | null;
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -40,6 +53,15 @@ export function WorkOrderManager({ companyId, vehicles, initialWorkOrders, statu
   const [notice, setNotice] = useState('');
   const [transitioningId, setTransitioningId] = useState('');
   const [vehicleId, setVehicleId] = useState('');
+  const previousToken = cursorHistory[cursorHistory.length - 1];
+  const previousHref = workOrdersHref({
+    status: statusFilter, search: searchQuery,
+    cursor: previousToken && previousToken !== 'ROOT' ? previousToken : undefined,
+    history: cursorHistory.slice(0, -1),
+  });
+  const nextHistory = pageCursor
+    ? [...cursorHistory.slice(-49), pageCursor]
+    : ['ROOT'];
   const selectedVehicle = vehicles.find((vehicle) => vehicle.id === vehicleId);
 
   async function transition(event: FormEvent<HTMLFormElement>, workOrder: WorkOrder) {
@@ -144,6 +166,11 @@ export function WorkOrderManager({ companyId, vehicles, initialWorkOrders, statu
           <tbody>{initialWorkOrders.map((item) => <tr key={item.id}><td><strong>{item.reference}</strong></td><td>{dateOnly(item.dateReported)}</td><td>{item.vehicle.registrationNumber} — {item.vehicle.make} {item.vehicle.model}</td><td>{item.reportedFault}</td><td>{item.workType ?? 'Not recorded'}</td><td>{item.priority ?? 'Not recorded'}</td><td>{item.status}</td></tr>)}</tbody>
         </table>
       </div>}
+      {(pageCursor || nextCursor) && <nav className="fleet-pagination" aria-label="Work-order pages">
+        {pageCursor && <Link className="button-link" href={previousHref}>Previous page</Link>}
+        <span className="muted">Showing up to 100 records per page.</span>
+        {nextCursor && <Link className="button-link" href={workOrdersHref({ status: statusFilter, search: searchQuery, cursor: nextCursor, history: nextHistory })}>Next page</Link>}
+      </nav>}
       {initialWorkOrders.map((item) => <details key={`details-${item.id}`} className="vehicle-editor">
         <summary>{item.reference}: planned work, completion evidence and costs</summary>
         <dl className="work-order-detail-grid">

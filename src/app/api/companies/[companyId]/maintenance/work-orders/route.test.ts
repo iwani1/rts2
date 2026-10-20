@@ -26,20 +26,20 @@ describe('maintenance work-order API', () => {
   it('returns a private uncached company-scoped list', async () => {
     mocks.getSession.mockResolvedValue({ user: { id: 'fleet-manager-1' } });
     const workOrders = [{ id: 'wo-1', reference: 'WO-AABBCCDDEEFF0011' }];
-    mocks.listWorkOrders.mockResolvedValue(workOrders);
+    mocks.listWorkOrders.mockResolvedValue({ workOrders, nextCursor: 'wo-next' });
     const response = await GET(new Request('https://example.test'), context);
     expect(response.status).toBe(200);
     expect(response.headers.get('Cache-Control')).toBe('private, no-store');
-    await expect(response.json()).resolves.toEqual({ workOrders });
+    await expect(response.json()).resolves.toEqual({ workOrders, nextCursor: 'wo-next' });
     expect(mocks.listWorkOrders).toHaveBeenCalledWith('fleet-manager-1', 'company-1');
   });
 
   it('passes an explicit status filter to the tenant-scoped list service', async () => {
     mocks.getSession.mockResolvedValue({ user: { id: 'fleet-manager-1' } });
-    mocks.listWorkOrders.mockResolvedValue([]);
-    const response = await GET(new Request('https://example.test?status=Awaiting%20Review&q=door'), context);
+    mocks.listWorkOrders.mockResolvedValue({ workOrders: [], nextCursor: null });
+    const response = await GET(new Request('https://example.test?status=Awaiting%20Review&q=door&cursor=wo-12'), context);
     expect(response.status).toBe(200);
-    expect(mocks.listWorkOrders).toHaveBeenCalledWith('fleet-manager-1', 'company-1', 'Awaiting Review', 'door');
+    expect(mocks.listWorkOrders).toHaveBeenCalledWith('fleet-manager-1', 'company-1', 'Awaiting Review', 'door', 'wo-12');
   });
 
   it('derives actor and tenant from the authenticated route and returns the Reported record', async () => {
