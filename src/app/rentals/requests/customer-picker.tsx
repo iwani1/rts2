@@ -14,12 +14,15 @@ export function CustomerPicker({ companyId, current }: { companyId: string; curr
 
   // On client-side navigation (e.g. list -> edit draft), `current` changes without remounting.
   // useState(current) only initialises on mount, so sync selected when the customer id changes.
+  // Intentionally depend only on current.id (a primitive): `current` is an object prop with a
+  // new reference every render, and `selected` is user-controlled state that must not be reset.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const currentId = current?.id ?? null;
     if (currentId && (!selected || selected.id !== currentId)) {
       setSelected(current);
     }
-  }, [current?.id]); // eslint-disable-line react-hooks/exhaustive-deps — intentionally depend only on current.id (primitive); current is an object prop with a new reference every render, selected is user-controlled state
+  }, [current?.id]);
 
   useEffect(() => {
     const term = query.trim();
