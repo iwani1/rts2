@@ -22,7 +22,7 @@ export async function PUT(request: Request, context: RouteContext) {
     const { companyId, vehicleId, blockId } = await context.params;
     const body = await request.json() as Record<string, unknown>;
     const block = await releaseVehicleSafetyBlock({ ...body, actorId: session.user.id, companyId, vehicleId, blockId });
-    return NextResponse.json({ block }, { headers: { 'Cache-Control': 'private, no-store' } });
+    return NextResponse.json({ block: { id: block.id, status: block.status, releasedAt: block.releasedAt } }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     return errorResponse(error);
   }

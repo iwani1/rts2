@@ -25,7 +25,10 @@ describe('PUT vehicle safety block release', () => {
 
   it('derives actor and path scope and forwards completion plus inspection evidence', async () => {
     mocks.getSession.mockResolvedValue({ user: { id: 'fleet-manager-1' } });
-    const block = { id: 'block-1', releasedAt: '2026-10-20T12:00:00.000Z' };
+    const block = {
+      id: 'block-1', status: 'Under Maintenance', releasedAt: '2026-10-20T12:00:00.000Z',
+      reason: 'Sensitive applied reason', releaseReason: 'Sensitive release reason', inspectionResults: 'Sensitive inspection detail',
+    };
     mocks.releaseVehicleSafetyBlock.mockResolvedValue(block);
     const payload = {
       workCompletedAt: '2026-10-20T10:00:00.000Z', inspectionResults: 'Brake test passed on post-repair inspection',
@@ -36,7 +39,9 @@ describe('PUT vehicle safety block release', () => {
     }), context);
     expect(response.status).toBe(200);
     expect(response.headers.get('Cache-Control')).toBe('private, no-store');
-    await expect(response.json()).resolves.toEqual({ block });
+    await expect(response.json()).resolves.toEqual({
+      block: { id: 'block-1', status: 'Under Maintenance', releasedAt: '2026-10-20T12:00:00.000Z' },
+    });
     expect(mocks.releaseVehicleSafetyBlock).toHaveBeenCalledWith({
       ...payload, actorId: 'fleet-manager-1', companyId: 'company-1', vehicleId: 'vehicle-1', blockId: 'block-1',
     });
