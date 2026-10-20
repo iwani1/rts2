@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
+import { accraLocalDateTimeToISOString, formatAccraDateTime } from '@/modules/time/accra-date-time';
 import { useRouter } from 'next/navigation';
 
 type VehicleOption = { id: string; registrationNumber: string; make: string; model: string; odometerUnit: string | null };
@@ -19,9 +20,7 @@ function formatPesewas(value: string | null) {
   const pesewas = BigInt(value);
   return `GHS ${pesewas / BigInt(100)}.${String(pesewas % BigInt(100)).padStart(2, '0')}`;
 }
-function dateTimeGhana(value: string) {
-  return new Intl.DateTimeFormat('en-GH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Accra' }).format(new Date(value));
-}
+function dateTimeGhana(value: string) { return formatAccraDateTime(value); }
 const workOrderStatuses = ['Reported', 'Awaiting Inspection', 'Approved', 'In Progress', 'Awaiting Parts', 'Awaiting Review', 'Completed', 'Closed', 'Cancelled'];
 function workOrdersHref({ status, search, cursor, history }: { status?: string; search?: string; cursor?: string; history?: string[] }) {
   const params = new URLSearchParams();
@@ -114,7 +113,7 @@ export function WorkOrderManager({ companyId, vehicles, vehiclesHaveMore = false
     }
     if (toStatus === 'Completed') {
       const completionValue = String(form.get('completionDate') ?? '');
-      payload.completionDate = completionValue ? new Date(completionValue).toISOString() : '';
+      payload.completionDate = completionValue ? accraLocalDateTimeToISOString(completionValue) : '';
       payload.inspectionResults = String(form.get('inspectionResults') ?? '').trim();
       for (const key of ['labourCostPesewas', 'partsCostPesewas', 'otherCostPesewas']) {
         const value = String(form.get(key) ?? '').trim();

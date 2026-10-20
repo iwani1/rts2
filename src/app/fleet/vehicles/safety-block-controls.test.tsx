@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { formatAccraDateTime } from '@/modules/time/accra-date-time';
 import { SafetyBlockControls } from './safety-block-controls';
 
 const mocks = vi.hoisted(() => ({ refresh: vi.fn() }));
@@ -32,13 +33,13 @@ describe('SafetyBlockControls', () => {
     fireEvent.change(screen.getByLabelText('Release reason'), { target: { value: 'Release after completed repair inspection' } });
     fireEvent.click(screen.getByRole('checkbox'));
     fireEvent.click(screen.getByRole('button', { name: 'Record inspection and release' }));
-    expect(await screen.findByText((text) => text.includes(`safety block released at ${new Date(releasedAt).toLocaleString()}`))).toBeTruthy();
+    expect(await screen.findByText((text) => text.includes(`safety block released at ${formatAccraDateTime(releasedAt)}`))).toBeTruthy();
     const payload = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as Record<string, unknown>;
     expect(payload).toMatchObject({
       inspectionResults: 'Brake test passed after replacement', inspectionPassed: true,
       reason: 'Release after completed repair inspection',
     });
-    expect(typeof payload.workCompletedAt).toBe('string');
+    expect(payload.workCompletedAt).toBe('2026-10-18T11:00:00.000Z');
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain('/safety-blocks/block-1');
   });
 });

@@ -97,6 +97,32 @@ describe('WorkOrderManager', () => {
     expect(screen.getByRole('option', { name: /GT-NEW-26/ })).toBeTruthy();
   });
 
+  it('records completion date-time as Africa/Accra wall time independent of browser timezone', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ workOrder: {
+      id: 'wo-time', reference: 'WO-ACC0A1B2C3D4E5F6', status: 'Completed',
+    } }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<WorkOrderManager companyId="company-1" vehicles={[]} initialWorkOrders={[{
+      id: 'wo-time', reference: 'WO-ACC0A1B2C3D4E5F6', vehicleId: 'vehicle-1', reportedFault: 'Routine hinge repair required',
+      workType: null, priority: null, dateReported: '2026-10-20', status: 'Awaiting Review',
+      requiredWork: null, parts: null, completionDate: null, inspectionResults: null,
+      labourCostPesewas: null, partsCostPesewas: null, otherCostPesewas: null,
+      vehicle: { registrationNumber: 'GT-1234-25', make: 'Toyota', model: 'Hiace' }, statusHistory: [{
+        sequence: 6, fromStatus: 'In Progress', toStatus: 'Awaiting Review', reason: 'Work is ready for inspection',
+        createdAt: '2026-10-20T10:00:00.000Z', actorName: 'Fleet Manager',
+      }],
+    }]} />);
+    fireEvent.click(screen.getByText('WO-ACC0A1B2C3D4E5F6: transition from Awaiting Review'));
+    fireEvent.change(screen.getByLabelText('Next status'), { target: { value: 'Completed' } });
+    fireEvent.change(screen.getByLabelText('Reason for transition'), { target: { value: 'Inspection passed and work is complete' } });
+    fireEvent.change(screen.getByLabelText('Completion date and time'), { target: { value: '2026-10-20T12:45' } });
+    fireEvent.change(screen.getByLabelText('Inspection results'), { target: { value: 'Hinge operation tested and passed' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Record transition' }));
+    expect(await screen.findByText(/moved to Completed/)).toBeTruthy();
+    const payload = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as Record<string, unknown>;
+    expect(payload.completionDate).toBe('2026-10-20T12:45:00.000Z');
+  });
+
   it('submits a reasoned transition only to a displayed next status', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ workOrder: {
       id: 'wo-1', reference: 'WO-AABBCCDDEEFF0011', status: 'Awaiting Inspection',

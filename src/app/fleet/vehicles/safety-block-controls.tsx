@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
+import { accraLocalDateTimeToISOString, formatAccraDateTime } from '@/modules/time/accra-date-time';
 import { useRouter } from 'next/navigation';
 
 type ActiveBlock = { id: string; status: string; appliedAt: Date | string } | null;
@@ -38,20 +39,18 @@ export function SafetyBlockControls({ companyId, vehicleId, activeBlock }: {
     const values = new FormData(form);
     setBusy(true); setError(''); setNotice('');
     try {
-      const completedLocal = String(values.get('workCompletedAt') ?? '');
-      const completedDate = new Date(completedLocal);
-      if (!Number.isFinite(completedDate.getTime())) throw new Error('Enter a valid work-completion date and time.');
+      const workCompletedAt = accraLocalDateTimeToISOString(String(values.get('workCompletedAt') ?? ''));
       const response = await fetch(`/api/companies/${encodeURIComponent(companyId)}/vehicles/${encodeURIComponent(vehicleId)}/safety-blocks/${encodeURIComponent(activeBlock?.id ?? '')}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          workCompletedAt: completedDate.toISOString(), inspectionResults: String(values.get('inspectionResults') ?? '').trim(),
+          workCompletedAt, inspectionResults: String(values.get('inspectionResults') ?? '').trim(),
           inspectionPassed: values.get('inspectionPassed') === 'on', reason: String(values.get('reason') ?? '').trim(),
         }),
       });
       const body = await response.json() as { error?: string; block?: { releasedAt?: string } };
       if (!response.ok) throw new Error(body.error || 'Unable to release safety block.');
       const releasedAt = body.block?.releasedAt ? new Date(body.block.releasedAt) : null;
-      const releaseTime = releasedAt && Number.isFinite(releasedAt.getTime()) ? ` at ${releasedAt.toLocaleString()}` : '';
+      const releaseTime = releasedAt && Number.isFinite(releasedAt.getTime()) ? ` at ${formatAccraDateTime(releasedAt)}` : '';
       setNotice(`Inspection and work completion recorded; safety block released${releaseTime}.`);
       setMode(null); router.refresh();
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Unable to release safety block.'); }
