@@ -129,8 +129,8 @@ test('authorized staff can import records, review vehicle document dates, edit c
   const driverName = `E2E CSV Driver ${suffix}`;
   const driverSearchResponsePromise = page.waitForResponse((response) => {
     const url = new URL(response.url());
-    return url.pathname.endsWith('/drivers') && url.searchParams.has('search') && response.request().method() === 'GET';
-  });
+    return url.pathname.replace(/\/+$/, '').endsWith('/drivers') && url.searchParams.has('search') && response.request().method() === 'GET';
+  }, { timeout: 15_000 });
   await page.getByLabel('Search active drivers').fill(driverName);
   const driverSearchResponse = await driverSearchResponsePromise;
   expect(driverSearchResponse.status()).toBe(200);

@@ -25,8 +25,8 @@ test('authorized staff can submit a rental request, review it, then record a rea
   await page.getByLabel('Reason for creation').fill('Create a disposable browser-test customer');
   const customerCreateResponsePromise = page.waitForResponse((response) => {
     const url = new URL(response.url());
-    return url.pathname.endsWith('/customers') && response.request().method() === 'POST';
-  });
+    return url.pathname.replace(/\/+$/, '').endsWith('/customers') && response.request().method() === 'POST';
+  }, { timeout: 15_000 });
   await page.getByRole('button', { name: 'Add customer' }).click();
   const customerCreateResponse = await customerCreateResponsePromise;
   expect(customerCreateResponse.status()).toBe(201);
