@@ -37,7 +37,7 @@ export class SafetyBlockReleasePolicyError extends Error {
 }
 
 type Block = { id: string; status: string; reason: string; appliedAt: Date };
-type ReleasedBlock = Block & { releasedAt: Date | null };
+type ReleasedBlock = Block & { releasedAt: Date };
 export type ActiveSafetyStatus = { id: string; status: string; appliedAt: Date; reason?: string };
 type SafetyPersistence = {
   vehicleSafetyBlock: {

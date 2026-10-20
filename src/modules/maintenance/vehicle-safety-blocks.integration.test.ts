@@ -56,7 +56,7 @@ describe('vehicle safety block lifecycle with PostgreSQL', () => {
       workCompletedAt: new Date().toISOString(), inspectionResults: 'Brake and steering inspection passed after repair',
       inspectionPassed: true, reason: 'Release after recorded completed work and passed inspection',
     });
-    expect(released.releasedAt).not.toBeNull();
+    expect(released.releasedAt).toBeInstanceOf(Date);
     const list = await listVehicles({ actorId: managerId, companyId });
     expect(list.vehicles.find((item) => item.id === vehicleId)?.safetyBlock).toBeNull();
     await expect(prisma.vehicleSafetyBlock.update({ where: { id: block.id }, data: { reason: 'Tampered applied reason' } })).rejects.toThrow('immutable');
