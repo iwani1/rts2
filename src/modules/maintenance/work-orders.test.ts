@@ -76,6 +76,12 @@ describe('maintenance work-order intake', () => {
     }));
   });
 
+  it('rejects overlong vehicle search input before authorization or database access', async () => {
+    await expect(listWorkOrderVehicleOptions('manager-1', 'company-1', 'x'.repeat(101))).rejects.toThrow();
+    expect(mocks.resolvePermission).not.toHaveBeenCalled();
+    expect(mocks.getPrisma).not.toHaveBeenCalled();
+  });
+
   it('denies vehicle-option searches before reading company or vehicle records', async () => {
     mocks.resolvePermission.mockResolvedValue({ allowed: false, scopes: [] });
     await expect(listWorkOrderVehicleOptions('manager-1', 'company-1', 'GT-1234')).rejects.toThrow('Access denied');
