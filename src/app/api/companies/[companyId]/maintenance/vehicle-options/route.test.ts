@@ -9,6 +9,7 @@ vi.mock('@/modules/maintenance/work-orders', () => ({
 }));
 
 import { PermissionDeniedError } from '@/modules/auth/permissions';
+import { WorkOrderNotFoundError } from '@/modules/maintenance/work-orders';
 import { GET } from './route';
 
 const context = { params: Promise.resolve({ companyId: 'company-1' }) };
@@ -29,6 +30,14 @@ describe('maintenance vehicle-options API', () => {
     const response = await GET(new Request('https://example.test?q=GT-1234'), context);
     expect(response.status).toBe(403);
     expect(mocks.listWorkOrderVehicleOptions).toHaveBeenCalledWith('limited-user', 'company-1', 'GT-1234');
+  });
+
+  it('does not expose picker data when the company is inactive', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'manager-1' } });
+    mocks.listWorkOrderVehicleOptions.mockRejectedValue(new WorkOrderNotFoundError());
+    const response = await GET(new Request('https://example.test?q=GT-1234'), context);
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({ error: 'Company not found.' });
   });
 
   it('returns an uncached manager-authorized searchable projection', async () => {

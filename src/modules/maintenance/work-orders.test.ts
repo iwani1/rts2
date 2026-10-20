@@ -82,6 +82,17 @@ describe('maintenance work-order intake', () => {
     expect(mocks.getPrisma).not.toHaveBeenCalled();
   });
 
+  it('refuses vehicle options for an inactive company before querying vehicles', async () => {
+    const findMany = vi.fn();
+    mocks.getPrisma.mockReturnValue({
+      company: { findUnique: vi.fn().mockResolvedValue({ status: 'SUSPENDED' }) },
+      vehicle: { findMany },
+    });
+    mocks.resolvePermission.mockResolvedValue({ allowed: true, scopes: ['COMPANY'] });
+    await expect(listWorkOrderVehicleOptions('manager-1', 'company-1', 'GT-1234')).rejects.toThrow('not available');
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
   it('denies vehicle-option searches before reading company or vehicle records', async () => {
     mocks.resolvePermission.mockResolvedValue({ allowed: false, scopes: [] });
     await expect(listWorkOrderVehicleOptions('manager-1', 'company-1', 'GT-1234')).rejects.toThrow('Access denied');
