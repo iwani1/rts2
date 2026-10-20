@@ -17,7 +17,8 @@ export default async function Home() {
   if (!mayStartSession(currentUser?.status)) redirect('/login');
   const auditAccess = await resolvePermission({ userId: session.user.id, permission: 'audit:read' });
   const canManageUserRoles = await isActiveSuperAdmin(session.user.id);
-  const company = await prisma.company.findFirst({ where: { status: 'ACTIVE' }, select: { id: true } });
+  const companies = await prisma.company.findMany({ where: { status: 'ACTIVE' }, orderBy: { createdAt: 'asc' }, take: 2, select: { id: true } });
+  const company = companies.length === 1 ? companies[0] : undefined;
   const fleetAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'fleet:manage' }) : { allowed: false, scopes: [] };
   const driverAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'driver:manage' }) : { allowed: false, scopes: [] };
   const customerAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'customer:manage' }) : { allowed: false, scopes: [] };
