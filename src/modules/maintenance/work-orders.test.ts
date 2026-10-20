@@ -76,6 +76,12 @@ describe('maintenance work-order intake', () => {
     }));
   });
 
+  it('denies vehicle-option searches before reading company or vehicle records', async () => {
+    mocks.resolvePermission.mockResolvedValue({ allowed: false, scopes: [] });
+    await expect(listWorkOrderVehicleOptions('manager-1', 'company-1', 'GT-1234')).rejects.toThrow('Access denied');
+    expect(mocks.getPrisma).not.toHaveBeenCalled();
+  });
+
   it('records an explicitly non-safety report, initializes Reported, and audits in the same transaction', async () => {
     const { tx, workOrder } = createFixture();
     await expect(createWorkOrder(input)).resolves.toEqual(workOrder);

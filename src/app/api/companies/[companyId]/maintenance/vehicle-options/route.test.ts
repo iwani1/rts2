@@ -8,6 +8,7 @@ vi.mock('@/modules/maintenance/work-orders', () => ({
   listWorkOrderVehicleOptions: mocks.listWorkOrderVehicleOptions,
 }));
 
+import { PermissionDeniedError } from '@/modules/auth/permissions';
 import { GET } from './route';
 
 const context = { params: Promise.resolve({ companyId: 'company-1' }) };
@@ -20,6 +21,14 @@ describe('maintenance vehicle-options API', () => {
     const response = await GET(new Request('https://example.test?q=GT-1234'), context);
     expect(response.status).toBe(401);
     expect(mocks.listWorkOrderVehicleOptions).not.toHaveBeenCalled();
+  });
+
+  it('returns 403 when the authenticated user lacks maintenance-management scope', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'limited-user' } });
+    mocks.listWorkOrderVehicleOptions.mockRejectedValue(new PermissionDeniedError());
+    const response = await GET(new Request('https://example.test?q=GT-1234'), context);
+    expect(response.status).toBe(403);
+    expect(mocks.listWorkOrderVehicleOptions).toHaveBeenCalledWith('limited-user', 'company-1', 'GT-1234');
   });
 
   it('returns an uncached manager-authorized searchable projection', async () => {
