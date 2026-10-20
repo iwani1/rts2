@@ -46,9 +46,9 @@ test('authorized staff can submit a rental request, review it, then record a rea
   await requestRow.getByRole('link', { name: 'View / edit' }).click();
   await page.getByLabel('Reason for recording or updating this Draft').fill('Prepare this Draft for submission');
   await page.getByRole('button', { name: 'Submit request' }).click();
-  await expect(page.getByRole('alert')).toContainText('Draft saved but not submitted');
-  await expect(page.getByRole('alert')).toContainText('service date');
-  await expect(page.getByRole('alert')).toContainText('return time or duration');
+  await expect(page.getByRole('alert').first()).toContainText('Draft saved but not submitted');
+  await expect(page.getByRole('alert').first()).toContainText('service date');
+  await expect(page.getByRole('alert').first()).toContainText('return time or duration');
 
   await page.getByLabel('Service date').fill(upcomingDate(14));
   await page.getByLabel('Departure time').fill('22:30');
