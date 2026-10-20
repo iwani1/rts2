@@ -74,4 +74,10 @@ test('authorized staff can submit a rental request, review it, then record a rea
   await expect(page.getByText('Under Review → Declined')).toBeVisible();
   await expect(requestRow).toContainText('Declined');
   await expect(page.getByText(/Only the explicitly approved review and decline transitions are currently available/)).toBeVisible();
+
+  await page.goto('/rentals/reports');
+  await expect(page.getByRole('heading', { name: 'Rental request report' })).toBeVisible();
+  await expect(page.getByText(/Requests ever submitted:/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Metrics not available yet' })).toBeVisible();
+  await expect(page.getByText(/Quotations issued and acceptance rate/)).toBeVisible();
 });
