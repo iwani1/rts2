@@ -73,6 +73,30 @@ describe('WorkOrderManager', () => {
     expect(screen.getByLabelText('Vehicle')).toHaveProperty('disabled', false);
   });
 
+  it('ignores a stale vehicle-search response that arrives after the latest query', async () => {
+    const responses: Array<(response: Response) => void> = [];
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(() => new Promise<Response>((resolve) => { responses.push(resolve); }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<WorkOrderManager companyId="company-1" vehicles={[{
+      id: 'vehicle-1', registrationNumber: 'GT-0001-26', make: 'Toyota', model: 'Hiace', odometerUnit: 'KM',
+    }]} initialWorkOrders={[]} />);
+    const search = screen.getByLabelText('Find vehicle by registration, make or model');
+    fireEvent.change(search, { target: { value: 'GT-OLD' } });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    fireEvent.change(search, { target: { value: 'GT-NEW' } });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect((fetchMock.mock.calls[0]?.[1]?.signal as AbortSignal).aborted).toBe(true);
+    responses[1]?.(new Response(JSON.stringify({ vehicles: [{
+      id: 'vehicle-new', registrationNumber: 'GT-NEW-26', make: 'Toyota', model: 'Coaster', odometerUnit: 'KM',
+    }], hasMore: false }), { status: 200 }));
+    expect(await screen.findByRole('option', { name: /GT-NEW-26/ })).toBeTruthy();
+    responses[0]?.(new Response(JSON.stringify({ vehicles: [{
+      id: 'vehicle-old', registrationNumber: 'GT-OLD-26', make: 'Toyota', model: 'Coaster', odometerUnit: 'KM',
+    }], hasMore: false }), { status: 200 }));
+    await waitFor(() => expect(screen.queryByRole('option', { name: /GT-OLD-26/ })).toBeNull());
+    expect(screen.getByRole('option', { name: /GT-NEW-26/ })).toBeTruthy();
+  });
+
   it('submits a reasoned transition only to a displayed next status', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ workOrder: {
       id: 'wo-1', reference: 'WO-AABBCCDDEEFF0011', status: 'Awaiting Inspection',
