@@ -411,3 +411,47 @@ The owner approved the role/permission matrix. The first-admin method is now exp
 - Added a manager-authorized, tenant-scoped all-time snapshot of persisted rental requests grouped by current status and recorded source, plus a distinct all-time count of audited `Draft → Submitted` events (including later-declined requests). Aggregates are read in one repeatable-read transaction and contain no customer-level details.
 - The report labels Draft-inclusive counts separately from the submitted-enquiry KPI. Quotations/acceptance, confirmed/completed rentals, revenue/balances, vehicle utilisation and cancellation reasons are explicitly marked unavailable because their supporting records and transitions are not implemented; none is shown as zero.
 - Added a workspace link and an uncached server-rendered report page. No filters, export, financial calculations, pricing, reservation or assignment behavior were added. Focused service/UI tests pass (4 tests); a PostgreSQL integration assertion compares the report count to the submitted-history ledger but has not run without a disposable `*_test` database. The rental-request Playwright flow now navigates to the report and verifies the submitted count and unavailable-metric labels; browser execution remains unrun. Lint and `git diff --check` pass. The app compiles in production-build mode, but build type validation stops at the existing `scripts/bootstrap-super-admin.ts:69` implicit-any error; full typecheck also has stale generated Prisma Client diagnostics.
+
+## Phase 1B — corporate client register (CLI-01; 2026-10-20)
+
+Added corporate client records as the first Phase 1B vertical slice, following the established customers-module patterns.
+
+- **Prisma schema**: Added `Client` model (id, companyId FK, name required, registrationDetails/contactPerson/telephone/email/billingAddress/status/notes optional, archivedAt, timestamps) with `companyId` + `id` unique constraint and company-scoped indexes. Added `clients Client[]` relation to `Company`.
+- **Migration**: `prisma/migrations/20261020120000_clients_register/migration.sql` creates the `Client` table, unique index, and company-scoped index.
+- **Service layer** (`src/modules/clients/clients.ts`): `listClients`, `getClient`, `createClient`, `updateClient`, `archiveClient` with company-scoped `client:manage` permission enforcement, cursor pagination, soft archive, and audited create/update/archive events.
+- **Zod schemas** (`src/modules/clients/client-schema.ts`): `clientInputSchema`, `clientRequestSchema` (with audit reason), `clientListQuerySchema`. Name is required; all other business fields optional with no defaults.
+- **API routes**: `POST/GET /api/companies/[companyId]/clients` and `GET/PUT/DELETE /api/companies/[companyId]/clients/[clientId]` with session auth, error mapping, and private/no-store responses.
+- **Pages** (`src/app/clients/page.tsx` + `client-manager.tsx`): server-rendered client register with search, cursor pagination, edit/history, and client create/edit/archive form with audit reason.
+- **Tests**: `client-schema.test.ts` (Zod validation), `clients.integration.test.ts` (PostgreSQL CRUD, cross-company denial, cursor, archive).
+
+| Feature ID | Status | Notes |
+|---|---|---|
+| CLI-01 | In Progress | Corporate client register: schema, migration, service, API routes, pages, unit + integration tests. Contracts (CLI-02) and corporate dashboard (CLI-03) not started. |
+| CLI-02 | Not Started | Contracts: reference, client, dates, status, service type, routes, pricing model, billing frequency, renewal reminders, approval history. |
+| CLI-03 | Not Started | Corporate dashboard limited to the client's own records. |
+| EMP-01 | Not Started | Employee register. |
+| EMP-02 | Not Started | CSV import with preview and row-level errors. |
+| EMP-03 | Not Started | Employee management: shifts, locations, eligibility. |
+| RTE-01 | Not Started | Locations and stops. |
+| RTE-02 | Not Started | Routes. |
+| RTE-03 | Not Started | Recurring schedules. |
+| RTE-04 | Not Started | Explainable planning aid. |
+| BKG-01 | Not Started | Booking types. |
+| BKG-02 | Not Started | Booking validation. |
+| BKG-03 | Not Started | Booking workflow. |
+| BKG-04 | Not Started | Assign bookings to trips with capacity check. |
+| BKG-05 | Not Started | Cancellation deadlines and waiting list. |
+| BKG-06 | Not Started | Booking change history. |
+| TRP-01 | Not Started | Trip records. |
+| TRP-02 | Not Started | Passenger manifests. |
+| DSP-01 | Not Started | Daily dispatch board. |
+| DSP-02 | Not Started | Assign/reassign vehicle and driver. |
+| DSP-03 | Not Started | Emergency trip creation. |
+| DSP-04 | Not Started | Record no-shows and delays. |
+| DRV-01 | Not Started | Mobile-first driver home. |
+| DRV-02 | Not Started | Driver actions (open trip, manifest, navigation, events). |
+| DRV-04 | Not Started | Vehicle defect and breakdown/incident report. |
+| FIN-01 (contract pricing) | Not Started | Contract pricing models. |
+| FIN-02 (corporate invoice) | Not Started | Corporate invoice generation from billable trips. |
+
+Phase 1A remains complete: all 4 E2E specs pass against the cleaned test DB (1 company: Richie Transport Services), unit tests 337/337 pass, integration tests 51/51 pass, typecheck and build pass.

@@ -24,6 +24,27 @@ model Company {
   maintenanceWorkOrders MaintenanceWorkOrder[]
   maintenanceWorkOrderStatusHistory MaintenanceWorkOrderStatusHistory[]
   vehicleSafetyBlocks  VehicleSafetyBlock[]
+  clients               Client[]
+}
+
+model Client {
+  id               String   @id @default(cuid())
+  companyId        String
+  name             String
+  registrationDetails String?
+  contactPerson    String?
+  telephone        String?
+  email            String?
+  billingAddress   String?
+  status           String?
+  notes            String?
+  archivedAt       DateTime? @db.Timestamptz(6)
+  createdAt        DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @db.Timestamptz(6)
+  company          Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, id])
+  @@index([companyId, archivedAt, name])
 }
 
 model User {
