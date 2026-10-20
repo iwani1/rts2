@@ -37,13 +37,14 @@ export class SafetyBlockReleasePolicyError extends Error {
 }
 
 type Block = { id: string; status: string; reason: string; appliedAt: Date };
+type ReleasedBlock = Block & { releasedAt: Date | null };
 export type ActiveSafetyStatus = { id: string; status: string; appliedAt: Date; reason?: string };
 type SafetyPersistence = {
   vehicleSafetyBlock: {
     findFirst(args: unknown): Promise<Block | null>;
     findMany(args: unknown): Promise<Array<{ id: string; vehicleId: string; status: string; appliedAt: Date; reason?: string }>>;
     create(args: unknown): Promise<Block>;
-    update(args: unknown): Promise<Block>;
+    update(args: unknown): Promise<ReleasedBlock>;
   };
 };
 

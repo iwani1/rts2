@@ -67,7 +67,7 @@ describe('vehicle safety block lifecycle', () => {
 
   it('releases only after recorded completion and a passed inspection, then audits', async () => {
     const { tx } = fixture();
-    await expect(releaseVehicleSafetyBlock(releaseInput)).resolves.toMatchObject({ id: 'block-1' });
+    await expect(releaseVehicleSafetyBlock(releaseInput)).resolves.toMatchObject({ id: 'block-1', releasedAt: expect.any(Date) });
     expect(tx.vehicleSafetyBlock.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: 'block-1' },
       data: expect.objectContaining({ releasedById: 'fleet-manager-1', inspectionPassed: true, inspectionResults: releaseInput.inspectionResults }),
