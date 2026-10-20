@@ -69,6 +69,12 @@ describe('WorkOrderManager', () => {
     expect(mocks.refresh).toHaveBeenCalled();
   });
 
+  it('offers a working clear-filters path when the maintenance register has no matches', () => {
+    render(<WorkOrderManager companyId="company-1" vehicles={[]} initialWorkOrders={[]} statusFilter="Reported" searchQuery="no match" />);
+    expect(screen.getByRole('heading', { name: 'No work orders match these filters' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Clear filters' }).getAttribute('href')).toBe('/fleet/maintenance');
+  });
+
   it('preserves filters and validated cursor history across previous and next pages', () => {
     render(<WorkOrderManager companyId="company-1" vehicles={[]} initialWorkOrders={[]} statusFilter="Reported" searchQuery="door latch" pageCursor="current-cursor" cursorHistory={['ROOT', 'prior-cursor']} nextCursor="next-cursor" />);
     expect(screen.getByRole('link', { name: 'Previous page' }).getAttribute('href')).toBe('/fleet/maintenance?status=Reported&q=door+latch&cursor=prior-cursor&cursorHistory=ROOT');
