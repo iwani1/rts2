@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import { PermissionDeniedError } from '@/modules/auth/permissions';
-import { createWorkOrder, listWorkOrders, WorkOrderNotFoundError, WorkOrderPolicyError } from '@/modules/maintenance/work-orders';
+import { createWorkOrder, InvalidWorkOrderCursorError, listWorkOrders, WorkOrderNotFoundError, WorkOrderPolicyError } from '@/modules/maintenance/work-orders';
 import { getAuth } from '@/server/auth';
 
 export const runtime = 'nodejs';
@@ -11,6 +11,7 @@ function respondError(error: unknown) {
   if (error instanceof ZodError || error instanceof SyntaxError) return NextResponse.json({ error: 'Check the fault report, date, odometer, safety confirmation and reason.' }, { status: 400 });
   if (error instanceof PermissionDeniedError) return NextResponse.json({ error: 'Access denied.' }, { status: 403 });
   if (error instanceof WorkOrderNotFoundError) return NextResponse.json({ error: error.message }, { status: 404 });
+  if (error instanceof InvalidWorkOrderCursorError) return NextResponse.json({ error: error.message }, { status: 400 });
   if (error instanceof WorkOrderPolicyError) return NextResponse.json({ error: error.message }, { status: 409 });
   return NextResponse.json({ error: 'The work-order request could not be completed.' }, { status: 500 });
 }

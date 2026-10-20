@@ -155,7 +155,7 @@ describe('maintenance work-order intake', () => {
     expect(findFirst).toHaveBeenCalledWith({ where: { id: 'wo-cursor', companyId: 'company-1' }, select: { id: true } });
     expect(findMany).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: { id: 'wo-cursor' }, skip: 1, take: 101 }));
     findFirst.mockResolvedValue(null);
-    await expect(listWorkOrders('manager-1', 'company-1', undefined, undefined, 'foreign-cursor')).rejects.toThrow('not available');
+    await expect(listWorkOrders('manager-1', 'company-1', undefined, undefined, 'foreign-cursor')).rejects.toThrow('Invalid work-order page cursor');
   });
 
   it('advances only valid statuses and records sequenced status history plus audit atomically', async () => {

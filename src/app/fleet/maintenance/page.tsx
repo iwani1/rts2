@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { PermissionDeniedError } from '@/modules/auth/permissions';
 import { ZodError } from 'zod';
-import { listWorkOrders, WorkOrderNotFoundError } from '@/modules/maintenance/work-orders';
+import { InvalidWorkOrderCursorError, listWorkOrders, WorkOrderNotFoundError } from '@/modules/maintenance/work-orders';
 import { listVehicles } from '@/modules/fleet/vehicles';
 import { mayStartSession } from '@/modules/auth/policy';
 import { getAuth } from '@/server/auth';
@@ -44,6 +44,7 @@ export default async function MaintenancePage({ searchParams }: PageProps) {
     </main>;
   } catch (error) {
     if (error instanceof PermissionDeniedError) redirect('/');
+    if (error instanceof InvalidWorkOrderCursorError) redirect('/fleet/maintenance');
     if (error instanceof WorkOrderNotFoundError) redirect('/');
     if (error instanceof ZodError) redirect('/fleet/maintenance');
     throw error;

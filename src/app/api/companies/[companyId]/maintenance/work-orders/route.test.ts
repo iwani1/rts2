@@ -5,10 +5,12 @@ vi.mock('@/server/auth', () => ({ getAuth: () => ({ api: { getSession: mocks.get
 vi.mock('@/modules/auth/permissions', () => ({ PermissionDeniedError: class PermissionDeniedError extends Error {} }));
 vi.mock('@/modules/maintenance/work-orders', () => ({
   WorkOrderNotFoundError: class WorkOrderNotFoundError extends Error {},
+  InvalidWorkOrderCursorError: class InvalidWorkOrderCursorError extends Error { constructor() { super('Invalid work-order page cursor.'); } },
   WorkOrderPolicyError: class WorkOrderPolicyError extends Error {},
   createWorkOrder: mocks.createWorkOrder,
   listWorkOrders: mocks.listWorkOrders,
 }));
+import { InvalidWorkOrderCursorError } from '@/modules/maintenance/work-orders';
 import { GET, POST } from './route';
 
 const context = { params: Promise.resolve({ companyId: 'company-1' }) };
@@ -40,6 +42,14 @@ describe('maintenance work-order API', () => {
     const response = await GET(new Request('https://example.test?status=Awaiting%20Review&q=door&cursor=wo-12'), context);
     expect(response.status).toBe(200);
     expect(mocks.listWorkOrders).toHaveBeenCalledWith('fleet-manager-1', 'company-1', 'Awaiting Review', 'door', 'wo-12');
+  });
+
+  it('returns a client error for a cursor outside the manager company', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'fleet-manager-1' } });
+    mocks.listWorkOrders.mockRejectedValue(new InvalidWorkOrderCursorError());
+    const response = await GET(new Request('https://example.test?cursor=foreign-cursor'), context);
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: 'Invalid work-order page cursor.' });
   });
 
   it('derives actor and tenant from the authenticated route and returns the Reported record', async () => {

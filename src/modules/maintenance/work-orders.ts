@@ -54,6 +54,9 @@ export class WorkOrderNotFoundError extends Error {
 export class WorkOrderPolicyError extends Error {
   constructor(message: string) { super(message); this.name = 'WorkOrderPolicyError'; }
 }
+export class InvalidWorkOrderCursorError extends Error {
+  constructor() { super('Invalid work-order page cursor.'); this.name = 'InvalidWorkOrderCursorError'; }
+}
 
 export type WorkOrderRecord = {
   id: string;
@@ -117,7 +120,7 @@ export async function listWorkOrders(actorIdInput: string, companyIdInput: strin
   if (company?.status !== 'ACTIVE') throw new WorkOrderNotFoundError();
   const store = prisma as unknown as WorkOrderStore;
   if (cursor && !(await store.maintenanceWorkOrder.findFirst({ where: { id: cursor, companyId }, select: { id: true } }))) {
-    throw new WorkOrderNotFoundError();
+    throw new InvalidWorkOrderCursorError();
   }
   const rows = await store.maintenanceWorkOrder.findMany({
     where: {
