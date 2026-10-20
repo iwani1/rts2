@@ -30,6 +30,7 @@ export function CustomerPicker({ companyId, current }: { companyId: string; curr
           cache: 'no-store',
         });
         const body = await response.json() as { customers?: CustomerOption[]; error?: string };
+        if (controller.signal.aborted) return;
         if (!response.ok) throw new Error(body.error || 'Unable to search customer records.');
         setMatches(body.customers ?? []);
       } catch (caught) {
@@ -55,7 +56,10 @@ export function CustomerPicker({ companyId, current }: { companyId: string; curr
     </div>
     <label htmlFor="request-customer-search">Search existing customers<input
       id="request-customer-search" type="search" maxLength={100} autoComplete="off" value={query}
-      onChange={(event) => { setQuery(event.target.value); setMatches([]); setError(''); }}
+      onChange={(event) => {
+        const value = event.target.value;
+        setQuery(value); setMatches([]); setBusy(Boolean(value.trim())); setError('');
+      }}
       aria-describedby="request-customer-status" placeholder="Search by customer name or reference"
     /></label>
     <p id="request-customer-status" className="form-help" role="status">

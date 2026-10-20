@@ -36,6 +36,7 @@ export function UsualDriverPicker({
           cache: 'no-store',
         });
         const body = await response.json() as { drivers?: DriverOption[]; error?: string };
+        if (controller.signal.aborted) return;
         if (!response.ok) throw new Error(body.error || 'Unable to search active drivers.');
         setMatches(body.drivers ?? []);
       } catch (caught) {
@@ -67,8 +68,10 @@ export function UsualDriverPicker({
       autoComplete="off"
       value={query}
       onChange={(event) => {
-        setQuery(event.target.value);
+        const value = event.target.value;
+        setQuery(value);
         setMatches([]);
+        setBusy(Boolean(value.trim()));
         setError('');
       }}
       aria-describedby="usual-driver-help usual-driver-search-status"
