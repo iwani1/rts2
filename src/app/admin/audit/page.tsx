@@ -9,7 +9,14 @@ import { LogoutButton } from '@/app/logout-button';
 export const dynamic = 'force-dynamic';
 const pageSize = 50;
 
-type AuditPageProps = { searchParams: Promise<{ before?: string | string[] }> };
+type AuditPageProps = { searchParams: Promise<{ before?: string | string[]; cursorHistory?: string }> };
+function auditPageHref({ before, history }: { before?: string; history?: string[] }) {
+  const params = new URLSearchParams();
+  if (before) params.set('before', before);
+  if (history?.length) params.set('cursorHistory', history.join('.'));
+  const query = params.toString();
+  return `/admin/audit${query ? `?${query}` : ''}`;
+}
 
 function formatValue(value: unknown): string {
   if (value === null || value === undefined) return '—';
@@ -39,8 +46,15 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
   if (!access.scopes.includes('GLOBAL')) redirect('/');
 
   const params = await searchParams;
-  const before = typeof params.before === 'string' && params.before.length <= 64 ? params.before : undefined;
-  const fetched = await getPrisma().auditEvent.findMany({
+  const cursorHistory = params.cursorHistory ? params.cursorHistory.split('.') : [];
+  const before = typeof params.before === 'string' ? params.before : undefined;
+  if (
+    (params.before !== undefined && (!before || !/^[A-Za-z0-9_-]{1,128}$/.test(before))) ||
+    cursorHistory.length > 50 || cursorHistory.some((token) => token !== 'ROOT' && !/^[A-Za-z0-9_-]{1,128}$/.test(token))
+  ) redirect('/admin/audit');
+  const prisma = getPrisma();
+  if (before && !(await prisma.auditEvent.findUnique({ where: { id: before }, select: { id: true } }))) redirect('/admin/audit');
+  const fetched = await prisma.auditEvent.findMany({
     take: pageSize + 1,
     ...(before ? { cursor: { id: before }, skip: 1 } : {}),
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
@@ -52,6 +66,12 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
   const hasMore = fetched.length > pageSize;
   const events = fetched.slice(0, pageSize);
   const nextCursor = hasMore ? events.at(-1)?.id : undefined;
+  const previousToken = cursorHistory[cursorHistory.length - 1];
+  const previousHref = auditPageHref({
+    before: previousToken && previousToken !== 'ROOT' ? previousToken : undefined,
+    history: cursorHistory.slice(0, -1),
+  });
+  const nextHistory = before ? [...cursorHistory.slice(-49), before] : ['ROOT'];
 
   return <main className="app-shell">
     <header className="app-header">
@@ -103,9 +123,9 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
           </table>
         </div>
         <nav className="audit-pagination" aria-label="Audit event pages">
-          {before && <Link className="button-link" href="/admin/audit">Latest events</Link>}
+          {before && <Link className="button-link" href={previousHref}>Previous page</Link>}
           <span className="muted">Showing {events.length} {events.length === 1 ? 'event' : 'events'}</span>
-          {nextCursor && <Link className="button-link" href={`/admin/audit?before=${encodeURIComponent(nextCursor)}`}>Older events</Link>}
+          {nextCursor && <Link className="button-link" href={auditPageHref({ before: nextCursor, history: nextHistory })}>Next page</Link>}
         </nav>
       </>}
     </section>
