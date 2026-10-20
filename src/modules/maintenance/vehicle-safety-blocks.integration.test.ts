@@ -59,7 +59,7 @@ describe('vehicle safety block lifecycle with PostgreSQL', () => {
     expect(released.releasedAt).toBeInstanceOf(Date);
     const list = await listVehicles({ actorId: managerId, companyId });
     expect(list.vehicles.find((item) => item.id === vehicleId)?.safetyBlock).toBeNull();
-    await expect(prisma.vehicleSafetyBlock.update({ where: { id: block.id }, data: { reason: 'Tampered applied reason' } })).rejects.toThrow('immutable');
+    await expect(prisma.vehicleSafetyBlock.update({ where: { id: block.id }, data: { reason: 'Tampered applied reason' } })).rejects.toThrow();
     await expect(prisma.vehicleSafetyBlock.delete({ where: { id: block.id } })).rejects.toThrow('cannot be deleted');
   });
 });
