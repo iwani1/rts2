@@ -175,7 +175,7 @@ export function WorkOrderManager({ companyId, vehicles, vehiclesHaveMore = false
       {vehicles.length === 0 ? <p className="fleet-empty">Add an active vehicle before reporting a work order.</p> : <form className="vehicle-form" onSubmit={(event) => void submit(event)}>
         <div className="vehicle-form-grid">
           <label htmlFor="work-order-vehicle-search">Find vehicle by registration, make or model<input id="work-order-vehicle-search" type="search" maxLength={100} value={vehicleQuery} onChange={(event) => setVehicleQuery(event.target.value)} placeholder="Search active vehicles" /></label>
-          <label htmlFor="work-order-vehicle">Vehicle<select id="work-order-vehicle" required value={vehicleId} onChange={(event) => {
+          <label htmlFor="work-order-vehicle">Vehicle<select id="work-order-vehicle" required disabled={vehicleLoading} value={vehicleId} onChange={(event) => {
             const value = event.target.value;
             setVehicleId(value);
             setSelectedVehicleOption(vehicleOptions.find((vehicle) => vehicle.id === value) ?? null);
