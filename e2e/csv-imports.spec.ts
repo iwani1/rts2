@@ -127,6 +127,10 @@ test('authorized staff can import records, review vehicle document dates, edit c
   const importedVehicle = page.getByRole('row').filter({ hasText: `E2E-${suffix}` });
   await importedVehicle.getByRole('link', { name: 'Edit' }).click();
   const driverName = `E2E CSV Driver ${suffix}`;
+  // Next.js client navigation can resolve the link click before the server-rendered edit form is ready.
+  // Wait for the edit route and record heading before searching so the picker isn't unmounted mid-request.
+  await expect(page).toHaveURL(/\/fleet\/vehicles\?[^#]*\bedit=/);
+  await expect(page.getByRole('heading', { name: `Edit E2E-${suffix}` })).toBeVisible();
   const driverSearchResponsePromise = page.waitForResponse((response) => {
     const url = new URL(response.url());
     return url.pathname.replace(/\/+$/, '').endsWith('/drivers') && url.searchParams.has('search') && response.request().method() === 'GET';

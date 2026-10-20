@@ -13,7 +13,9 @@ export function UsualDriverPicker({
   current: SelectedDriver | null;
 }) {
   const [selected, setSelected] = useState<SelectedDriver | null>(current);
+  const [interactive, setInteractive] = useState(false);
   const [query, setQuery] = useState('');
+  useEffect(() => setInteractive(true), []);
   const [matches, setMatches] = useState<DriverOption[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -64,6 +66,7 @@ export function UsualDriverPicker({
     <label htmlFor="usual-driver-search">Search active drivers<input
       id="usual-driver-search"
       type="search"
+      disabled={!interactive}
       maxLength={100}
       autoComplete="off"
       value={query}

@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CustomerRecord } from '@/modules/customers/customers';
 
@@ -17,6 +17,8 @@ function value(form: FormData, name: string) {
 
 export function CustomerManager({ companyId, customer }: { companyId: string; customer?: CustomerRecord }) {
   const router = useRouter();
+  const [interactive, setInteractive] = useState(false);
+  useEffect(() => setInteractive(true), []);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -116,7 +118,7 @@ export function CustomerManager({ companyId, customer }: { companyId: string; cu
       <label>Reason for {customer ? 'change' : 'creation'}<input name="reason" required minLength={8} maxLength={500} /></label>
       <p id="customer-terms-help" className="form-help">No customer type or status is preloaded. Use only values agreed by your company.</p>
       <p className="form-help">The reason is recorded in audit history; do not include customer personal or billing details in it.</p>
-      <div className="vehicle-form-actions"><button className="button-primary" type="submit" disabled={pending}>{pending ? 'Saving…' : customer ? 'Save changes' : 'Add customer'}</button></div>
+      <div className="vehicle-form-actions"><button className="button-primary" type="submit" disabled={!interactive || pending}>{pending ? 'Saving…' : customer ? 'Save changes' : 'Add customer'}</button></div>
       {error && <p className="form-error" role="alert">{error}</p>}
       {notice && <p className="form-success" role="status">{notice}</p>}
     </form>
@@ -125,7 +127,7 @@ export function CustomerManager({ companyId, customer }: { companyId: string; cu
       <p className="form-help">Archiving hides the record from the active customer register without deleting its retained history.</p>
       <form onSubmit={archive}>
         <label>Reason for archiving<input value={archiveReason} onChange={(event) => setArchiveReason(event.target.value)} required minLength={8} maxLength={500} /></label>
-        <button type="submit" className="button-danger" disabled={pending}>{pending ? 'Working…' : 'Archive customer'}</button>
+        <button type="submit" className="button-danger" disabled={!interactive || pending}>{pending ? 'Working…' : 'Archive customer'}</button>
       </form>
     </details>}
   </section>;
