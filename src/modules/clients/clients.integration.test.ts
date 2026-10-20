@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getPrisma } from '@/server/prisma';
-import { assignRole, PermissionDeniedError } from '@/modules/auth/permissions';
+import { PermissionDeniedError } from '@/modules/auth/permissions';
 import {
   archiveClient,
   createClient,
