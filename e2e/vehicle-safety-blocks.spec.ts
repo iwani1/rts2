@@ -19,6 +19,8 @@ test('authorized fleet manager applies and releases a safety block, then records
   await expect(page).toHaveURL('/');
 
   await page.goto('/fleet/vehicles');
+  await expect(page).toHaveURL('/fleet/vehicles');
+  await expect(page.getByRole('heading', { name: 'Vehicle register' })).toBeVisible();
   await page.getByLabel('Registration number').fill(registration);
   await page.getByLabel('Make', { exact: true }).fill('E2E test');
   await page.getByLabel('Model', { exact: true }).fill(`Safety ${suffix}`);

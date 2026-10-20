@@ -19,7 +19,7 @@ export function CustomerPicker({ companyId, current }: { companyId: string; curr
     if (currentId && (!selected || selected.id !== currentId)) {
       setSelected(current);
     }
-  }, [current?.id]);
+  }, [current?.id]); // eslint-disable-line react-hooks/exhaustive-deps — intentionally depend only on current.id (primitive); current is an object prop with a new reference every render, selected is user-controlled state
 
   useEffect(() => {
     const term = query.trim();
