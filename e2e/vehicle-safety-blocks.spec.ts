@@ -2,7 +2,8 @@ import { expect, test } from '@playwright/test';
 
 function localDateTime(value: Date) {
   const pad = (part: number, width = 2) => String(part).padStart(width, '0');
-  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}.${pad(value.getMilliseconds(), 3)}`;
+  // datetime-local inputs do not accept milliseconds.
+  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}`;
 }
 
 test('authorized fleet manager applies and releases a safety block, then records and searches non-safety maintenance', async ({ page }) => {
