@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { assignRole } from '@/modules/auth/permissions';
 import { getPrisma } from '@/server/prisma';
-import { createWorkOrder, listWorkOrders, transitionWorkOrder } from './work-orders';
+import { createWorkOrder, listWorkOrders, listWorkOrderVehicleOptions, transitionWorkOrder } from './work-orders';
 
 const prisma = getPrisma();
 let companyId = '';
@@ -38,6 +38,21 @@ describe('non-safety maintenance work orders with PostgreSQL', () => {
   });
 
   afterAll(async () => { await prisma.$disconnect(); });
+
+  it('searches only active vehicles from the authorized company for the intake picker', async () => {
+    const searchTerm = `Picker${randomUUID().replaceAll('-', '').slice(0, 10)}`;
+    const otherCompany = await prisma.company.create({ data: { name: `Other picker tenant ${randomUUID()}` } });
+    const [matchingVehicle, archivedVehicle, foreignVehicle] = await Promise.all([
+      prisma.vehicle.create({ data: { companyId, registrationNumber: `P-${randomUUID().slice(0, 8)}`, make: searchTerm, model: 'Van', category: 'Fixture' } }),
+      prisma.vehicle.create({ data: { companyId, registrationNumber: `P-${randomUUID().slice(0, 8)}`, make: searchTerm, model: 'Van', category: 'Fixture' } }),
+      prisma.vehicle.create({ data: { companyId: otherCompany.id, registrationNumber: `P-${randomUUID().slice(0, 8)}`, make: searchTerm, model: 'Van', category: 'Fixture' } }),
+    ]);
+    await prisma.vehicle.update({ where: { id: archivedVehicle.id }, data: { archivedAt: new Date() } });
+    const result = await listWorkOrderVehicleOptions(managerId, companyId, searchTerm);
+    expect(result.vehicles).toEqual([expect.objectContaining({ id: matchingVehicle.id, make: searchTerm })]);
+    expect(result.hasMore).toBe(false);
+    expect(result.vehicles.some((vehicle) => vehicle.id === foreignVehicle.id || vehicle.id === archivedVehicle.id)).toBe(false);
+  });
 
   it('persists and lists an explicit non-safety report without assuming unit, priority or work type', async () => {
     const created = await createWorkOrder({
