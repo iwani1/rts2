@@ -15,7 +15,16 @@ import { QuotationReadiness } from './quotation-readiness';
 import { RentalPricingPreview } from './pricing-preview';
 
 export const dynamic = 'force-dynamic';
-type PageProps = { searchParams: Promise<{ q?: string; cursor?: string; edit?: string }> };
+type PageProps = { searchParams: Promise<{ q?: string; cursor?: string; cursorHistory?: string; edit?: string }> };
+function requestPageHref({ search, cursor, history, edit }: { search?: string; cursor?: string; history?: string[]; edit?: string }) {
+  const params = new URLSearchParams();
+  if (search) params.set('q', search);
+  if (cursor) params.set('cursor', cursor);
+  if (history?.length) params.set('cursorHistory', history.join('.'));
+  if (edit) params.set('edit', edit);
+  const query = params.toString();
+  return `/rentals/requests${query ? `?${query}` : ''}`;
+}
 const accraDateTime = new Intl.DateTimeFormat('en-GH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Accra' });
 
 export default async function RentalRequestsPage({ searchParams }: PageProps) {
@@ -28,6 +37,10 @@ export default async function RentalRequestsPage({ searchParams }: PageProps) {
   if (companies.length !== 1) return <main className="fleet-page"><section className="fleet-empty"><h1>Rental requests unavailable</h1><p>Exactly one active operator company must be provisioned for this installation.</p><Link className="button-link" href="/">Back to workspace</Link></section></main>;
   const company = companies[0];
   const params = await searchParams;
+  const cursorHistory = params.cursorHistory ? params.cursorHistory.split('.') : [];
+  if (cursorHistory.length > 50 || cursorHistory.some((token) => token !== 'ROOT' && !/^[A-Za-z0-9_-]{1,128}$/.test(token))) {
+    redirect('/rentals/requests');
+  }
   let result: Awaited<ReturnType<typeof listRentalRequests>>;
   try {
     result = await listRentalRequests({ actorId: session.user.id, companyId: company.id, search: params.q, cursor: params.cursor });
@@ -61,6 +74,13 @@ export default async function RentalRequestsPage({ searchParams }: PageProps) {
   }
 
   const customerAccess = await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'customer:manage' });
+  const previousToken = cursorHistory[cursorHistory.length - 1];
+  const previousHref = requestPageHref({
+    search: params.q,
+    cursor: previousToken && previousToken !== 'ROOT' ? previousToken : undefined,
+    history: cursorHistory.slice(0, -1),
+  });
+  const nextHistory = params.cursor ? [...cursorHistory.slice(-49), params.cursor] : ['ROOT'];
   return <main className="fleet-page">
     <header className="fleet-page-header">
       <Link className="wordmark fleet-wordmark" href="/" aria-label="Richie TMS home">R<span>.</span>TS</Link>
@@ -80,18 +100,22 @@ export default async function RentalRequestsPage({ searchParams }: PageProps) {
           <div><h2 id="request-list-title">Requests</h2><p className="muted">Showing up to 50 requests per page.</p></div>
           <form className="fleet-search" method="get"><label htmlFor="request-search">Search requests</label><div><input id="request-search" type="search" name="q" maxLength={100} defaultValue={params.q ?? ''} placeholder="Customer, pickup or destination"/><button className="button-link" type="submit">Search</button></div></form>
         </div>
-        {result.requests.length === 0 ? <div className="fleet-empty"><h3>No rental requests found</h3><p>{params.q ? 'Try another search or clear the search term.' : 'No requests have been recorded yet.'}</p></div> : <div className="vehicle-table-wrap" role="region" aria-label="Rental request records" tabIndex={0}>
+        {result.requests.length === 0 ? <div className="fleet-empty"><h3>No rental requests found</h3><p>{params.q ? <>Try another search or clear the search term. <Link className="button-link" href="/rentals/requests">Clear search</Link></> : 'No requests have been recorded yet.'}</p></div> : <div className="vehicle-table-wrap" role="region" aria-label="Rental request records" tabIndex={0}>
           <table className="vehicle-table"><caption className="sr-only">Rental request records</caption><thead><tr><th scope="col">Customer</th><th scope="col">Service date</th><th scope="col">Journey</th><th scope="col">Status</th><th scope="col">Record</th></tr></thead>
             <tbody>{result.requests.map((request) => <tr key={request.id}>
               <td><strong>{request.customerName}</strong></td>
               <td>{request.serviceDate ?? 'Not recorded'}{request.departureTime && <span className="vehicle-secondary">Departure: {request.departureTime}</span>}</td>
               <td>{request.pickupLocation ?? 'Pickup not recorded'} → {request.destination ?? 'Destination not recorded'}{request.returnTime && <span className="vehicle-secondary">Return: {request.returnDate ? `${request.returnDate} ` : ''}{request.returnTime}</span>}</td>
               <td><span className="request-status">{request.status}</span></td>
-              <td><Link className="button-link vehicle-edit-link" href={`/rentals/requests?edit=${encodeURIComponent(request.id)}${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`}>View / edit</Link></td>
+              <td><Link className="button-link vehicle-edit-link" href={requestPageHref({ search: params.q, cursor: params.cursor, history: cursorHistory, edit: request.id })}>View / edit</Link></td>
             </tr>)}</tbody>
           </table>
         </div>}
-        {result.nextCursor && <div className="fleet-pagination"><span className="muted">More requests available.</span><Link className="button-link" href={`/rentals/requests?${params.q ? `q=${encodeURIComponent(params.q)}&` : ''}cursor=${encodeURIComponent(result.nextCursor)}`}>Next page</Link></div>}
+        {(params.cursor || result.nextCursor) && <nav className="fleet-pagination" aria-label="Rental request pages">
+          {params.cursor && <Link className="button-link" href={previousHref}>Previous page</Link>}
+          <span className="muted">Showing up to 50 requests per page.</span>
+          {result.nextCursor && <Link className="button-link" href={requestPageHref({ search: params.q, cursor: result.nextCursor, history: nextHistory })}>Next page</Link>}
+        </nav>}
       </section>
       {result.canManage && (!editing || editing.status === 'Draft') && <RequestManager companyId={company.id} request={editing} />}
       {result.canManage && editing && editing.status !== 'Draft' && <RentalRequestDetails request={editing} />}
