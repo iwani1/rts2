@@ -50,7 +50,8 @@ describe('WorkOrderManager', () => {
         sequence: 1, fromStatus: null, toStatus: 'Reported', reason: 'Record routine maintenance fault',
         createdAt: '2026-10-20T10:00:00.000Z', actorName: 'Fleet Manager',
       }],
-    }]} />);
+    }]} statusFilter="Reported" />);
+    expect(screen.getByLabelText('Filter by current status')).toHaveProperty('value', 'Reported');
     expect(screen.getByText('Record routine maintenance fault')).toBeTruthy();
     expect(screen.getByText(/Fleet Manager ·/)).toBeTruthy();
     fireEvent.click(screen.getByText('WO-AABBCCDDEEFF0011: transition from Reported'));

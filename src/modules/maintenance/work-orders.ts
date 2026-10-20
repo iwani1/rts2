@@ -5,6 +5,8 @@ import { PermissionDeniedError, resolvePermission } from '@/modules/auth/permiss
 import { getPrisma } from '@/server/prisma';
 
 const idSchema = z.string().trim().min(1).max(128);
+export const WORK_ORDER_STATUSES = ['Reported', 'Awaiting Inspection', 'Approved', 'In Progress', 'Awaiting Parts', 'Awaiting Review', 'Completed', 'Closed', 'Cancelled'] as const;
+const workOrderStatusSchema = z.enum(WORK_ORDER_STATUSES);
 const transitionSchema = z.object({
   actorId: idSchema,
   companyId: idSchema,
@@ -95,16 +97,17 @@ async function requireMaintenanceManager(actorId: string, companyId: string) {
 }
 
 /** Lists work orders for authorized company maintenance managers. */
-export async function listWorkOrders(actorIdInput: string, companyIdInput: string) {
+export async function listWorkOrders(actorIdInput: string, companyIdInput: string, statusInput?: string) {
   const actorId = idSchema.parse(actorIdInput);
   const companyId = idSchema.parse(companyIdInput);
+  const status = statusInput ? workOrderStatusSchema.parse(statusInput) : undefined;
   await requireMaintenanceManager(actorId, companyId);
   const prisma = getPrisma();
   const company = await prisma.company.findUnique({ where: { id: companyId }, select: { status: true } });
   if (company?.status !== 'ACTIVE') throw new WorkOrderNotFoundError();
   const store = prisma as unknown as WorkOrderStore;
   const rows = await store.maintenanceWorkOrder.findMany({
-    where: { companyId },
+    where: { companyId, ...(status ? { status } : {}) },
     orderBy: [{ dateReported: 'desc' }, { createdAt: 'desc' }],
     take: 100,
     select: {

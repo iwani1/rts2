@@ -14,15 +14,17 @@ function dateOnly(value: string) { return value.slice(0, 10); }
 function dateTimeGhana(value: string) {
   return new Intl.DateTimeFormat('en-GH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Accra' }).format(new Date(value));
 }
+const workOrderStatuses = ['Reported', 'Awaiting Inspection', 'Approved', 'In Progress', 'Awaiting Parts', 'Awaiting Review', 'Completed', 'Closed', 'Cancelled'];
 const nextStatuses: Record<string, string[]> = {
   Reported: ['Awaiting Inspection', 'Cancelled'], 'Awaiting Inspection': ['Approved', 'Cancelled'], Approved: ['In Progress'],
   'In Progress': ['Awaiting Parts', 'Awaiting Review'], 'Awaiting Parts': ['In Progress'], 'Awaiting Review': ['Completed'], Completed: ['Closed'], Closed: [], Cancelled: [],
 };
 
-export function WorkOrderManager({ companyId, vehicles, initialWorkOrders }: {
+export function WorkOrderManager({ companyId, vehicles, initialWorkOrders, statusFilter }: {
   companyId: string;
   vehicles: VehicleOption[];
   initialWorkOrders: WorkOrder[];
+  statusFilter?: string;
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -120,7 +122,13 @@ export function WorkOrderManager({ companyId, vehicles, initialWorkOrders }: {
       </form>}
     </section>
     <section className="fleet-list-panel" aria-labelledby="work-order-list-title">
-      <div className="fleet-list-heading"><div><h2 id="work-order-list-title">Work orders</h2><p className="muted">Showing the latest 100 reported maintenance records.</p></div></div>
+      <div className="fleet-list-heading">
+        <div><h2 id="work-order-list-title">Work orders</h2><p className="muted">Showing the latest 100 records{statusFilter ? ` currently at ${statusFilter}` : ' across all statuses'}.</p></div>
+        <form className="fleet-search" method="get" aria-label="Filter work orders by status">
+          <label htmlFor="work-order-status-filter">Filter by current status</label>
+          <div><select id="work-order-status-filter" name="status" defaultValue={statusFilter ?? ''}><option value="">All statuses</option>{workOrderStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select><button className="button-link" type="submit">Apply filter</button></div>
+        </form>
+      </div>
       {initialWorkOrders.length === 0 ? <div className="fleet-empty"><h3>No work orders recorded</h3><p>Non-safety maintenance reports will appear here.</p></div> : <div className="vehicle-table-wrap" role="region" aria-label="Maintenance work orders" tabIndex={0}>
         <table className="vehicle-table"><caption className="sr-only">Maintenance work orders</caption><thead><tr><th scope="col">Reference</th><th scope="col">Reported</th><th scope="col">Vehicle</th><th scope="col">Fault</th><th scope="col">Work type</th><th scope="col">Priority</th><th scope="col">Status</th></tr></thead>
           <tbody>{initialWorkOrders.map((item) => <tr key={item.id}><td><strong>{item.reference}</strong></td><td>{dateOnly(item.dateReported)}</td><td>{item.vehicle.registrationNumber} — {item.vehicle.make} {item.vehicle.model}</td><td>{item.reportedFault}</td><td>{item.workType ?? 'Not recorded'}</td><td>{item.priority ?? 'Not recorded'}</td><td>{item.status}</td></tr>)}</tbody>

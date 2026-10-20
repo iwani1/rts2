@@ -20,7 +20,10 @@ export async function GET(request: Request, context: RouteContext) {
   if (!session) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
   try {
     const { companyId } = await context.params;
-    const workOrders = await listWorkOrders(session.user.id, companyId);
+    const status = new URL(request.url).searchParams.get('status') ?? undefined;
+    const workOrders = status
+      ? await listWorkOrders(session.user.id, companyId, status)
+      : await listWorkOrders(session.user.id, companyId);
     return NextResponse.json({ workOrders }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     return respondError(error);
