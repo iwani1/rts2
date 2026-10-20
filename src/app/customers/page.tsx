@@ -1,16 +1,26 @@
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
+import { ZodError } from 'zod';
 import { PermissionDeniedError, resolvePermission } from '@/modules/auth/permissions';
 import { mayStartSession } from '@/modules/auth/policy';
-import { CustomerCompanyNotFoundError, CustomerNotFoundError, getCustomer, listCustomers } from '@/modules/customers/customers';
+import { CustomerCompanyNotFoundError, CustomerNotFoundError, InvalidCustomerCursorError, getCustomer, listCustomers } from '@/modules/customers/customers';
 import type { CustomerRecord } from '@/modules/customers/customers';
 import { getAuth } from '@/server/auth';
 import { getPrisma } from '@/server/prisma';
 import { CustomerManager } from './customer-manager';
 
 export const dynamic = 'force-dynamic';
-type PageProps = { searchParams: Promise<{ q?: string; cursor?: string; edit?: string }> };
+type PageProps = { searchParams: Promise<{ q?: string; cursor?: string; cursorHistory?: string; edit?: string }> };
+function customerPageHref({ search, cursor, history, edit }: { search?: string; cursor?: string; history?: string[]; edit?: string }) {
+  const params = new URLSearchParams();
+  if (search) params.set('q', search);
+  if (cursor) params.set('cursor', cursor);
+  if (history?.length) params.set('cursorHistory', history.join('.'));
+  if (edit) params.set('edit', edit);
+  const query = params.toString();
+  return `/customers${query ? `?${query}` : ''}`;
+}
 const accraDateTime = new Intl.DateTimeFormat('en-GH', {
   dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Accra',
 });
@@ -25,11 +35,16 @@ export default async function CustomersPage({ searchParams }: PageProps) {
   if (companies.length !== 1) return <main className="fleet-page"><section className="fleet-empty"><h1>Customer register unavailable</h1><p>Exactly one active operator company must be provisioned for this installation.</p><Link className="button-link" href="/">Back to workspace</Link></section></main>;
   const company = companies[0];
   const params = await searchParams;
+  const cursorHistory = params.cursorHistory ? params.cursorHistory.split('.') : [];
+  if (cursorHistory.length > 50 || cursorHistory.some((token) => token !== 'ROOT' && !/^[A-Za-z0-9_-]{1,128}$/.test(token))) {
+    redirect('/customers');
+  }
   let result: Awaited<ReturnType<typeof listCustomers>>;
   try {
     result = await listCustomers({ actorId: session.user.id, companyId: company.id, search: params.q, cursor: params.cursor });
   } catch (error) {
     if (error instanceof CustomerCompanyNotFoundError) notFound();
+    if (error instanceof InvalidCustomerCursorError || error instanceof ZodError) redirect('/customers');
     if (error instanceof PermissionDeniedError) redirect('/');
     throw error;
   }
@@ -50,6 +65,9 @@ export default async function CustomersPage({ searchParams }: PageProps) {
 
   const vehicleAccess = await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'fleet:manage' });
   const driverAccess = await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'driver:manage' });
+  const previousToken = cursorHistory[cursorHistory.length - 1];
+  const previousHref = customerPageHref({ search: params.q, cursor: previousToken && previousToken !== 'ROOT' ? previousToken : undefined, history: cursorHistory.slice(0, -1) });
+  const nextHistory = params.cursor ? [...cursorHistory.slice(-49), params.cursor] : ['ROOT'];
   return <main className="fleet-page">
     <header className="fleet-page-header">
       <Link className="wordmark fleet-wordmark" href="/" aria-label="Richie TMS home">R<span>.</span>TS</Link>
@@ -73,17 +91,21 @@ export default async function CustomersPage({ searchParams }: PageProps) {
           <div><h2 id="customer-list-title">Customers</h2><p className="muted">Showing up to 50 active records per page.</p></div>
           <form className="fleet-search" method="get"><label htmlFor="customer-search">Search customers</label><div><input id="customer-search" type="search" name="q" maxLength={100} defaultValue={params.q ?? ''} placeholder="Name, reference or contact"/><button className="button-link" type="submit">Search</button></div></form>
         </div>
-        {result.customers.length === 0 ? <div className="fleet-empty"><h3>No customers found</h3><p>{params.q ? 'Try a different search or clear the search term.' : 'No customer records have been entered yet.'}</p></div> : <div className="vehicle-table-wrap" role="region" aria-label="Customer records" tabIndex={0}>
+        {result.customers.length === 0 ? <div className="fleet-empty"><h3>No customers found</h3><p>{params.q ? <>Try a different search or clear the search term. <Link className="button-link" href="/customers">Clear search</Link></> : 'No customer records have been entered yet.'}</p></div> : <div className="vehicle-table-wrap" role="region" aria-label="Customer records" tabIndex={0}>
           <table className="vehicle-table"><caption className="sr-only">Customer register records</caption><thead><tr><th scope="col">Customer</th><th scope="col">Type</th><th scope="col">Status</th><th scope="col">Contact</th><th scope="col">Record</th></tr></thead>
             <tbody>{result.customers.map((customer) => <tr key={customer.id}>
               <td><strong>{customer.displayName}</strong><span className="vehicle-secondary">{customer.reference ?? 'No reference recorded'}</span></td>
               <td>{customer.customerType ?? 'Not recorded'}</td><td>{customer.status ?? 'Not recorded'}</td>
               <td>{customer.contactPerson ?? 'No contact person recorded'}{customer.telephone && <span className="vehicle-secondary">{customer.telephone}</span>}{customer.email && <span className="vehicle-secondary">{customer.email}</span>}</td>
-              <td><Link className="button-link vehicle-edit-link" href={`/customers?edit=${encodeURIComponent(customer.id)}${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`}>Edit / history</Link></td>
+              <td><Link className="button-link vehicle-edit-link" href={customerPageHref({ search: params.q, cursor: params.cursor, history: cursorHistory, edit: customer.id })}>Edit / history</Link></td>
             </tr>)}</tbody>
           </table>
         </div>}
-        {result.nextCursor && <div className="fleet-pagination"><span className="muted">More records available.</span><Link className="button-link" href={`/customers?${params.q ? `q=${encodeURIComponent(params.q)}&` : ''}cursor=${encodeURIComponent(result.nextCursor)}`}>Next page</Link></div>}
+        {(params.cursor || result.nextCursor) && <nav className="fleet-pagination" aria-label="Customer pages">
+          {params.cursor && <Link className="button-link" href={previousHref}>Previous page</Link>}
+          <span className="muted">Showing up to 50 customers per page.</span>
+          {result.nextCursor && <Link className="button-link" href={customerPageHref({ search: params.q, cursor: result.nextCursor, history: nextHistory })}>Next page</Link>}
+        </nav>}
       </section>
       {result.canManage && <CustomerManager companyId={company.id} customer={editing} />}
       {editing && <section className="fleet-list-panel" aria-labelledby="customer-history-title">
