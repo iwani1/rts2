@@ -32,7 +32,7 @@ describe('non-safety maintenance work orders with PostgreSQL', () => {
       actorId: admin.id, targetUserId: user.id, companyId, roleCode: 'FLEET_MANAGER', reason: 'Work-order integration manager',
     })));
     const vehicle = await prisma.vehicle.create({ data: {
-      companyId, registrationNumber: `WO-${randomUUID().slice(0, 8)}`, make: 'Test', model: 'Van', category: 'Integration fixture',
+      companyId, registrationNumber: `WO-${randomUUID().slice(0, 8).toUpperCase()}`, make: 'Test', model: 'Van', category: 'Integration fixture',
     } });
     vehicleId = vehicle.id;
   });
@@ -43,9 +43,9 @@ describe('non-safety maintenance work orders with PostgreSQL', () => {
     const searchTerm = `Picker${randomUUID().replaceAll('-', '').slice(0, 10)}`;
     const otherCompany = await prisma.company.create({ data: { name: `Other picker tenant ${randomUUID()}` } });
     const [matchingVehicle, archivedVehicle, foreignVehicle] = await Promise.all([
-      prisma.vehicle.create({ data: { companyId, registrationNumber: `P-${randomUUID().slice(0, 8)}`, make: searchTerm, model: 'Van', category: 'Fixture' } }),
-      prisma.vehicle.create({ data: { companyId, registrationNumber: `P-${randomUUID().slice(0, 8)}`, make: searchTerm, model: 'Van', category: 'Fixture' } }),
-      prisma.vehicle.create({ data: { companyId: otherCompany.id, registrationNumber: `P-${randomUUID().slice(0, 8)}`, make: searchTerm, model: 'Van', category: 'Fixture' } }),
+      prisma.vehicle.create({ data: { companyId, registrationNumber: `P-${randomUUID().slice(0, 8).toUpperCase()}`, make: searchTerm, model: 'Van', category: 'Fixture' } }),
+      prisma.vehicle.create({ data: { companyId, registrationNumber: `P-${randomUUID().slice(0, 8).toUpperCase()}`, make: searchTerm, model: 'Van', category: 'Fixture' } }),
+      prisma.vehicle.create({ data: { companyId: otherCompany.id, registrationNumber: `P-${randomUUID().slice(0, 8).toUpperCase()}`, make: searchTerm, model: 'Van', category: 'Fixture' } }),
     ]);
     await prisma.vehicle.update({ where: { id: archivedVehicle.id }, data: { archivedAt: new Date() } });
     const result = await listWorkOrderVehicleOptions(managerId, companyId, searchTerm);

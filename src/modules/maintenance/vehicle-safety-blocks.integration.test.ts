@@ -28,7 +28,7 @@ describe('vehicle safety block lifecycle with PostgreSQL', () => {
     } });
     await assignRole({ actorId: admin.id, targetUserId: manager.id, companyId, roleCode: 'FLEET_MANAGER', reason: 'Safety-block integration fleet manager' });
     const vehicle = await prisma.vehicle.create({ data: {
-      companyId, registrationNumber: `SB-${randomUUID().slice(0, 8)}`, make: 'Test', model: 'Van', category: 'Integration fixture',
+      companyId, registrationNumber: `SB-${randomUUID().slice(0, 8).toUpperCase()}`, make: 'Test', model: 'Van', category: 'Integration fixture',
     } });
     vehicleId = vehicle.id;
   });

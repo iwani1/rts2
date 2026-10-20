@@ -2,10 +2,10 @@
 
 Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is tracked per ID; scaffolding and isolated helpers are not feature completion.
 
-## Phase 1A — integration-test database safeguards (2026-10-20)
+## Phase 1A — integration-test database safeguards and Fedora verification (2026-10-20)
 - Dedicated integration configuration selects `TMS_TEST_DATABASE_URL` ahead of the normal application URL and rejects non-PostgreSQL, non-loopback, or non-`_test` targets. It also validates a 32-character minimum `AUTH_SECRET` and loopback `APP_URL` before test files load. Bracketed IPv6 loopback is accepted; unsupported protocols are tested as rejections.
-- The raw SQL test-migration helper now refuses to apply migrations when its current schema already contains relations, preventing accidental reapplication to a previously used database. Fedora/Podman setup and fail-fast commands are documented.
-- The focused helper suite passes (19 tests); lint and `git diff --check` pass. These checks do not replace the still-outstanding disposable-PostgreSQL integration run or Phase 1A browser E2E verification. Changes are committed locally and have not been pushed.
+- The raw SQL test-migration helper refuses to apply migrations when its current schema already contains relations, preventing accidental reapplication to a previously used database. Fedora/Podman setup and fail-fast commands are documented.
+- Owner Fedora run successfully applied all 13 SQL migrations to a `template0`-derived disposable database. Integration run: 45 tests passed, 2 failed, and 4 skipped (13 files; 2 suites failed during setup). Follow-up fixes update the test-only tax-line fixture to the approved typed structure, assert permission denial for an actor lacking the other-company grant, and uppercase generated vehicle registration fixtures to satisfy the database constraint. These fixes await a rerun on Fedora. The focused settings unit suite passes (21 tests); lint and `git diff --check` pass. Phase 1A browser E2E verification remains outstanding.
 
 | Feature ID | Status | Notes |
 |---|---|---|

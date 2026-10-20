@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getPrisma } from '@/server/prisma';
-import { assignRole } from '@/modules/auth/permissions';
+import { assignRole, PermissionDeniedError } from '@/modules/auth/permissions';
 import {
   archiveCustomer,
   createCustomer,
@@ -87,7 +87,7 @@ describe('customer register with PostgreSQL persistence', () => {
   it('enforces unique optional references within a company and prevents cross-company access', async () => {
     const existing = await createCustomer(customerInput({ reference: 'SAME-REF' }), managerId, companyId);
     await expect(createCustomer(customerInput({ reference: 'SAME-REF' }), managerId, companyId)).rejects.toMatchObject({ code: 'P2002' });
-    await expect(getCustomer({ actorId: managerId, companyId: otherCompanyId, customerId: existing.id })).rejects.toMatchObject({ code: 'CUSTOMER_NOT_FOUND' });
+    await expect(getCustomer({ actorId: managerId, companyId: otherCompanyId, customerId: existing.id })).rejects.toBeInstanceOf(PermissionDeniedError);
     const otherCompanyManager = await makeUser('Other Customer Ops Manager');
     await assignRole({ actorId: adminId, targetUserId: otherCompanyManager.id, companyId: otherCompanyId, roleCode: 'OPS_MANAGER', reason: 'Other company access boundary test' });
     await expect(getCustomer({ actorId: otherCompanyManager.id, companyId: otherCompanyId, customerId: existing.id })).rejects.toMatchObject({ code: 'CUSTOMER_NOT_FOUND' });

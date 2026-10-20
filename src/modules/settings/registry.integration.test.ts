@@ -59,7 +59,7 @@ describe('company settings against PostgreSQL', () => {
   });
 
   it('persists an explicit Super Administrator value and its audit event in one transaction', async () => {
-    const value = [{ code: 'integration-only', amount: 0 }];
+    const value = [{ code: 'INTEGRATION_ONLY', label: 'Integration-only test line', rateBasisPoints: 0 }];
     const updated = await setCompanySetting({
       actorId: adminId,
       companyId,
