@@ -127,7 +127,13 @@ test('authorized staff can import records, review vehicle document dates, edit c
   const importedVehicle = page.getByRole('row').filter({ hasText: `E2E-${suffix}` });
   await importedVehicle.getByRole('link', { name: 'Edit' }).click();
   const driverName = `E2E CSV Driver ${suffix}`;
+  const driverSearchResponsePromise = page.waitForResponse((response) =>
+    response.url().includes('/api/companies/') && response.url().includes('/drivers?search=') && response.request().method() === 'GET');
   await page.getByLabel('Search active drivers').fill(driverName);
+  const driverSearchResponse = await driverSearchResponsePromise;
+  expect(driverSearchResponse.status()).toBe(200);
+  const driverSearchBody = await driverSearchResponse.json() as { drivers?: Array<{ fullName: string }> };
+  expect(driverSearchBody.drivers?.map(({ fullName }) => fullName)).toContain(driverName);
   const driverOption = page.getByRole('button', { name: new RegExp(driverName) });
   await expect(driverOption).toBeVisible();
   await driverOption.click();

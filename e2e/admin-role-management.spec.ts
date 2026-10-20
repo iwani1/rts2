@@ -17,9 +17,10 @@ test('Super Administrator can review read-only policy status and cannot change t
   const settingsResponse = await settingsResponsePromise;
   expect(settingsResponse.status()).toBe(200);
   expect(JSON.stringify(await settingsResponse.json())).not.toContain('"value":');
-  await expect(page.getByRole('table', { name: 'Registered policy keys, configuration status and blocked features' })).toBeVisible();
-  await expect(page.locator('input, textarea, select')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: /Save|Update/ })).toHaveCount(0);
+  const policyRegistry = page.getByRole('region', { name: 'Required policy settings' });
+  await expect(policyRegistry.getByRole('table', { name: 'Registered policy keys, configuration status and blocked features' })).toBeVisible();
+  await expect(policyRegistry.locator('input, textarea, select')).toHaveCount(0);
+  await expect(policyRegistry.getByRole('button', { name: /Save|Update/ })).toHaveCount(0);
   const pricingRow = page.getByRole('row').filter({ hasText: 'Rental pricing models' });
   await expect(pricingRow).toContainText('Not configured');
   await expect(pricingRow).toContainText('RNT-04');

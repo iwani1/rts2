@@ -23,8 +23,12 @@ test('authorized staff can submit a rental request, review it, then record a rea
   await page.getByRole('link', { name: 'Customer register' }).click();
   await page.getByLabel('Customer or organisation name').fill(customerName);
   await page.getByLabel('Reason for creation').fill('Create a disposable browser-test customer');
+  const customerCreateResponsePromise = page.waitForResponse((response) =>
+    response.url().includes('/api/companies/') && response.url().endsWith('/customers') && response.request().method() === 'POST');
   await page.getByRole('button', { name: 'Add customer' }).click();
-  await expect(page.getByText('Customer record saved.')).toBeVisible();
+  const customerCreateResponse = await customerCreateResponsePromise;
+  expect(customerCreateResponse.status()).toBe(201);
+  await expect(page.getByRole('status').filter({ hasText: 'Customer record saved.' })).toBeVisible();
 
   await page.goto('/rentals/requests');
   await page.getByLabel('Search existing customers').fill(customerName);

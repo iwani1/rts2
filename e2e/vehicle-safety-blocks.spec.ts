@@ -45,7 +45,7 @@ test('authorized fleet manager applies and releases a safety block, then records
   await expect(vehicleRow).toContainText('No active safety block recorded');
 
   await page.goto('/fleet/maintenance');
-  await page.getByLabel('Vehicle').selectOption({ label: `${registration} — E2E test Safety ${suffix}` });
+  await page.locator('#work-order-vehicle').selectOption({ label: `${registration} — E2E test Safety ${suffix}` });
   await page.getByLabel('Date reported').fill(new Date().toISOString().slice(0, 10));
   await page.getByLabel('Reported fault').fill('E2E non-safety door hinge inspection');
   await page.getByLabel('Reason for creating this work order').fill('Record an E2E non-safety maintenance report');
