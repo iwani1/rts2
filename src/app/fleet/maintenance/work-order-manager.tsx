@@ -6,11 +6,18 @@ import { useRouter } from 'next/navigation';
 type VehicleOption = { id: string; registrationNumber: string; make: string; model: string; odometerUnit: string | null };
 type WorkOrder = {
   id: string; reference: string; vehicleId: string; reportedFault: string; workType: string | null; priority: string | null;
-  dateReported: string; status: string; vehicle: { registrationNumber: string; make: string; model: string };
+  dateReported: string; status: string; requiredWork: string | null; parts: string | null; completionDate: string | null;
+  inspectionResults: string | null; labourCostPesewas: string | null; partsCostPesewas: string | null; otherCostPesewas: string | null;
+  vehicle: { registrationNumber: string; make: string; model: string };
   statusHistory: Array<{ sequence: number; fromStatus: string | null; toStatus: string; reason: string; createdAt: string; actorName: string }>;
 };
 
 function dateOnly(value: string) { return value.slice(0, 10); }
+function formatPesewas(value: string | null) {
+  if (value === null) return 'Not recorded';
+  const pesewas = BigInt(value);
+  return `GHS ${pesewas / BigInt(100)}.${String(pesewas % BigInt(100)).padStart(2, '0')}`;
+}
 function dateTimeGhana(value: string) {
   return new Intl.DateTimeFormat('en-GH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Accra' }).format(new Date(value));
 }
@@ -134,6 +141,18 @@ export function WorkOrderManager({ companyId, vehicles, initialWorkOrders, statu
           <tbody>{initialWorkOrders.map((item) => <tr key={item.id}><td><strong>{item.reference}</strong></td><td>{dateOnly(item.dateReported)}</td><td>{item.vehicle.registrationNumber} — {item.vehicle.make} {item.vehicle.model}</td><td>{item.reportedFault}</td><td>{item.workType ?? 'Not recorded'}</td><td>{item.priority ?? 'Not recorded'}</td><td>{item.status}</td></tr>)}</tbody>
         </table>
       </div>}
+      {initialWorkOrders.map((item) => <details key={`details-${item.id}`} className="vehicle-editor">
+        <summary>{item.reference}: planned work, completion evidence and costs</summary>
+        <dl className="work-order-detail-grid">
+          <div><dt>Planned work</dt><dd>{item.requiredWork ?? 'Not recorded'}</dd></div>
+          <div><dt>Parts</dt><dd>{item.parts ?? 'Not recorded'}</dd></div>
+          <div><dt>Completion date</dt><dd>{item.completionDate ? dateTimeGhana(item.completionDate) : 'Not recorded'}</dd></div>
+          <div><dt>Inspection results</dt><dd>{item.inspectionResults ?? 'Not recorded'}</dd></div>
+          <div><dt>Labour cost</dt><dd>{formatPesewas(item.labourCostPesewas)}</dd></div>
+          <div><dt>Parts cost</dt><dd>{formatPesewas(item.partsCostPesewas)}</dd></div>
+          <div><dt>Other cost</dt><dd>{formatPesewas(item.otherCostPesewas)}</dd></div>
+        </dl>
+      </details>)}
       {initialWorkOrders.map((item) => <details key={`history-${item.id}`} className="vehicle-editor">
         <summary>{item.reference}: status audit history ({item.statusHistory.length} of up to 50 events)</summary>
         {item.statusHistory.length === 0 ? <p className="form-help">No status history is available for this record.</p> : <ol>

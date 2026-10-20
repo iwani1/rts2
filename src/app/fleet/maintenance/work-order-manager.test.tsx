@@ -46,6 +46,8 @@ describe('WorkOrderManager', () => {
     render(<WorkOrderManager companyId="company-1" vehicles={[]} initialWorkOrders={[{
       id: 'wo-1', reference: 'WO-AABBCCDDEEFF0011', vehicleId: 'vehicle-1', reportedFault: 'Front latch is sticking',
       workType: null, priority: null, dateReported: '2026-10-20', status: 'Reported',
+      requiredWork: null, parts: null, completionDate: null, inspectionResults: null,
+      labourCostPesewas: null, partsCostPesewas: null, otherCostPesewas: null,
       vehicle: { registrationNumber: 'GT-1234-25', make: 'Toyota', model: 'Hiace' }, statusHistory: [{
         sequence: 1, fromStatus: null, toStatus: 'Reported', reason: 'Record routine maintenance fault',
         createdAt: '2026-10-20T10:00:00.000Z', actorName: 'Fleet Manager',
@@ -63,5 +65,24 @@ describe('WorkOrderManager', () => {
       method: 'PATCH', body: JSON.stringify({ toStatus: 'Awaiting Inspection', reason: 'Move the vehicle to inspection queue' }),
     }));
     expect(mocks.refresh).toHaveBeenCalled();
+  });
+
+  it('shows the persisted completion evidence and formats integer pesewas exactly', () => {
+    render(<WorkOrderManager companyId="company-1" vehicles={[]} initialWorkOrders={[{
+      id: 'wo-complete', reference: 'WO-1122334455667788', vehicleId: 'vehicle-1', reportedFault: 'Routine hinge repair required',
+      workType: 'Repair', priority: null, dateReported: '2026-10-20', status: 'Completed',
+      requiredWork: 'Adjust the hinge', parts: 'Seal kit', completionDate: '2026-10-21T10:00:00.000Z',
+      inspectionResults: 'Hinge operation tested and passed', labourCostPesewas: '12500', partsCostPesewas: '0', otherCostPesewas: null,
+      vehicle: { registrationNumber: 'GT-1234-25', make: 'Toyota', model: 'Hiace' }, statusHistory: [{
+        sequence: 6, fromStatus: 'Awaiting Review', toStatus: 'Completed', reason: 'Inspection passed and work is complete',
+        createdAt: '2026-10-21T10:00:00.000Z', actorName: 'Fleet Manager',
+      }],
+    }]} />);
+    fireEvent.click(screen.getByText('WO-1122334455667788: planned work, completion evidence and costs'));
+    expect(screen.getByText('Adjust the hinge')).toBeTruthy();
+    expect(screen.getByText('Hinge operation tested and passed')).toBeTruthy();
+    expect(screen.getByText('GHS 125.00')).toBeTruthy();
+    expect(screen.getByText('GHS 0.00')).toBeTruthy();
+    expect(screen.getAllByText('Not recorded')).toHaveLength(2);
   });
 });

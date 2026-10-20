@@ -104,15 +104,19 @@ describe('maintenance work-order intake', () => {
     mocks.resolvePermission.mockResolvedValue({ allowed: true, scopes: ['COMPANY'] });
     const row = {
       id: 'wo-1', reference: 'WO-AABBCCDDEEFF0011', vehicleId: 'vehicle-1', reportedFault: 'Door latch sticks',
-      workType: null, priority: null, dateReported: new Date('2026-10-20T00:00:00.000Z'), status: 'Reported',
+      workType: null, priority: null, dateReported: new Date('2026-10-20T00:00:00.000Z'), status: 'Completed',
+      requiredWork: 'Adjust latch', parts: 'Seal kit', completionDate: new Date('2026-10-21T11:00:00.000Z'),
+      inspectionResults: 'Latch operation passed inspection', labourCostPesewas: BigInt(12500), partsCostPesewas: null, otherCostPesewas: BigInt(250),
       vehicle: { registrationNumber: 'GT-1234-25', make: 'Test', model: 'Van' },
-      statusHistory: [{ sequence: 2, fromStatus: 'Reported', toStatus: 'Awaiting Inspection', reason: 'Send for inspection before approval', createdAt: new Date('2026-10-21T10:00:00.000Z'), actor: { name: 'Manager' } }],
+      statusHistory: [{ sequence: 6, fromStatus: 'Awaiting Review', toStatus: 'Completed', reason: 'Inspection passed and work is complete', createdAt: new Date('2026-10-21T11:00:00.000Z'), actor: { name: 'Manager' } }],
     };
     const findMany = vi.fn().mockResolvedValue([row]);
     mocks.getPrisma.mockReturnValue({ company: { findUnique: vi.fn().mockResolvedValue({ status: 'ACTIVE' }) }, maintenanceWorkOrder: { findMany } });
     await expect(listWorkOrders('manager-1', 'company-1')).resolves.toEqual([{
-      ...row, dateReported: '2026-10-20', statusHistory: [{ sequence: 2, fromStatus: 'Reported', toStatus: 'Awaiting Inspection',
-        reason: 'Send for inspection before approval', createdAt: '2026-10-21T10:00:00.000Z', actorName: 'Manager' }],
+      ...row, dateReported: '2026-10-20', completionDate: '2026-10-21T11:00:00.000Z',
+      labourCostPesewas: '12500', partsCostPesewas: null, otherCostPesewas: '250',
+      statusHistory: [{ sequence: 6, fromStatus: 'Awaiting Review', toStatus: 'Completed',
+        reason: 'Inspection passed and work is complete', createdAt: '2026-10-21T11:00:00.000Z', actorName: 'Manager' }],
     }]);
     expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: { companyId: 'company-1' }, take: 100,

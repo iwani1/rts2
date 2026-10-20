@@ -64,6 +64,13 @@ export type WorkOrderRecord = {
   priority: string | null;
   dateReported: string;
   status: string;
+  requiredWork: string | null;
+  parts: string | null;
+  completionDate: string | null;
+  inspectionResults: string | null;
+  labourCostPesewas: string | null;
+  partsCostPesewas: string | null;
+  otherCostPesewas: string | null;
   vehicle: { registrationNumber: string; make: string; model: string };
   statusHistory: Array<{ sequence: number; fromStatus: string | null; toStatus: string; reason: string; createdAt: string; actorName: string }>;
 };
@@ -112,20 +119,29 @@ export async function listWorkOrders(actorIdInput: string, companyIdInput: strin
     take: 100,
     select: {
       id: true, reference: true, vehicleId: true, reportedFault: true, workType: true, priority: true,
-      dateReported: true, status: true,
+      dateReported: true, status: true, requiredWork: true, parts: true, completionDate: true, inspectionResults: true,
+      labourCostPesewas: true, partsCostPesewas: true, otherCostPesewas: true,
       vehicle: { select: { registrationNumber: true, make: true, model: true } },
       statusHistory: {
         take: 50, orderBy: { sequence: 'desc' },
         select: { sequence: true, fromStatus: true, toStatus: true, reason: true, createdAt: true, actor: { select: { name: true } } },
       },
     },
-  }) as Array<Omit<WorkOrderRecord, 'dateReported' | 'statusHistory'> & {
+  }) as Array<Omit<WorkOrderRecord, 'dateReported' | 'statusHistory' | 'completionDate' | 'labourCostPesewas' | 'partsCostPesewas' | 'otherCostPesewas'> & {
     dateReported: Date;
+    completionDate: Date | null;
+    labourCostPesewas: bigint | null;
+    partsCostPesewas: bigint | null;
+    otherCostPesewas: bigint | null;
     statusHistory: Array<Omit<WorkOrderRecord['statusHistory'][number], 'createdAt' | 'actorName'> & { createdAt: Date; actor: { name: string } }>;
   }>;
   return rows.map((row) => ({
     ...row,
     dateReported: row.dateReported.toISOString().slice(0, 10),
+    completionDate: row.completionDate?.toISOString() ?? null,
+    labourCostPesewas: row.labourCostPesewas?.toString() ?? null,
+    partsCostPesewas: row.partsCostPesewas?.toString() ?? null,
+    otherCostPesewas: row.otherCostPesewas?.toString() ?? null,
     statusHistory: row.statusHistory.map(({ actor, ...event }) => ({ ...event, createdAt: event.createdAt.toISOString(), actorName: actor.name })),
   }));
 }

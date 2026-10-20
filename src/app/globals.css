@@ -163,6 +163,10 @@ button:disabled { opacity: .65; cursor: wait; }
 .customer-picker-results li + li { border-top: 1px solid var(--line); }
 .customer-picker-option { display: grid; width: 100%; gap: 2px; padding: 10px 12px; border: 0; background: #fff; color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
 .customer-picker-option:hover, .customer-picker-option:focus-visible { background: var(--teal-50); outline: 2px solid var(--focus); outline-offset: -2px; }
+.work-order-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 22px; margin: 14px 0 0; }
+.work-order-detail-grid > div { min-width: 0; display: grid; grid-template-columns: minmax(100px, .7fr) minmax(0, 1.3fr); gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.work-order-detail-grid dt { color: var(--navy-800); font-size: 13px; font-weight: 700; }
+.work-order-detail-grid dd { margin: 0; overflow-wrap: anywhere; color: var(--ink); font-size: 14px; }
 .rental-report-total { margin: 0 0 18px; color: var(--navy-950); font-size: clamp(36px, 7vw, 56px); font-weight: 800; line-height: 1; letter-spacing: -.04em; }
 .request-status { display: inline-block; padding: 4px 8px; border-radius: 999px; background: var(--teal-50); color: var(--navy-800); font-size: 12px; font-weight: 700; }
 .usual-driver-field { min-width: 0; margin: 0; padding: 0; border: 0; }
@@ -253,6 +257,7 @@ button:disabled { opacity: .65; cursor: wait; }
   .fleet-content { width: min(100% - 32px, 1440px); margin-top: 24px; }
   .fleet-title-row, .vehicle-editor-heading { align-items: start; flex-direction: column; }
   .vehicle-form-grid { grid-template-columns: 1fr; }
+  .work-order-detail-grid { grid-template-columns: 1fr; }
   .vehicle-document-filters > .vehicle-document-filter-controls { grid-template-columns: 1fr; }
   .vehicle-document-filter-controls button { justify-self: start; }
   .fleet-pagination { flex-wrap: wrap; }
