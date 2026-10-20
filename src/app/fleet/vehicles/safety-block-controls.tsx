@@ -48,9 +48,11 @@ export function SafetyBlockControls({ companyId, vehicleId, activeBlock }: {
           inspectionPassed: values.get('inspectionPassed') === 'on', reason: String(values.get('reason') ?? '').trim(),
         }),
       });
-      const body = await response.json() as { error?: string };
+      const body = await response.json() as { error?: string; block?: { releasedAt?: string } };
       if (!response.ok) throw new Error(body.error || 'Unable to release safety block.');
-      setNotice('Inspection and work completion recorded; safety block released.');
+      const releasedAt = body.block?.releasedAt ? new Date(body.block.releasedAt) : null;
+      const releaseTime = releasedAt && Number.isFinite(releasedAt.getTime()) ? ` at ${releasedAt.toLocaleString()}` : '';
+      setNotice(`Inspection and work completion recorded; safety block released${releaseTime}.`);
       setMode(null); router.refresh();
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Unable to release safety block.'); }
     finally { setBusy(false); }

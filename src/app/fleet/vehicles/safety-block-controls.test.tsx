@@ -22,7 +22,8 @@ describe('SafetyBlockControls', () => {
   });
 
   it('releases only after explicit work completion and passed-inspection details', async () => {
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ block: { id: 'block-1' } }), { status: 200 }));
+    const releasedAt = '2026-10-18T12:30:00.000Z';
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ block: { id: 'block-1', status: 'Pending Inspection', releasedAt } }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     render(<SafetyBlockControls companyId="company-1" vehicleId="vehicle-1" activeBlock={{ id: 'block-1', status: 'Pending Inspection', appliedAt: '2026-10-18T10:00:00.000Z' }} />);
     fireEvent.click(screen.getByRole('button', { name: 'Record inspection and release' }));
@@ -31,7 +32,7 @@ describe('SafetyBlockControls', () => {
     fireEvent.change(screen.getByLabelText('Release reason'), { target: { value: 'Release after completed repair inspection' } });
     fireEvent.click(screen.getByRole('checkbox'));
     fireEvent.click(screen.getByRole('button', { name: 'Record inspection and release' }));
-    expect(await screen.findByText(/safety block released/)).toBeTruthy();
+    expect(await screen.findByText((text) => text.includes(`safety block released at ${new Date(releasedAt).toLocaleString()}`))).toBeTruthy();
     const payload = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as Record<string, unknown>;
     expect(payload).toMatchObject({
       inspectionResults: 'Brake test passed after replacement', inspectionPassed: true,
