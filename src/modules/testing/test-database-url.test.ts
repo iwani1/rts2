@@ -4,6 +4,7 @@ import { assertIntegrationTestEnvironment, resolveTestDatabaseUrl } from './test
 describe('integration-test environment safety', () => {
   it('accepts a sufficiently long secret and local application URL', () => {
     expect(() => assertIntegrationTestEnvironment('a'.repeat(32), 'http://localhost:3000')).not.toThrow();
+    expect(() => assertIntegrationTestEnvironment('a'.repeat(32), 'http://[::1]:3000')).not.toThrow();
   });
 
   it.each([
@@ -28,11 +29,17 @@ describe('integration-test database safety', () => {
     expect(resolveTestDatabaseUrl(undefined, testUrl)).toBe(testUrl);
   });
 
+  it('accepts the bracketed IPv6 loopback address', () => {
+    const testUrl = 'postgres://user:pass@[::1]:5432/local_test';
+    expect(resolveTestDatabaseUrl(testUrl)).toBe(testUrl);
+  });
+
   it.each([
     ['missing URL', undefined, undefined],
     ['normal development database', undefined, 'postgresql://user:pass@localhost:5432/richie_tms'],
     ['remote test-named database', undefined, 'postgresql://user:pass@db.example.test:5432/richie_tms_test'],
     ['remote dedicated test URL', 'postgresql://user:pass@db.example.test:5432/richie_tms_test', undefined],
+    ['non-PostgreSQL URL', undefined, 'http://localhost/richie_tms_test'],
     ['malformed URL', undefined, 'not-a-url'],
   ])('rejects %s', (_label, dedicated, fallback) => {
     expect(() => resolveTestDatabaseUrl(dedicated, fallback)).toThrow();
