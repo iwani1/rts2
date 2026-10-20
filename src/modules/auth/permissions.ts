@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { getPrisma } from '@/server/prisma';
 
@@ -204,5 +203,5 @@ export async function revokeRoleAssignment(input: {
 }
 
 export function isUniqueRoleAssignmentError(error: unknown): boolean {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+  return error instanceof Error && 'code' in error && error.code === 'P2002';
 }

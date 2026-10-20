@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { PermissionDeniedError } from '@/modules/auth/permissions';
 import { getPrisma } from '@/server/prisma';

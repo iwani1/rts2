@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ getSession: vi.fn(), applyVehicleSafetyBlock: vi.fn() }));
 vi.mock('@/server/auth', () => ({ getAuth: () => ({ api: { getSession: mocks.getSession } }) }));
+vi.mock('@/modules/auth/permissions', () => ({ PermissionDeniedError: class PermissionDeniedError extends Error {} }));
 vi.mock('@/modules/maintenance/vehicle-safety-blocks', () => ({
   ActiveSafetyBlockExistsError: class ActiveSafetyBlockExistsError extends Error {},
   SafetyBlockVehicleNotFoundError: class SafetyBlockVehicleNotFoundError extends Error {},
