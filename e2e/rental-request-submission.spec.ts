@@ -64,7 +64,7 @@ test('authorized staff can submit a rental request, review it, then record a rea
   await expect(page.getByRole('heading', { name: 'Request details' })).toBeVisible();
   await expect(page.getByText(upcomingDate(15)).first()).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Status history' })).toBeVisible();
-  await expect(page.getByText('Draft → Submitted')).toBeVisible();
+  await expect(page.getByText('Draft → Submitted').first()).toBeVisible();
   await expect(requestRow).toContainText('Submitted');
   await expect(requestRow).toContainText(upcomingDate(15));
   await expect(page.getByRole('button', { name: 'Submit request' })).toHaveCount(0);
