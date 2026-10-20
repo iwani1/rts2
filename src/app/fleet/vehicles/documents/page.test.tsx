@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { InvalidVehicleCursorError } from '@/modules/fleet/vehicles';
 import VehicleDocumentsPage from './page';
 
 const mocks = vi.hoisted(() => ({
@@ -15,6 +16,7 @@ vi.mock('next/navigation', () => ({
   redirect: (path: string) => { throw new Error(`NEXT_REDIRECT:${path}`); },
   notFound: () => { throw new Error('NEXT_NOT_FOUND'); },
 }));
+vi.mock('next/link', () => ({ default: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) => <a href={href} {...props}>{children}</a> }));
 vi.mock('@/server/auth', () => ({ getAuth: () => ({ api: { getSession: mocks.getSession } }) }));
 vi.mock('@/server/prisma', () => ({
   getPrisma: () => ({
@@ -25,6 +27,7 @@ vi.mock('@/server/prisma', () => ({
 vi.mock('@/modules/fleet/vehicles', () => ({
   listVehicles: mocks.listVehicles,
   FleetCompanyNotFoundError: class FleetCompanyNotFoundError extends Error {},
+  InvalidVehicleCursorError: class InvalidVehicleCursorError extends Error {},
 }));
 
 afterEach(cleanup);
@@ -105,6 +108,23 @@ describe('VehicleDocumentsPage', () => {
 
     expect(screen.getByRole('heading', { name: 'No vehicles found' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Clear filters' }).getAttribute('href')).toBe('/fleet/vehicles/documents');
+  });
+
+  it('preserves document type and search through previous and next pages', async () => {
+    mocks.listVehicles.mockResolvedValue({ canManage: true, nextCursor: 'vehicle-next', vehicles: [] });
+    const page = await VehicleDocumentsPage({ searchParams: Promise.resolve({
+      q: 'Toyota', type: 'Insurance', cursor: 'vehicle-current', cursorHistory: 'ROOT.vehicle-prior',
+    }) });
+    render(page);
+
+    expect(screen.getByRole('link', { name: 'Previous page' }).getAttribute('href')).toBe('/fleet/vehicles/documents?q=Toyota&type=Insurance&cursor=vehicle-prior&cursorHistory=ROOT');
+    expect(screen.getByRole('link', { name: 'Next page' }).getAttribute('href')).toBe('/fleet/vehicles/documents?q=Toyota&type=Insurance&cursor=vehicle-next&cursorHistory=ROOT.vehicle-prior.vehicle-current');
+  });
+
+  it('redirects when a stale or foreign document-page cursor is supplied', async () => {
+    mocks.listVehicles.mockRejectedValue(new InvalidVehicleCursorError());
+    await expect(VehicleDocumentsPage({ searchParams: Promise.resolve({ cursor: 'stale-cursor' }) }))
+      .rejects.toThrow('NEXT_REDIRECT:/fleet/vehicles/documents');
   });
 
   it('redirects limited fleet views before displaying document dates', async () => {

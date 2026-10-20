@@ -1,15 +1,25 @@
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
+import { ZodError } from 'zod';
 import { PermissionDeniedError } from '@/modules/auth/permissions';
 import { mayStartSession } from '@/modules/auth/policy';
-import { FleetCompanyNotFoundError, listVehicles } from '@/modules/fleet/vehicles';
+import { FleetCompanyNotFoundError, InvalidVehicleCursorError, listVehicles } from '@/modules/fleet/vehicles';
 import { getVehicleDocumentDates, vehicleDocumentTypes } from '@/modules/fleet/vehicle-document-dates';
 import { getAuth } from '@/server/auth';
 import { getPrisma } from '@/server/prisma';
 
 export const dynamic = 'force-dynamic';
-type PageProps = { searchParams: Promise<{ q?: string; cursor?: string; type?: string }> };
+type PageProps = { searchParams: Promise<{ q?: string; cursor?: string; cursorHistory?: string; type?: string }> };
+function documentPageHref({ search, type, cursor, history }: { search?: string; type?: string; cursor?: string; history?: string[] }) {
+  const params = new URLSearchParams();
+  if (search) params.set('q', search);
+  if (type) params.set('type', type);
+  if (cursor) params.set('cursor', cursor);
+  if (history?.length) params.set('cursorHistory', history.join('.'));
+  const query = params.toString();
+  return `/fleet/vehicles/documents${query ? `?${query}` : ''}`;
+}
 
 export default async function VehicleDocumentsPage({ searchParams }: PageProps) {
   const session = await getAuth().api.getSession({ headers: await headers() });
@@ -27,6 +37,10 @@ export default async function VehicleDocumentsPage({ searchParams }: PageProps) 
   </section></main>;
 
   const params = await searchParams;
+  const cursorHistory = params.cursorHistory ? params.cursorHistory.split('.') : [];
+  if (cursorHistory.length > 50 || cursorHistory.some((token) => token !== 'ROOT' && !/^[A-Za-z0-9_-]{1,128}$/.test(token))) {
+    redirect('/fleet/vehicles/documents');
+  }
   let result: Awaited<ReturnType<typeof listVehicles>>;
   try {
     result = await listVehicles({
@@ -34,6 +48,7 @@ export default async function VehicleDocumentsPage({ searchParams }: PageProps) 
     });
   } catch (error) {
     if (error instanceof FleetCompanyNotFoundError) notFound();
+    if (error instanceof InvalidVehicleCursorError || error instanceof ZodError) redirect('/fleet/vehicles/documents');
     if (error instanceof PermissionDeniedError) redirect('/');
     throw error;
   }
@@ -41,10 +56,9 @@ export default async function VehicleDocumentsPage({ searchParams }: PageProps) 
 
   const selectedDocumentType = vehicleDocumentTypes.find((documentType) => documentType === params.type);
   const documents = getVehicleDocumentDates(result.vehicles, selectedDocumentType);
-  const nextPageParams = new URLSearchParams();
-  if (params.q) nextPageParams.set('q', params.q);
-  if (selectedDocumentType) nextPageParams.set('type', selectedDocumentType);
-  if (result.nextCursor) nextPageParams.set('cursor', result.nextCursor);
+  const previousToken = cursorHistory[cursorHistory.length - 1];
+  const previousHref = documentPageHref({ search: params.q, type: selectedDocumentType, cursor: previousToken && previousToken !== 'ROOT' ? previousToken : undefined, history: cursorHistory.slice(0, -1) });
+  const nextHistory = params.cursor ? [...cursorHistory.slice(-49), params.cursor] : ['ROOT'];
 
   return <main className="fleet-page">
     <header className="fleet-page-header">
@@ -106,10 +120,11 @@ export default async function VehicleDocumentsPage({ searchParams }: PageProps) 
             </tr>)}</tbody>
           </table>
         </div>}
-        {result.nextCursor && <div className="fleet-pagination">
-          <span className="muted">More vehicles are available.</span>
-          <Link className="button-link" href={`/fleet/vehicles/documents?${nextPageParams.toString()}`}>Next page</Link>
-        </div>}
+        {(params.cursor || result.nextCursor) && <nav className="fleet-pagination" aria-label="Vehicle document pages">
+          {params.cursor && <Link className="button-link" href={previousHref}>Previous page</Link>}
+          <span className="muted">Showing document dates for up to 50 vehicles per page.</span>
+          {result.nextCursor && <Link className="button-link" href={documentPageHref({ search: params.q, type: selectedDocumentType, cursor: result.nextCursor, history: nextHistory })}>Next page</Link>}
+        </nav>}
       </section>
       <p className="fleet-limits">Document file uploads and automatic expiry reminders are deferred pending production storage and reminder policy decisions.</p>
     </div>
