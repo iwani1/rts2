@@ -6,6 +6,7 @@ import { resolvePermission } from '@/modules/auth/permissions';
 import { getPrisma } from '@/server/prisma';
 import { getCorporateInvoice, listCorporateInvoices } from '@/modules/finance/invoices';
 import { InvoiceManager } from './invoice-manager';
+import { InvoiceLifecycle } from './invoice-lifecycle';
 
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -80,8 +81,9 @@ export default async function InvoicesPage({
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             Invoices are generated from Completed trips for one contract and period, priced only from the typed
             corporate-rate setting. Generating the same contract and period twice returns the original invoice;
-            a trip can never be billed twice. Invoices are DRAFT and immutable until the finance lifecycle is
-            approved.
+            a trip can never be billed twice while its invoice stands. Invoices move DRAFT → ISSUED → PAID,
+            may be voided before payment, and every amount stays immutable; payments are append-only and the
+            outstanding balance is always derived from them.
           </p>
         </div>
         <Link className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700" href="/">
@@ -100,6 +102,8 @@ export default async function InvoicesPage({
               <th className="px-4 py-3 font-medium">Subtotal</th>
               <th className="px-4 py-3 font-medium">Tax</th>
               <th className="px-4 py-3 font-medium">Total</th>
+              <th className="px-4 py-3 font-medium">Paid</th>
+              <th className="px-4 py-3 font-medium">Outstanding</th>
               <th className="px-4 py-3 font-medium">Open</th>
             </tr>
           </thead>
@@ -113,6 +117,8 @@ export default async function InvoicesPage({
                 <td className="px-4 py-3 text-slate-700">{cedis(invoice.subtotalPesewas)}</td>
                 <td className="px-4 py-3 text-slate-700">{cedis(invoice.taxPesewas)}</td>
                 <td className="px-4 py-3 text-slate-700">{cedis(invoice.totalPesewas)}</td>
+                <td className="px-4 py-3 text-slate-700">{cedis(invoice.paidPesewas)}</td>
+                <td className="px-4 py-3 text-slate-700">{cedis(invoice.outstandingPesewas)}</td>
                 <td className="px-4 py-3">
                   <Link className="font-medium text-slate-900 underline" href={`/invoices?${new URLSearchParams({ invoice: invoice.id }).toString()}`}>
                     View
@@ -121,7 +127,7 @@ export default async function InvoicesPage({
               </tr>
             ))}
             {result.invoices.length === 0 ? (
-              <tr><td className="px-4 py-6 text-slate-600" colSpan={8}>No invoices yet. Generate one below.</td></tr>
+              <tr><td className="px-4 py-6 text-slate-600" colSpan={10}>No invoices yet. Generate one below.</td></tr>
             ) : null}
           </tbody>
         </table>
@@ -132,9 +138,12 @@ export default async function InvoicesPage({
           <h2 className="text-lg font-semibold text-slate-950">Invoice {detail.invoice.reference}</h2>
           <dl className="mt-4 grid gap-3 text-sm text-slate-700 sm:grid-cols-4">
             <div><dt className="font-medium text-slate-500">Contract</dt><dd>{detail.invoice.contractReference}</dd></div>
+            <div><dt className="font-medium text-slate-500">Status</dt><dd>{detail.invoice.status}</dd></div>
             <div><dt className="font-medium text-slate-500">Subtotal</dt><dd>{cedis(detail.invoice.subtotalPesewas)}</dd></div>
             <div><dt className="font-medium text-slate-500">Tax</dt><dd>{cedis(detail.invoice.taxPesewas)}</dd></div>
             <div><dt className="font-medium text-slate-500">Total</dt><dd>{cedis(detail.invoice.totalPesewas)}</dd></div>
+            <div><dt className="font-medium text-slate-500">Paid</dt><dd>{cedis(detail.invoice.paidPesewas)}</dd></div>
+            <div><dt className="font-medium text-slate-500">Outstanding</dt><dd>{cedis(detail.invoice.outstandingPesewas)}</dd></div>
           </dl>
           <table className="mt-4 w-full text-left text-sm">
             <thead className="text-slate-500">
@@ -152,6 +161,21 @@ export default async function InvoicesPage({
               ))}
             </tbody>
           </table>
+          <InvoiceLifecycle
+            canManage={canManage}
+            companyId={company.id}
+            invoice={{
+              id: detail.invoice.id,
+              reference: detail.invoice.reference,
+              status: detail.invoice.status,
+              totalPesewas: detail.invoice.totalPesewas,
+              paidPesewas: detail.invoice.paidPesewas,
+              outstandingPesewas: detail.invoice.outstandingPesewas,
+            }}
+            history={detail.history.map((entry) => ({ ...entry, createdAt: entry.createdAt.toISOString() }))}
+            payments={detail.payments.map((payment) => ({ ...payment, createdAt: payment.createdAt.toISOString() }))}
+            returnTo={returnTo}
+          />
         </section>
       ) : null}
 

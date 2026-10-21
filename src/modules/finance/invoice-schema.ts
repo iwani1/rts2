@@ -14,4 +14,18 @@ export const corporateInvoiceRequestSchema = z.object({
 export const corporateInvoiceListQuerySchema = z.object({
   clientId: z.string().trim().min(1).max(128).optional(),
   cursor: z.string().min(1).max(128).optional(),
+  status: z.enum(['DRAFT', 'ISSUED', 'PAID', 'VOID']).optional(),
+}).strict();
+
+export const corporateInvoiceTransitionSchema = z.object({
+  toStatus: z.enum(['ISSUED', 'PAID', 'VOID']),
+  reason: z.string().trim().min(8).max(500),
+}).strict();
+
+export const invoicePaymentRequestSchema = z.object({
+  amountPesewas: z.number().int().positive().safe(),
+  method: z.string().trim().max(120).nullable(),
+  reference: z.string().trim().max(200).nullable(),
+  receivedAt: z.string().date(),
+  reason: z.string().trim().min(8).max(500),
 }).strict();

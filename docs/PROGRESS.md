@@ -77,8 +77,8 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | INC-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | INC-02 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FIN-01 | Not Started | No feature implementation; Phase 1+ approval required. |
-| FIN-02 | Tested | Corporate invoice generation per D-057/D-058 (DRAFT-only lifecycle confirmed at the Phase 1B gate, D-060); rates registry row approved (D-060). Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
-| FIN-03 | Not Started | No feature implementation; Phase 1+ approval required. |
+| FIN-02 | Tested | Corporate invoice generation per D-057/D-058 (DRAFT-only lifecycle confirmed at the Phase 1B gate, D-060); rates registry row approved (D-060). Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). Phase 1C extends FIN-02 with the governed lifecycle per D-061 (see the Phase 1C section below; sandbox-verified, Fedora verification pending). |
+| FIN-03 | In Progress | Manual invoice payments per D-062: append-only `InvoicePayment` records against ISSUED invoices, overpayment refused under the invoice row lock, outstanding derived (`total − Σ payments`), automatic PAID at full payment. Sandbox-verified 2026-10-21 (unit 375/375, lifecycle integration 6/6 on PGlite); Fedora verification pending. See the Phase 1C section below. |
 | FIN-04 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FIN-05 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FIN-06 | Not Started | No feature implementation; Phase 1+ approval required. |
@@ -658,3 +658,39 @@ Added bookings as the fifth Phase 1B vertical slice.
 - **Limits**: No trip assignment/capacity (TRP-01/BKG-04 next), no waiting list or cancellation deadlines (BKG-05), no cut-off enforcement (unconfigured), staff-side creation only.
 
 Phase 1A remains complete: all 4 E2E specs pass against the cleaned test DB (1 company: Richie Transport Services), unit tests 337/337 pass, integration tests 51/51 pass, typecheck and build pass.
+
+## Phase 1C — corporate invoice lifecycle and payments (FIN-02 extension, FIN-03; D-061/D-062; 2026-10-21)
+
+First Phase 1C slice, built under the owner's Phase 1C go-ahead ("go ahead start building phase 1c
+completely after i will run", 2026-10-21). D-061/D-062 are recorded in `docs/DECISIONS.md` for
+ratification at the Phase 1C gate.
+
+- **Lifecycle (D-061):** `DRAFT → ISSUED → PAID`, `VOID` from `DRAFT`/`ISSUED`, both terminal,
+  via `invoice-transitions.ts` + row-locked `transitionCorporateInvoice` + append-only
+  `CorporateInvoiceStatusHistory`. Amounts/lines/reference/period/contract are immutable after
+  generation (DB change guard); voiding is refused once payments exist (service + DB guard);
+  voiding releases trips and the contract+period (trigger-maintained `billingActive`,
+  status-aware partial unique indexes) so a replacement invoice can be generated.
+- **Payments (D-062 / FIN-03):** append-only `InvoicePayment` (amount, method, external
+  reference, received date, reason) recorded only against ISSUED invoices by `payment:record`
+  (or `invoice:manage`) GLOBAL/COMPANY scope; the invoice row lock recomputes the balance so
+  parallel payments cannot overpay; full payment flips the invoice to PAID atomically with its
+  history row. Outstanding is always derived, never stored; part-paid is a balance, not a status.
+- **Surface:** `POST .../invoices/[invoiceId]/transition` and `POST .../invoices/[invoiceId]/payments`
+  APIs; list gains a `status` filter; the invoices page shows paid/outstanding everywhere and a
+  lifecycle panel (issue/mark-paid/void, payment form, payments table, status history); the
+  corporate (bound-HR) dashboard now shows invoice status and outstanding.
+- **Tests (sandbox-verified 2026-10-21; Fedora run still required):** unit 375/375 (incl. the new
+  4×4 invoice transition matrix); `prisma validate` OK on the extended schema; all 23 migrations
+  apply in sequence on PostgreSQL (PGlite) with DB-guard assertions (duplicate billing, payment
+  on DRAFT, void-with-payments, append-only, immutability, history pairing, void release +
+  same-period replacement); `invoice-lifecycle.integration.test.ts` 6/6 and the pre-existing
+  FIN-02 suite 4/4 on the adapter-backed sandbox client; typecheck and lint clean on touched
+  files; production build compiles (full prerender needs a reachable database, Fedora will run it).
+- **Limits:** No credit notes/adjustments (void-with-payments is refused instead), no payment
+  verification/reconciliation workflow (FIN-08 is Phase 3), no overdue status/job, no PDF
+  (RPT-05 is Phase 3), rental invoices/payments remain the Phase 1A rental scope, and configuring
+  `finance.corporate_rates` still happens through the settings service (no dedicated editor yet).
+- **Remaining Phase 1C scope:** PAX-01 passenger portal, RNT-09 rental customer portal,
+  RPT-02/RPT-03/RPT-04 reports and exports, FIN-07 finance dashboard, role dashboards and the
+  hardening pass, per `richie-tms-phase-prompts.md`. Next slice: FIN-07 finance dashboard.

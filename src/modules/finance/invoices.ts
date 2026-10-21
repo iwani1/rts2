@@ -5,7 +5,13 @@ import { PermissionDeniedError, resolvePermission } from '@/modules/auth/permiss
 import { getPrisma } from '@/server/prisma';
 import { getCorporateRate, taxLinesSchema, type TaxLine } from '@/modules/settings/registry';
 import { calculateTaxLineAmount } from './tax';
-import { corporateInvoiceListQuerySchema, corporateInvoiceRequestSchema } from './invoice-schema';
+import {
+  corporateInvoiceListQuerySchema,
+  corporateInvoiceRequestSchema,
+  corporateInvoiceTransitionSchema,
+  invoicePaymentRequestSchema,
+} from './invoice-schema';
+import { isAllowedCorporateInvoiceTransition } from './invoice-transitions';
 
 const companyIdSchema = z.string().trim().min(1).max(128);
 const invoiceIdSchema = z.string().trim().min(1).max(128);
@@ -31,6 +37,22 @@ export class InvalidInvoiceCursorError extends Error {
   readonly code = 'INVALID_INVOICE_CURSOR';
   constructor() { super('Invalid invoice cursor.'); this.name = 'InvalidInvoiceCursorError'; }
 }
+export class InvoiceTransitionNotAllowedError extends Error {
+  readonly code = 'INVOICE_TRANSITION_NOT_ALLOWED';
+  readonly statusCode = 409;
+  constructor(fromStatus: string, toStatus: string) {
+    super(`An invoice cannot move from ${fromStatus} to ${toStatus}.`);
+    this.name = 'InvoiceTransitionNotAllowedError';
+  }
+}
+export class PaymentExceedsBalanceError extends Error {
+  readonly code = 'PAYMENT_EXCEEDS_BALANCE';
+  readonly statusCode = 422;
+  constructor(outstandingPesewas: number) {
+    super(`The payment exceeds the outstanding balance of GH₵ ${(outstandingPesewas / 100).toFixed(2)}.`);
+    this.name = 'PaymentExceedsBalanceError';
+  }
+}
 
 export type CorporateInvoiceLineRecord = {
   id: string;
@@ -55,8 +77,30 @@ export type CorporateInvoiceRecord = {
   subtotalPesewas: number;
   taxPesewas: number;
   totalPesewas: number;
+  paidPesewas: number;
+  outstandingPesewas: number;
   createdAt: Date;
   lines: CorporateInvoiceLineRecord[];
+};
+
+export type CorporateInvoiceStatusHistoryRecord = {
+  sequence: number;
+  fromStatus: string | null;
+  toStatus: string;
+  reason: string;
+  actorName: string;
+  createdAt: Date;
+};
+
+export type CorporateInvoicePaymentRecord = {
+  id: string;
+  amountPesewas: number;
+  method: string | null;
+  reference: string | null;
+  receivedAt: string;
+  reason: string;
+  recordedByName: string;
+  createdAt: Date;
 };
 
 type InvoiceDbShape = {
@@ -69,15 +113,19 @@ type InvoiceDbShape = {
     id: string; tripId: string | null; description: string; unit: string;
     quantity: number; ratePesewas: number; amountPesewas: number;
   }>;
+  payments: Array<{ amountPesewas: number }>;
 };
 
 const invoiceInclude = {
   client: { select: { name: true } },
   contract: { select: { reference: true } },
   lines: { orderBy: [{ createdAt: 'asc' as const }, { id: 'asc' as const }] },
+  payments: { select: { amountPesewas: true } },
 };
 
 function presentInvoice(row: InvoiceDbShape): CorporateInvoiceRecord {
+  // Outstanding is always derived from the append-only payments, never stored.
+  const paidPesewas = row.payments.reduce((sum, payment) => sum + payment.amountPesewas, 0);
   return {
     id: row.id,
     reference: row.reference,
@@ -91,6 +139,10 @@ function presentInvoice(row: InvoiceDbShape): CorporateInvoiceRecord {
     subtotalPesewas: row.subtotalPesewas,
     taxPesewas: row.taxPesewas,
     totalPesewas: row.totalPesewas,
+    paidPesewas,
+    outstandingPesewas: row.status === 'PAID' || row.status === 'VOID'
+      ? 0
+      : row.totalPesewas - paidPesewas,
     createdAt: row.createdAt,
     lines: row.lines.map((line) => ({
       id: line.id,
@@ -115,10 +167,12 @@ async function accessFor(actorId: string, companyId: string) {
 }
 
 export async function listCorporateInvoices(input: {
-  actorId: string; companyId: string; clientId?: string; cursor?: string;
+  actorId: string; companyId: string; clientId?: string; cursor?: string; status?: string;
 }): Promise<{ invoices: CorporateInvoiceRecord[]; nextCursor: string | null; canManage: boolean }> {
   const companyId = companyIdSchema.parse(input.companyId);
-  const query = corporateInvoiceListQuerySchema.parse({ clientId: input.clientId || undefined, cursor: input.cursor });
+  const query = corporateInvoiceListQuerySchema.parse({
+    clientId: input.clientId || undefined, cursor: input.cursor, status: input.status || undefined,
+  });
   const access = await accessFor(input.actorId, companyId);
   const prisma = getPrisma();
   if (query.cursor) {
@@ -128,7 +182,11 @@ export async function listCorporateInvoices(input: {
     if (!cursorInvoice) throw new InvalidInvoiceCursorError();
   }
   const rows = await prisma.corporateInvoice.findMany({
-    where: { companyId, ...(query.clientId ? { clientId: query.clientId } : {}) },
+    where: {
+      companyId,
+      ...(query.clientId ? { clientId: query.clientId } : {}),
+      ...(query.status ? { status: query.status } : {}),
+    },
     include: invoiceInclude,
     orderBy: [{ periodStart: 'desc' }, { id: 'desc' }],
     take: 51,
@@ -138,16 +196,54 @@ export async function listCorporateInvoices(input: {
   return { invoices, nextCursor: rows.length > 50 ? invoices.at(-1)?.id ?? null : null, canManage: access.canManage };
 }
 
-export async function getCorporateInvoice(input: { actorId: string; companyId: string; invoiceId: string }) {
+export type CorporateInvoiceDetail = {
+  invoice: CorporateInvoiceRecord;
+  history: CorporateInvoiceStatusHistoryRecord[];
+  payments: CorporateInvoicePaymentRecord[];
+};
+
+export async function getCorporateInvoice(input: {
+  actorId: string; companyId: string; invoiceId: string;
+}): Promise<CorporateInvoiceDetail> {
   const companyId = companyIdSchema.parse(input.companyId);
   const invoiceId = invoiceIdSchema.parse(input.invoiceId);
   await accessFor(input.actorId, companyId);
   const row = await getPrisma().corporateInvoice.findFirst({
     where: { id: invoiceId, companyId },
-    include: invoiceInclude,
+    include: {
+      ...invoiceInclude,
+      payments: {
+        orderBy: [{ createdAt: 'asc' as const }, { id: 'asc' as const }],
+        include: { recordedBy: { select: { name: true } } },
+      },
+      statusHistory: {
+        orderBy: { sequence: 'asc' as const },
+        include: { actor: { select: { name: true } } },
+      },
+    },
   });
   if (!row) throw new InvoiceNotFoundError();
-  return { invoice: presentInvoice(row) };
+  return {
+    invoice: presentInvoice(row),
+    history: row.statusHistory.map((entry) => ({
+      sequence: entry.sequence,
+      fromStatus: entry.fromStatus,
+      toStatus: entry.toStatus,
+      reason: entry.reason,
+      actorName: entry.actor.name,
+      createdAt: entry.createdAt,
+    })),
+    payments: row.payments.map((payment) => ({
+      id: payment.id,
+      amountPesewas: payment.amountPesewas,
+      method: payment.method,
+      reference: payment.reference,
+      receivedAt: payment.receivedAt.toISOString().slice(0, 10),
+      reason: payment.reason,
+      recordedByName: payment.recordedBy.name,
+      createdAt: payment.createdAt,
+    })),
+  };
 }
 
 async function configuredTaxLines(companyId: string): Promise<TaxLine[]> {
@@ -169,11 +265,13 @@ export type GenerateInvoiceResult = {
  * FIN-02 (D-057/D-058): builds a DRAFT corporate invoice for one contract and
  * period from Completed trips carrying that contract's Completed bookings.
  * Rates come only from the typed `finance.corporate_rates` setting. The
- * contract+period unique key (plus the contract row lock) makes generation
- * idempotent, and the partial unique index on invoice lines guarantees a
- * trip is never billed twice. Note: regenerating an existing period returns
- * the stored invoice, so trips completed later for that period need a fresh
- * period (recorded in docs/PROGRESS.md).
+ * status-aware contract+period unique index (non-VOID invoices, plus the
+ * contract row lock) makes generation idempotent, and the partial unique
+ * index on billing-active invoice lines guarantees a trip is never billed
+ * twice while its invoice stands. Note: regenerating an existing period
+ * returns the stored invoice, so trips completed later for that period need
+ * a fresh period (recorded in docs/PROGRESS.md); voiding the invoice first
+ * releases both the period and its trips.
  */
 export async function generateCorporateInvoice(
   input: unknown, actorId: string, companyIdInput: string,
@@ -206,7 +304,7 @@ export async function generateCorporateInvoice(
     const periodStart = new Date(`${data.periodStart}T00:00:00.000Z`);
     const periodEnd = new Date(`${data.periodEnd}T00:00:00.000Z`);
     const existing = await tx.corporateInvoice.findFirst({
-      where: { companyId, contractId: data.contractId, periodStart, periodEnd },
+      where: { companyId, contractId: data.contractId, periodStart, periodEnd, status: { not: 'VOID' } },
       include: invoiceInclude,
     });
     if (existing) return { invoice: presentInvoice(existing), duplicate: true };
@@ -228,8 +326,14 @@ export async function generateCorporateInvoice(
     if (billableTrips.length === 0) {
       throw new InvoiceValidationError('No Completed trips with Completed bookings for this contract exist in the period.');
     }
+    // A trip counts as billed while its line is billing-active, i.e. while
+    // the invoice carrying it is not VOID (D-061). Voiding an invoice
+    // releases its trips back into the billable pool.
     const alreadyBilled = await tx.corporateInvoiceLine.findMany({
-      where: { companyId, tripId: { in: billableTrips.map((trip: { id: string }) => trip.id) } },
+      where: {
+        companyId, billingActive: true,
+        tripId: { in: billableTrips.map((trip: { id: string }) => trip.id) },
+      },
       select: { tripId: true },
     });
     const billedIds = new Set(alreadyBilled.map((line: { tripId: string | null }) => line.tripId));
@@ -274,6 +378,12 @@ export async function generateCorporateInvoice(
           },
           include: invoiceInclude,
         });
+        await tx.corporateInvoiceStatusHistory.create({
+          data: {
+            companyId, invoiceId: invoice.id, sequence: 1, actorId,
+            fromStatus: null, toStatus: 'DRAFT', reason: data.reason,
+          },
+        });
         await tx.auditEvent.create({
           data: {
             actorId, companyId, action: 'CORPORATE_INVOICE_GENERATED', entityType: 'CORPORATE_INVOICE', entityId: invoice.id,
@@ -292,12 +402,186 @@ export async function generateCorporateInvoice(
           : undefined;
         if (code !== 'P2002' || attempt === 2) throw error;
         const raced = await tx.corporateInvoice.findFirst({
-          where: { companyId, contractId: data.contractId, periodStart, periodEnd },
+          where: { companyId, contractId: data.contractId, periodStart, periodEnd, status: { not: 'VOID' } },
           include: invoiceInclude,
         });
         if (raced) return { invoice: presentInvoice(raced), duplicate: true };
       }
     }
     throw new InvoiceValidationError('A unique invoice reference could not be allocated; retry.');
+  });
+}
+
+async function paymentAccessFor(actorId: string, companyId: string) {
+  const company = await getPrisma().company.findUnique({ where: { id: companyId }, select: { status: true } });
+  if (company?.status !== 'ACTIVE') throw new InvoiceCompanyNotFoundError();
+  // Recording a payment is authorised by the dedicated payment:record grant
+  // or by full invoice management; read-only invoice scopes never qualify.
+  for (const permission of ['payment:record', 'invoice:manage'] as const) {
+    const decision = await resolvePermission({ userId: actorId, companyId, permission });
+    if (decision.allowed && (decision.scopes.includes('GLOBAL') || decision.scopes.includes('COMPANY'))) {
+      return;
+    }
+  }
+  throw new PermissionDeniedError();
+}
+
+async function lockInvoice(
+  tx: Prisma.TransactionClient, companyId: string, invoiceId: string,
+): Promise<{ status: string; reference: string; totalPesewas: number }> {
+  const rows = await tx.$queryRaw<Array<{ status: string; reference: string; totalPesewas: number }>>`
+    SELECT "status", "reference", "totalPesewas" FROM "CorporateInvoice"
+    WHERE "id" = ${invoiceId} AND "companyId" = ${companyId}
+    FOR UPDATE
+  `;
+  const current = rows[0];
+  if (!current) throw new InvoiceNotFoundError();
+  return current;
+}
+
+async function appendStatusHistory(
+  tx: Prisma.TransactionClient,
+  input: { companyId: string; invoiceId: string; actorId: string; fromStatus: string; toStatus: string; reason: string },
+) {
+  const latest = await tx.corporateInvoiceStatusHistory.findFirst({
+    where: { companyId: input.companyId, invoiceId: input.invoiceId },
+    orderBy: { sequence: 'desc' },
+    select: { sequence: true },
+  });
+  await tx.corporateInvoiceStatusHistory.create({
+    data: {
+      companyId: input.companyId, invoiceId: input.invoiceId,
+      sequence: (latest?.sequence ?? 0) + 1, actorId: input.actorId,
+      fromStatus: input.fromStatus, toStatus: input.toStatus, reason: input.reason,
+    },
+  });
+}
+
+/**
+ * D-061 lifecycle transition (issue / mark paid / void). Row-locked and
+ * history-backed like contract transitions; the database re-checks the
+ * transition table, the history pairing, and the rule that an invoice with
+ * payments can never be voided.
+ */
+export async function transitionCorporateInvoice(
+  input: unknown, actorId: string, companyIdInput: string, invoiceIdInput: string,
+): Promise<CorporateInvoiceRecord> {
+  const data = corporateInvoiceTransitionSchema.parse(input);
+  const companyId = companyIdSchema.parse(companyIdInput);
+  const invoiceId = invoiceIdSchema.parse(invoiceIdInput);
+  await accessFor(actorId, companyId);
+  const prisma = getPrisma();
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const current = await lockInvoice(tx, companyId, invoiceId);
+    if (!isAllowedCorporateInvoiceTransition(current.status, data.toStatus)) {
+      throw new InvoiceTransitionNotAllowedError(current.status, data.toStatus);
+    }
+    if (data.toStatus === 'VOID' && current.status === 'ISSUED') {
+      const paymentCount = await tx.invoicePayment.count({ where: { companyId, invoiceId } });
+      if (paymentCount > 0) {
+        throw new InvoicePolicyError(
+          'This invoice has recorded payments and cannot be voided. Payments are append-only; '
+          + 'collect the outstanding balance or raise a correction through a future process.',
+        );
+      }
+    }
+    const changed = await tx.corporateInvoice.updateMany({
+      where: { id: invoiceId, companyId, status: current.status },
+      data: { status: data.toStatus },
+    });
+    if (changed.count !== 1) throw new InvoiceTransitionNotAllowedError(current.status, data.toStatus);
+    await appendStatusHistory(tx, {
+      companyId, invoiceId, actorId,
+      fromStatus: current.status, toStatus: data.toStatus, reason: data.reason,
+    });
+    await tx.auditEvent.create({
+      data: {
+        actorId, companyId, action: 'CORPORATE_INVOICE_STATUS_CHANGED', entityType: 'CORPORATE_INVOICE', entityId: invoiceId,
+        summary: {
+          reference: current.reference, fromStatus: current.status, toStatus: data.toStatus, reason: data.reason,
+        },
+      },
+    });
+    const invoice = await tx.corporateInvoice.findUniqueOrThrow({ where: { id: invoiceId }, include: invoiceInclude });
+    return presentInvoice(invoice);
+  });
+}
+
+export type RecordInvoicePaymentResult = {
+  invoice: CorporateInvoiceRecord;
+  payment: { id: string; amountPesewas: number; receivedAt: string };
+  outstandingPesewas: number;
+};
+
+/**
+ * D-062 / FIN-03: records an append-only manual payment against an ISSUED
+ * invoice. The invoice row lock serialises concurrent payments, the balance
+ * is recomputed inside the transaction so overpayment is impossible, and
+ * reaching the full total flips the invoice to PAID atomically with its
+ * history row.
+ */
+export async function recordInvoicePayment(
+  input: unknown, actorId: string, companyIdInput: string, invoiceIdInput: string,
+): Promise<RecordInvoicePaymentResult> {
+  const data = invoicePaymentRequestSchema.parse(input);
+  const companyId = companyIdSchema.parse(companyIdInput);
+  const invoiceId = invoiceIdSchema.parse(invoiceIdInput);
+  await paymentAccessFor(actorId, companyId);
+  const prisma = getPrisma();
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const current = await lockInvoice(tx, companyId, invoiceId);
+    if (current.status !== 'ISSUED') {
+      throw new InvoicePolicyError('Payments may only be recorded against ISSUED invoices.');
+    }
+    const prior = await tx.invoicePayment.findMany({
+      where: { companyId, invoiceId }, select: { amountPesewas: true },
+    });
+    const paidBefore = prior.reduce((sum: number, payment: { amountPesewas: number }) => sum + payment.amountPesewas, 0);
+    const outstandingBefore = current.totalPesewas - paidBefore;
+    if (data.amountPesewas > outstandingBefore) throw new PaymentExceedsBalanceError(outstandingBefore);
+    const payment = await tx.invoicePayment.create({
+      data: {
+        companyId, invoiceId, amountPesewas: data.amountPesewas,
+        method: data.method, reference: data.reference,
+        receivedAt: new Date(`${data.receivedAt}T00:00:00.000Z`),
+        reason: data.reason, recordedById: actorId,
+      },
+    });
+    const outstandingAfter = outstandingBefore - data.amountPesewas;
+    await tx.auditEvent.create({
+      data: {
+        actorId, companyId, action: 'INVOICE_PAYMENT_RECORDED', entityType: 'CORPORATE_INVOICE', entityId: invoiceId,
+        summary: {
+          reference: current.reference, paymentId: payment.id, amountPesewas: data.amountPesewas,
+          method: data.method, paymentReference: data.reference, receivedAt: data.receivedAt,
+          outstandingPesewas: outstandingAfter, reason: data.reason,
+        },
+      },
+    });
+    if (outstandingAfter === 0) {
+      const changed = await tx.corporateInvoice.updateMany({
+        where: { id: invoiceId, companyId, status: 'ISSUED' },
+        data: { status: 'PAID' },
+      });
+      if (changed.count !== 1) {
+        throw new InvoicePolicyError('The invoice changed while the payment was being recorded; retry.');
+      }
+      await appendStatusHistory(tx, {
+        companyId, invoiceId, actorId,
+        fromStatus: 'ISSUED', toStatus: 'PAID', reason: 'Paid in full by recorded payments',
+      });
+      await tx.auditEvent.create({
+        data: {
+          actorId, companyId, action: 'INVOICE_MARKED_PAID', entityType: 'CORPORATE_INVOICE', entityId: invoiceId,
+          summary: { reference: current.reference, paymentId: payment.id, totalPesewas: current.totalPesewas },
+        },
+      });
+    }
+    const invoice = await tx.corporateInvoice.findUniqueOrThrow({ where: { id: invoiceId }, include: invoiceInclude });
+    return {
+      invoice: presentInvoice(invoice),
+      payment: { id: payment.id, amountPesewas: payment.amountPesewas, receivedAt: data.receivedAt },
+      outstandingPesewas: outstandingAfter,
+    };
   });
 }

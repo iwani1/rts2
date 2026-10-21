@@ -328,3 +328,38 @@
   ratifications stand. Phase 1C planning may begin; Phase 1C construction still requires the owner's
   separate go-ahead, and the descoped items (DRV-03/DRV-05, invoice issuance/payment/void lifecycle)
   require their own decisions before implementation.
+
+## D-061 — Corporate invoice lifecycle (Phase 1C, FIN-02 extension)
+- **Decision:** `CorporateInvoice` gains a governed lifecycle `DRAFT → ISSUED → PAID`, with `VOID`
+  reachable from `DRAFT` or `ISSUED`; `VOID` and `PAID` are terminal. Guarded by a transition table
+  (`invoice-transitions.ts`) + row lock + status-history rows (`CorporateInvoiceStatusHistory`, DB
+  trigger-enforced), mirroring contracts. Guards: amounts never mutate (DB guard rejects any
+  non-status/issue-field change); **ISSUED is payable only while the trip-billing freeze holds** —
+  voiding returns its lines' trips to the billable pool by derivation (billed = non-VOID invoice
+  lines); payments (`InvoicePayment`, append-only) may only be recorded against ISSUED invoices and
+  may not exceed the outstanding balance; an invoice auto-transitions to PAID in the same transaction
+  when cumulative payments reach the total. Void requires reason ≥8 chars and, for ISSUED invoices,
+  is refused while any payment exists (payments are append-only; no clawback workflow).
+  Amounts, lines, reference, period and contract never change after generation.
+- **Source:** Phase 1C owner go-ahead ("go ahead start building phase 1c", 2026-10-21); D-057/D-058
+  (generation), D-060 (DRAFT-only confirmed for Phase 1B, lifecycle deferred to Phase 1C). 
+- **Ownership/timeline:** Built this session ahead of formal Phase 1C planning; recorded here for
+  ratification at the next gate.
+- **Implementation refinement (2026-10-21):** PostgreSQL index predicates cannot contain
+  subqueries, so the status-aware invariants are materialised without subqueries: the
+  contract+period unique index becomes partial (`WHERE status <> 'VOID'`, so a voided invoice
+  frees its contract+period for a replacement), and the trip-billing freeze uses a
+  trigger-maintained `CorporateInvoiceLine.billingActive` flag (set false by an AFTER UPDATE
+  trigger when the parent invoice is voided) with a partial unique index on
+  `(companyId, tripId) WHERE billingActive`. The service derives "billed" from `billingActive`,
+  and the database additionally refuses to void an invoice that has payments.
+
+## D-062 — Invoice payments and outstanding balance (FIN-03)
+- **Decision:** Payments are append-only `InvoicePayment` rows (amountPesewas > 0, method free-text,
+  reference text, receivedAt date, reason). The outstanding balance is derived, never stored:
+  `total − Σ(payments of non-VOID invoice)`. Overpayment is refused at the row lock
+  (`PaymentExceedsBalanceError`); the service recomputes under the invoice row lock, so parallel
+  payments cannot jointly overpay. Paid-in-full flips status to PAID atomically (history row
+  `Invoice marked PAID after full payment`). A PAID invoice accepts no further payments or transitions.
+- **Source:** D-061 companion; FIN-03 inferred scope approved under the same owner instruction,
+  recorded for ratification at the next gate.

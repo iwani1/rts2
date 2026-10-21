@@ -116,7 +116,10 @@ export type CorporateDashboard = {
   }>;
   employees: Array<{ fullName: string; department: string | null; accountStatus: string | null; transportEligible: boolean | null }>;
   contracts: Array<{ reference: string; status: string; startDate: string | null; endDate: string | null }>;
-  invoices: Array<{ reference: string; periodStart: string; periodEnd: string; totalPesewas: number; lineCount: number }>;
+  invoices: Array<{
+    reference: string; periodStart: string; periodEnd: string; status: string;
+    totalPesewas: number; paidPesewas: number; outstandingPesewas: number; lineCount: number;
+  }>;
   upcomingTrips: Array<{ reference: string; tripDate: string; status: string; passengerCount: number }>;
 };
 
@@ -188,7 +191,8 @@ export async function getCorporateDashboard(input: {
       where: { companyId, clientId: client.id },
       orderBy: [{ periodStart: 'desc' }, { id: 'desc' }],
       select: {
-        reference: true, periodStart: true, periodEnd: true, totalPesewas: true,
+        reference: true, periodStart: true, periodEnd: true, status: true, totalPesewas: true,
+        payments: { select: { amountPesewas: true } },
         _count: { select: { lines: true } },
       },
       take: 20,
@@ -244,14 +248,23 @@ export async function getCorporateDashboard(input: {
       endDate: row.endDate ? row.endDate.toISOString().slice(0, 10) : null,
     })),
     invoices: invoices.map((row: {
-      reference: string; periodStart: Date; periodEnd: Date; totalPesewas: number; _count: { lines: number };
-    }) => ({
-      reference: row.reference,
-      periodStart: row.periodStart.toISOString().slice(0, 10),
-      periodEnd: row.periodEnd.toISOString().slice(0, 10),
-      totalPesewas: row.totalPesewas,
-      lineCount: row._count.lines,
-    })),
+      reference: string; periodStart: Date; periodEnd: Date; status: string; totalPesewas: number;
+      payments: Array<{ amountPesewas: number }>; _count: { lines: number };
+    }) => {
+      const paidPesewas = row.payments.reduce((sum, payment) => sum + payment.amountPesewas, 0);
+      return {
+        reference: row.reference,
+        periodStart: row.periodStart.toISOString().slice(0, 10),
+        periodEnd: row.periodEnd.toISOString().slice(0, 10),
+        status: row.status,
+        totalPesewas: row.totalPesewas,
+        paidPesewas,
+        outstandingPesewas: row.status === 'PAID' || row.status === 'VOID'
+          ? 0
+          : row.totalPesewas - paidPesewas,
+        lineCount: row._count.lines,
+      };
+    }),
     upcomingTrips: upcomingTrips.map((row: {
       reference: string; tripDate: Date; status: string; _count: { bookings: number };
     }) => ({

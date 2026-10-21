@@ -160,7 +160,7 @@ export default async function CorporateDashboardPage({
                 <ul className="mt-3 grid gap-1 text-sm text-slate-700">
                   {dashboard.invoices.map((invoice) => (
                     <li key={invoice.reference}>
-                      {invoice.reference} — {invoice.periodStart} → {invoice.periodEnd} — {cedis(invoice.totalPesewas)}
+                      {invoice.reference} — {invoice.periodStart} → {invoice.periodEnd} — {invoice.status} — {cedis(invoice.totalPesewas)} total, {cedis(invoice.outstandingPesewas)} outstanding
                     </li>
                   ))}
                 </ul>

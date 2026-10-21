@@ -34,6 +34,7 @@ export async function GET(request: Request, context: { params: Promise<{ company
       companyId,
       clientId: url.searchParams.get('clientId') ?? undefined,
       cursor: url.searchParams.get('cursor') ?? undefined,
+      status: url.searchParams.get('status') ?? undefined,
     });
     return NextResponse.json(result);
   } catch (error) {

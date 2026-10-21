@@ -261,6 +261,8 @@ model User {
   assignedRoleChanges UserRoleAssignment[] @relation("RoleAssignmentActor")
   rentalRequestStatusChanges RentalRequestStatusHistory[]
   contractStatusChanges ContractStatusHistory[]
+  corporateInvoiceStatusChanges CorporateInvoiceStatusHistory[]
+  invoicePaymentsRecorded InvoicePayment[]
   bookingStatusChanges BookingStatusHistory[]
   tripStatusChanges TripStatusHistory[]
   driverAccount     Driver?                @relation("DriverAccount")
@@ -714,6 +716,8 @@ model CorporateInvoice {
   client         Client   @relation(fields: [companyId, clientId], references: [companyId, id], onDelete: Restrict)
   contract       Contract @relation(fields: [companyId, contractId], references: [companyId, id], onDelete: Restrict)
   lines          CorporateInvoiceLine[]
+  statusHistory  CorporateInvoiceStatusHistory[]
+  payments       InvoicePayment[]
 
   @@unique([companyId, id])
   @@unique([companyId, reference])
@@ -731,11 +735,50 @@ model CorporateInvoiceLine {
   quantity        Int
   ratePesewas     Int
   amountPesewas   Int
+  // Maintained only by database triggers: true while the parent invoice is
+  // not VOID. The status-aware trip-billing freeze is a partial unique index
+  // on (companyId, tripId) WHERE billingActive (migration-only; Prisma cannot
+  // express partial indexes).
+  billingActive   Boolean  @default(true)
   createdAt       DateTime @default(now()) @db.Timestamptz(6)
   invoice         CorporateInvoice @relation(fields: [companyId, invoiceId], references: [companyId, id], onDelete: Restrict)
   trip            Trip?    @relation(fields: [companyId, tripId], references: [companyId, id], onDelete: Restrict)
 
   @@index([companyId, invoiceId])
+}
+
+model CorporateInvoiceStatusHistory {
+  id         String   @id @default(cuid())
+  companyId  String
+  invoiceId  String
+  sequence   Int
+  actorId    String
+  fromStatus String?
+  toStatus   String
+  reason     String
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  invoice    CorporateInvoice @relation(fields: [companyId, invoiceId], references: [companyId, id], onDelete: Restrict)
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, invoiceId, sequence])
+  @@index([companyId, invoiceId, createdAt])
+}
+
+model InvoicePayment {
+  id            String   @id @default(cuid())
+  companyId     String
+  invoiceId     String
+  amountPesewas Int
+  method        String?
+  reference     String?
+  receivedAt    DateTime @db.Date
+  reason        String
+  recordedById  String
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+  invoice       CorporateInvoice @relation(fields: [companyId, invoiceId], references: [companyId, id], onDelete: Restrict)
+  recordedBy    User     @relation(fields: [recordedById], references: [id], onDelete: Restrict)
+
+  @@index([companyId, invoiceId, createdAt])
 }
 
 model UserClientBinding {

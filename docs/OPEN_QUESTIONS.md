@@ -215,3 +215,23 @@ Until resolved, settings remain unset and dependent actions must be blocked with
   unit 373/373, and E2E 4/4, with the D-060 ratifications recorded. Phase 1C planning may begin;
   Phase 1C construction requires the owner's separate go-ahead. Descoped items (DRV-03/DRV-05,
   invoice issuance/payment/void lifecycle) require their own decisions first.
+
+## Phase 1C kickoff — invoice lifecycle and payments built; ratification and next slices (2026-10-21)
+
+The owner authorized Phase 1C construction on 2026-10-21 ("go ahead start building phase 1c
+completely after i will run"). The first slice (corporate invoice lifecycle + manual payments,
+D-061/D-062 in docs/DECISIONS.md) is built and sandbox-verified; see the Phase 1C section of
+docs/PROGRESS.md and docs/PHASE_1C_VERIFICATION.md. For ratification at the Phase 1C gate:
+
+- D-061 models part-payment as a derived balance, not a "Partially Paid" status, and has no
+  Pending Approval or Overdue status (the aspirational rows in docs/STATE_MACHINES.md predate
+  it). Confirm this is acceptable, or ask for an approval step / overdue job.
+- D-062 keeps payments minimal (amount, method, reference, date, reason) without the
+  verification/reconciliation statuses sketched for FIN-03 in the standing brief; reconciliation
+  is FIN-08 (Phase 3). Corrections to a recorded payment are not supported (append-only);
+  confirm a future adjustment/credit-note process is the right vehicle.
+- A dedicated editor for `finance.corporate_rates` (and `bookings.creation_cutoff`) is still
+  outstanding; rates are currently written through the settings service only.
+- Remaining Phase 1C scope per richie-tms-phase-prompts.md: PAX-01, RNT-09, RPT-02, RPT-03,
+  RPT-04, FIN-07, role-specific dashboards and the hardening pass. FIN-07 is next because its
+  totals must reconcile against the new invoice/payment records (workflow F).
