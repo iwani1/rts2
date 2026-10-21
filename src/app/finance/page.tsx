@@ -128,7 +128,7 @@ export default async function FinanceDashboardPage({
               : <>Reconciliation warning: recognised revenue {cedis(dashboard.reconciliation.recognizedRevenuePesewas)} does not equal payments {cedis(dashboard.reconciliation.paymentsReceivedPesewas)} + outstanding {cedis(dashboard.reconciliation.outstandingPesewas)}. Investigate before relying on these figures.</>}
           </p>
 
-          <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Finance totals">
+          <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Finance totals">
             <div className="rounded-lg border border-slate-200 bg-white p-5">
               <p className="text-sm font-medium text-slate-500">Recognised revenue</p>
               <p className="mt-2 text-2xl font-semibold text-slate-950">{cedis(dashboard.recognizedRevenuePesewas)}</p>
@@ -148,6 +148,70 @@ export default async function FinanceDashboardPage({
               <p className="text-sm font-medium text-slate-500">Draft pipeline</p>
               <p className="mt-2 text-2xl font-semibold text-slate-950">{cedis(dashboard.draftPipelinePesewas)}</p>
               <p className="mt-1 text-xs text-slate-500">{dashboard.draftInvoiceCount} draft invoice(s), not yet revenue.</p>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-white p-5">
+              <p className="text-sm font-medium text-slate-500">Approved expenses ({dashboard.margin.basis === 'window' ? 'in window' : 'all time'})</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">{cedis(dashboard.expenses.approvedPesewas)}</p>
+              <p className="mt-1 text-xs text-slate-500">
+                {dashboard.expenses.pendingCount} pending ({cedis(dashboard.expenses.pendingPesewas)}) not yet effective.
+              </p>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-white p-5">
+              <p className="text-sm font-medium text-slate-500">Estimated gross margin</p>
+              {dashboard.margin.status === 'ESTIMATED' ? (
+                <>
+                  <p className="mt-2 text-2xl font-semibold text-slate-950">{cedis(dashboard.margin.marginPesewas)}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Revenue {cedis(dashboard.margin.revenuePesewas)} minus approved costs {cedis(dashboard.margin.approvedCostsPesewas)} ({dashboard.margin.basis}). Estimated — not audited profit.
+                  </p>
+                </>
+              ) : (
+                <p className="mt-2 text-sm text-slate-600">{dashboard.margin.reason}</p>
+              )}
+            </div>
+          </section>
+
+          <section className="mt-6 grid gap-6 lg:grid-cols-2">
+            <div className="overflow-x-auto rounded-lg border border-slate-200">
+              <h2 className="bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900">Approved expenses by category</h2>
+              <table className="w-full text-left text-sm">
+                <thead className="text-slate-500">
+                  <tr><th className="px-4 py-2 font-medium">Category</th><th className="px-4 py-2 font-medium">Expenses</th><th className="px-4 py-2 font-medium">Amount</th></tr>
+                </thead>
+                <tbody>
+                  {dashboard.expenses.byCategory.map((row) => (
+                    <tr className="border-t border-slate-100" key={row.category}>
+                      <td className="px-4 py-2 font-medium text-slate-900">{row.category}</td>
+                      <td className="px-4 py-2 text-slate-700">{row.expenseCount}</td>
+                      <td className="px-4 py-2 text-slate-700">{cedis(row.amountPesewas)}</td>
+                    </tr>
+                  ))}
+                  {dashboard.expenses.byCategory.length === 0 ? (
+                    <tr><td className="px-4 py-4 text-slate-600" colSpan={3}>No approved expenses on this basis yet.</td></tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+            <div className="overflow-x-auto rounded-lg border border-slate-200">
+              <h2 className="bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900">Cost per completed trip</h2>
+              <table className="w-full text-left text-sm">
+                <thead className="text-slate-500">
+                  <tr><th className="px-4 py-2 font-medium">Trip date</th><th className="px-4 py-2 font-medium">Approved cost</th><th className="px-4 py-2 font-medium">Passengers</th><th className="px-4 py-2 font-medium">Per passenger</th></tr>
+                </thead>
+                <tbody>
+                  {dashboard.expenses.tripCosts.map((row) => (
+                    <tr className="border-t border-slate-100" key={row.tripId}>
+                      <td className="px-4 py-2 font-medium text-slate-900">{row.tripDate}</td>
+                      <td className="px-4 py-2 text-slate-700">{cedis(row.approvedCostPesewas)}</td>
+                      <td className="px-4 py-2 text-slate-700">{row.completedJourneys}</td>
+                      <td className="px-4 py-2 text-slate-700">{row.costPerPassengerPesewas === null ? '—' : cedis(row.costPerPassengerPesewas)}</td>
+                    </tr>
+                  ))}
+                  {dashboard.expenses.tripCosts.length === 0 ? (
+                    <tr><td className="px-4 py-4 text-slate-600" colSpan={4}>No completed trips carry approved trip expenses yet.</td></tr>
+                  ) : null}
+                </tbody>
+              </table>
             </div>
           </section>
 

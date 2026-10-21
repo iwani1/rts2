@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { summariseFinanceDashboard } from './dashboard-summary';
+import { summariseCostsAndMargin, summariseFinanceDashboard } from './dashboard-summary';
 
 const statuses = [
   { status: 'DRAFT', invoiceCount: 1, totalPesewas: 20000 },
@@ -73,5 +73,49 @@ describe('summariseFinanceDashboard (FIN-07 / D-063)', () => {
     ]);
     expect(summary.reconciliation.reconciles).toBe(true);
     expect(summary.clients).toEqual([]);
+  });
+});
+
+describe('approved-expense costs and estimated margin (FIN-05R / D-082)', () => {
+  const categoryRows = [
+    { category: 'FUEL', expenseCount: 2, amountPesewas: 90000 },
+    { category: 'TOLLS', expenseCount: 1, amountPesewas: 4500 },
+  ];
+
+  it('sums approved categories and estimates margin on a matched basis', () => {
+    const result = summariseCostsAndMargin({
+      approvedByCategory: categoryRows, pendingCount: 1, pendingPesewas: 700,
+      tripCosts: [], revenuePesewas: 200000, basis: 'all-time',
+    });
+    expect(result.approvedExpensesPesewas).toBe(94500);
+    expect(result.approvedExpenseCount).toBe(3);
+    expect(result.margin).toEqual({
+      status: 'ESTIMATED', basis: 'all-time', revenuePesewas: 200000,
+      approvedCostsPesewas: 94500, marginPesewas: 105500,
+    });
+  });
+
+  it('stays insufficient-data without approved costs or without revenue', () => {
+    expect(summariseCostsAndMargin({
+      approvedByCategory: [], pendingCount: 0, pendingPesewas: 0,
+      tripCosts: [], revenuePesewas: 200000, basis: 'window',
+    }).margin.status).toBe('INSUFFICIENT_DATA');
+    expect(summariseCostsAndMargin({
+      approvedByCategory: categoryRows, pendingCount: 0, pendingPesewas: 0,
+      tripCosts: [], revenuePesewas: 0, basis: 'all-time',
+    }).margin.status).toBe('INSUFFICIENT_DATA');
+  });
+
+  it('derives cost per passenger only from completed journeys', () => {
+    const result = summariseCostsAndMargin({
+      approvedByCategory: categoryRows, pendingCount: 0, pendingPesewas: 0,
+      tripCosts: [
+        { tripId: 't1', tripDate: '2026-10-01', approvedCostPesewas: 10000, completedJourneys: 4 },
+        { tripId: 't2', tripDate: '2026-10-02', approvedCostPesewas: 10000, completedJourneys: 0 },
+      ],
+      revenuePesewas: 50000, basis: 'window',
+    });
+    expect(result.tripCosts[0].costPerPassengerPesewas).toBe(2500);
+    expect(result.tripCosts[1].costPerPassengerPesewas).toBeNull();
   });
 });

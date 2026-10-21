@@ -846,3 +846,25 @@ phase prompt allows it only once confirmed required.
    GLOBAL, FINANCE_OFFICER COMPANY; OPS_MANAGER READ_ONLY reads). Only
    GLOBAL/COMPANY may write or decide.
 
+
+## D-082 — FIN-05R: approved expenses as the cost basis for the FIN-07 dashboard (KPIS.md)
+
+1. **Cost basis.** Only `Approved` expenses count as attributable cost — by
+   `expenseDate` within the dashboard window when one is selected, else all
+   time. `Pending` records are reported separately (amount + count) as
+   not-yet-effective spend; `Rejected` records never count as cost.
+2. **Margin.** Estimated gross margin = recognised revenue − approved
+   expenses on a **matched basis**: with a window, revenue is the invoices
+   issued in that window (FIN-07 activity figure) and costs are approved
+   expenses dated in the same window; without a window both are standing
+   all-time figures. It is presented only when approved costs > 0 AND
+   revenue > 0, labelled "estimated gross margin — not audited profit"
+   (KPIS.md). Otherwise the dashboard keeps `INSUFFICIENT_DATA`.
+3. **Cost per trip / per passenger.** Shown per trip only for `COMPLETED`
+   trips carrying at least one approved expense; the passenger denominator
+   is the count of that trip's `Completed` bookings (boarded journeys).
+   Trips without completed bookings show cost only, never a unit figure;
+   shared fleet costs are never allocated or imputed (KPIS.md).
+4. The finance JSON report (RPT-03) and exports pass the dashboard margin
+   through unchanged, so they gain an estimated margin exactly when the
+   dashboard has one.

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { getPrisma } from '@/server/prisma';
 import { getFinanceDashboard } from '../finance/dashboard';
+import type { DashboardMargin } from '../finance/dashboard-summary';
 import { reportQuerySchema, reportWindow, type ReportQuery } from './report-schema';
 import { assertReportAccess, FINANCE_SCOPES } from './transport-reports';
 
@@ -38,7 +39,7 @@ export type FinanceReport = {
     paymentsWithMethod: { numerator: number; denominator: number };
     paymentsWithReference: { numerator: number; denominator: number };
   };
-  margin: { status: 'INSUFFICIENT_DATA'; reason: string };
+  margin: DashboardMargin;
   unavailableMetrics: Array<{ metric: string; reason: string }>;
 };
 
@@ -47,8 +48,8 @@ export type FinanceReport = {
  * reconciled figures (D-063); this report adds the windowed breakdowns —
  * revenue by client and by contract service type (standing invoices by their
  * ISSUED history timestamp), payments received in the window by method — and
- * the point-in-time outstanding-invoice list. Expenses, unit costs and margin
- * stay insufficient-data until attributable cost records exist.
+ * the point-in-time outstanding-invoice list. The dashboard's estimated
+ * gross margin (approved FIN-05 expenses, D-082) passes through unchanged.
  */
 export async function getFinanceReport(input: {
   actorId: string; companyId: string;

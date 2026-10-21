@@ -2,7 +2,13 @@ import { z } from 'zod';
 import { PermissionDeniedError, resolvePermission } from '@/modules/auth/permissions';
 import { getPrisma } from '@/server/prisma';
 import { financeDashboardQuerySchema } from './dashboard-schema';
-import { summariseFinanceDashboard } from './dashboard-summary';
+import {
+  summariseCostsAndMargin,
+  summariseFinanceDashboard,
+  type DashboardMargin,
+  type ExpenseCategoryTotal,
+  type TripCost,
+} from './dashboard-summary';
 
 const companyIdSchema = z.string().trim().min(1).max(128);
 
@@ -46,22 +52,22 @@ export type FinanceDashboard = {
     outstandingPesewas: number;
     reconciles: boolean;
   };
-  margin: { status: 'INSUFFICIENT_DATA'; reason: string };
+  expenses: {
+    byCategory: ExpenseCategoryTotal[];
+    approvedPesewas: number;
+    approvedCount: number;
+    pendingPesewas: number;
+    pendingCount: number;
+    tripCosts: TripCost[];
+  };
+  margin: DashboardMargin;
   unavailableMetrics: Array<{ metric: string; reason: string }>;
 };
 
 const UNAVAILABLE_METRICS = [
   {
-    metric: 'Estimated margin',
-    reason: 'Margin is shown only when cost and revenue data are sufficient (FIN-07). Attributable cost records do not exist yet: expenses are FIN-05 (Phase 3) and maintenance work-order costs cannot be attributed to invoices or trips, so no margin figure is presented.',
-  },
-  {
     metric: 'Rental revenue and rental outstanding balances',
     reason: 'Rental invoices and rental payment records are not implemented; quotation values are never treated as revenue.',
-  },
-  {
-    metric: 'Expenses by category, cost per trip and cost per passenger',
-    reason: 'No expense records exist yet (FIN-05 is Phase 3). Costs are never imputed or allocated without a recorded basis.',
   },
   {
     metric: 'Outstanding ageing by due date',
@@ -74,8 +80,11 @@ const UNAVAILABLE_METRICS = [
  * corporate invoice and payment transaction records. Revenue counts ISSUED +
  * PAID invoices only, payments are the append-only InvoicePayment sums, and
  * outstanding is derived per invoice — never stored. The optional window
- * drives only the activity section (payments by receivedAt, recognition by
+ * drives the activity section (payments by receivedAt, recognition by
  * the append-only ISSUED history timestamp); balances are point-in-time.
+ * Approved FIN-05 expenses are the attributable cost basis for expenses by
+ * category, cost per completed trip/passenger and the estimated gross margin
+ * on a matched window/all-time basis (D-082).
  */
 export async function getFinanceDashboard(input: {
   actorId: string; companyId: string; fromDate?: string; toDate?: string;
@@ -212,6 +221,72 @@ export async function getFinanceDashboard(input: {
     })),
   });
 
+  // FIN-05R / D-082: approved expenses are the attributable cost basis, on
+  // the expense date within the selected window when one is given.
+  const expenseWindow = windowStart || windowEndExclusive ? {
+    expenseDate: {
+      ...(windowStart ? { gte: windowStart } : {}),
+      ...(windowEndExclusive ? { lt: windowEndExclusive } : {}),
+    },
+  } : {};
+  const [approvedByCategoryRows, pendingAggregate, approvedTripCostRows] = await Promise.all([
+    prisma.expense.groupBy({
+      by: ['category'], where: { companyId, status: 'Approved', ...expenseWindow },
+      _count: { _all: true }, _sum: { amountPesewas: true },
+    }),
+    prisma.expense.aggregate({
+      where: { companyId, status: 'Pending', ...expenseWindow },
+      _count: { _all: true }, _sum: { amountPesewas: true },
+    }),
+    prisma.expense.groupBy({
+      by: ['tripId'], where: { companyId, status: 'Approved', tripId: { not: null }, ...expenseWindow },
+      _sum: { amountPesewas: true },
+    }),
+  ]);
+  const tripCostTripIds = approvedTripCostRows
+    .map((row) => row.tripId)
+    .filter((tripId): tripId is string => Boolean(tripId));
+  const [completedTrips, completedJourneyRows] = tripCostTripIds.length > 0
+    ? await Promise.all([
+        prisma.trip.findMany({
+          where: { companyId, id: { in: tripCostTripIds }, status: 'Completed' },
+          select: { id: true, tripDate: true },
+        }),
+        prisma.booking.groupBy({
+          by: ['tripId'],
+          where: { companyId, tripId: { in: tripCostTripIds }, status: 'Completed' },
+          _count: { _all: true },
+        }),
+      ])
+    : [[], []];
+  const completedTripDates = new Map(completedTrips.map((trip) => [trip.id, trip.tripDate]));
+  const journeysByTrip = new Map(
+    completedJourneyRows.map((row) => [row.tripId, row._count._all]),
+  );
+  const hasWindow = Boolean(query.fromDate || query.toDate);
+  const costs = summariseCostsAndMargin({
+    approvedByCategory: approvedByCategoryRows.map((row) => ({
+      category: row.category,
+      expenseCount: row._count._all,
+      amountPesewas: row._sum.amountPesewas ?? 0,
+    })).sort((a, b) => b.amountPesewas - a.amountPesewas || a.category.localeCompare(b.category)),
+    pendingCount: pendingAggregate._count._all,
+    pendingPesewas: pendingAggregate._sum.amountPesewas ?? 0,
+    tripCosts: approvedTripCostRows
+      .filter((row) => row.tripId && completedTripDates.has(row.tripId))
+      .map((row) => ({
+        tripId: row.tripId as string,
+        tripDate: (completedTripDates.get(row.tripId as string) as Date).toISOString().slice(0, 10),
+        approvedCostPesewas: row._sum.amountPesewas ?? 0,
+        completedJourneys: journeysByTrip.get(row.tripId as string) ?? 0,
+      }))
+      .sort((a, b) => b.approvedCostPesewas - a.approvedCostPesewas),
+    revenuePesewas: hasWindow
+      ? (issuedInWindowSum._sum.totalPesewas ?? 0)
+      : summary.recognizedRevenuePesewas,
+    basis: hasWindow ? 'window' : 'all-time',
+  });
+
   const methodRows = paymentsByMethod.map((row: {
     method: string | null; _count: { _all: number }; _sum: { amountPesewas: number | null };
   }) => ({
@@ -248,10 +323,19 @@ export async function getFinanceDashboard(input: {
       paymentsWithReference: { numerator: paymentsWithReference, denominator: paymentCount },
     },
     reconciliation: summary.reconciliation,
-    margin: {
-      status: 'INSUFFICIENT_DATA',
-      reason: 'Attributable cost records (FIN-05 expenses, Phase 3) do not exist yet, so margin is not shown.',
+    expenses: {
+      byCategory: approvedByCategoryRows.map((row) => ({
+        category: row.category,
+        expenseCount: row._count._all,
+        amountPesewas: row._sum.amountPesewas ?? 0,
+      })).sort((a, b) => b.amountPesewas - a.amountPesewas || a.category.localeCompare(b.category)),
+      approvedPesewas: costs.approvedExpensesPesewas,
+      approvedCount: costs.approvedExpenseCount,
+      pendingPesewas: pendingAggregate._sum.amountPesewas ?? 0,
+      pendingCount: pendingAggregate._count._all,
+      tripCosts: costs.tripCosts,
     },
+    margin: costs.margin,
     unavailableMetrics: UNAVAILABLE_METRICS,
   };
 }

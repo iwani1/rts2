@@ -305,4 +305,38 @@ describe('finance dashboard reconciles to invoice and payment records (FIN-07 / 
       actorId: financeId, companyId, fromDate: '2027-01-01', toDate: '2028-06-01',
     })).rejects.toBeInstanceOf(ZodError);
   });
+
+  it('counts only approved expenses as cost and estimates margin (FIN-05R / D-082)', async () => {
+    const { createExpense, transitionExpense } = await import('./expenses');
+    const approver = await prisma.user.create({
+      data: { name: 'Dashboard Expense Approver', email: `fin-approver-${randomUUID()}@example.invalid`, status: 'ACTIVE' },
+    });
+    await prisma.userRoleAssignment.create({
+      data: { userId: approver.id, companyId, roleCode: 'FINANCE_OFFICER', reason: 'Integration setup', assignedById: null },
+    });
+    const today = isoDay(0);
+    const fuel = await createExpense({
+      actorId: financeId, companyId, expenseDate: today, category: 'FUEL',
+      description: 'Dashboard cost fixture fuel', amountPesewas: 5000, reason: 'Fuel for dashboard fixture',
+    });
+    await transitionExpense({
+      actorId: approver.id, companyId, expenseId: fuel.id, toStatus: 'Approved', reason: 'Verified against receipts',
+    });
+    const pending = await createExpense({
+      actorId: financeId, companyId, expenseDate: today, category: 'TOLLS',
+      description: 'Dashboard pending fixture', amountPesewas: 999999, reason: 'Awaiting approval in fixture',
+    });
+    expect(pending.status).toBe('Pending');
+
+    const dashboard = await getFinanceDashboard({ actorId: financeId, companyId });
+    const fuelRow = dashboard.expenses.byCategory.find((row) => row.category === 'FUEL');
+    expect(fuelRow?.amountPesewas).toBeGreaterThanOrEqual(5000);
+    expect(dashboard.expenses.pendingPesewas).toBeGreaterThanOrEqual(999999);
+    expect(dashboard.margin.status).toBe('ESTIMATED');
+    if (dashboard.margin.status === 'ESTIMATED') {
+      expect(dashboard.margin.approvedCostsPesewas).toBeLessThan(dashboard.recognizedRevenuePesewas);
+      expect(dashboard.margin.marginPesewas)
+        .toBe(dashboard.margin.revenuePesewas - dashboard.margin.approvedCostsPesewas);
+    }
+  });
 });
