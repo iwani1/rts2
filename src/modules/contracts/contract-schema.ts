@@ -25,9 +25,9 @@ const contractFieldsSchema = z.object({
 });
 
 export const contractInputSchema = contractFieldsSchema;
-export const contractRequestSchema = contractFieldsSchema.extend({
+export const contractRequestSchema = contractFieldsSchema.and(z.object({
   reason: z.string().trim().min(8).max(500),
-});
+}));
 export const contractListQuerySchema = z.object({
   search: z.string().trim().max(100).optional(),
   status: z.enum(CONTRACT_STATUSES).optional(),

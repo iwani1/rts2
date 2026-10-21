@@ -8,7 +8,7 @@ import { dispatchBoardQuerySchema, tripNoShowSchema, tripResourceAssignmentSchem
 
 const companyIdSchema = z.string().trim().min(1).max(128);
 const tripIdSchema = z.string().trim().min(1).max(128);
-const ACTIVE_TRIP_STATUSES = ['Planned', 'Ready for Dispatch', 'Dispatched', 'In Progress', 'Delayed', 'Interrupted'] as const;
+const ACTIVE_TRIP_STATUSES = ['Planned', 'Ready for Dispatch', 'Dispatched', 'In Progress', 'Delayed', 'Interrupted'];
 
 export class DispatchCompanyNotFoundError extends Error {
   readonly code = 'COMPANY_NOT_FOUND';

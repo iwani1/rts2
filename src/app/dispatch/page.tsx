@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { auth } from '@/modules/auth/auth';
+import { headers } from 'next/headers';
+import { getAuth } from '@/server/auth';
 import { resolvePermission } from '@/modules/auth/permissions';
 import { getPrisma } from '@/server/prisma';
 import { getDispatchBoard, type DispatchBoardTrip } from '@/modules/dispatch/dispatch';
@@ -22,7 +23,6 @@ function warningText(warning: DispatchBoardTrip['warnings'][number]) {
     case 'VEHICLE_SAFETY_BLOCKED': return 'Vehicle has an active safety block';
     case 'DRIVER_ARCHIVED': return 'Driver is archived';
     case 'DRIVER_LICENCE_EXPIRED': return `Driver licence expired ${warning.licenceExpiresAt}`;
-    default: return warning.type;
   }
 }
 
@@ -31,8 +31,8 @@ export default async function DispatchPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await auth();
-  if (!session?.user?.id) redirect('/login');
+    const session = await getAuth().api.getSession({ headers: await headers() });
+  if (!session) redirect('/login');
   const params = await searchParams;
   const prisma = getPrisma();
   const companies = await prisma.company.findMany({

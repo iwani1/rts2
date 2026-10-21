@@ -66,12 +66,12 @@ describe('driver interface with PostgreSQL persistence', () => {
     await transitionContract({ toStatus: 'Pending Approval', reason: 'Submitting fixture for approval' }, managerId, companyId, draft.id);
     const active = await transitionContract({ toStatus: 'Active', reason: 'Fixture contract approved' }, managerId, companyId, draft.id);
     const [origin, destination] = await Promise.all([
-      prisma.location.create({ data: { companyId, name: 'Depot', type: 'DEPOT', clientId: client.id } }),
-      prisma.location.create({ data: { companyId, name: 'Client HQ', type: 'CLIENT_PREMISES', clientId: client.id } }),
+      prisma.location.create({ data: { companyId, name: 'Depot' } }),
+      prisma.location.create({ data: { companyId, name: 'Client HQ' } }),
     ]);
     const route = await prisma.route.create({
       data: {
-        companyId, clientId: client.id, name: 'Morning inbound', transportMode: 'BUS',
+        companyId, clientId: client.id, name: 'Morning inbound', reference: `RTE-${randomUUID().slice(0, 12).toUpperCase()}`, operatingDays: ['MON', 'TUE', 'WED', 'THU', 'FRI'],
         originLocationId: origin.id, destinationLocationId: destination.id, capacityRequirement: 40, active: true,
       },
     });

@@ -74,8 +74,8 @@ type InvoiceDbShape = {
 const invoiceInclude = {
   client: { select: { name: true } },
   contract: { select: { reference: true } },
-  lines: { orderBy: [{ createdAt: 'asc' as const }, { id: 'asc' as const }] },
-} as const;
+  lines: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] },
+};
 
 function presentInvoice(row: InvoiceDbShape): CorporateInvoiceRecord {
   return {

@@ -57,12 +57,12 @@ describe('dispatch board and resource assignment with PostgreSQL persistence', (
     await transitionContract({ toStatus: 'Pending Approval', reason: 'Submitting fixture for approval' }, managerId, companyId, draft.id);
     const active = await transitionContract({ toStatus: 'Active', reason: 'Fixture contract approved' }, managerId, companyId, draft.id);
     const [origin, destination] = await Promise.all([
-      prisma.location.create({ data: { companyId, name: 'Depot', type: 'DEPOT', clientId } }),
-      prisma.location.create({ data: { companyId, name: 'Client HQ', type: 'CLIENT_PREMISES', clientId } }),
+      prisma.location.create({ data: { companyId, name: 'Depot' } }),
+      prisma.location.create({ data: { companyId, name: 'Client HQ' } }),
     ]);
     const route = await prisma.route.create({
       data: {
-        companyId, clientId, name: 'Morning inbound', transportMode: 'BUS',
+        companyId, clientId, name: 'Morning inbound', reference: `RTE-${randomUUID().slice(0, 12).toUpperCase()}`, operatingDays: ['MON', 'TUE', 'WED', 'THU', 'FRI'],
         originLocationId: origin.id, destinationLocationId: destination.id, capacityRequirement: 10, active: true,
       },
     });

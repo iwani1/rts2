@@ -15,7 +15,7 @@ import { isAllowedTripTransition } from './trip-transitions';
 
 const companyIdSchema = z.string().trim().min(1).max(128);
 const tripIdSchema = z.string().trim().min(1).max(128);
-const MANIFEST_STATUSES = ['Assigned', 'Boarded', 'Completed'] as const;
+const MANIFEST_STATUSES = ['Assigned', 'Boarded', 'Completed'];
 
 export class TripCompanyNotFoundError extends Error {
   readonly code = 'COMPANY_NOT_FOUND';
@@ -102,7 +102,7 @@ const tripInclude = {
   vehicle: { select: { registrationNumber: true } },
   driver: { select: { fullName: true } },
   _count: { select: { bookings: { where: { status: { in: [...MANIFEST_STATUSES] } } } } },
-} as const;
+};
 
 function presentTrip(row: TripDbShape): TripRecord {
   return {

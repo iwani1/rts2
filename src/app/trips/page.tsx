@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { auth, hasRequiredScope } from '@/modules/auth/auth';
+import { headers } from 'next/headers';
+import { getAuth } from '@/server/auth';
 import { resolvePermission } from '@/modules/auth/permissions';
 import { getPrisma } from '@/server/prisma';
 import { TRIP_STATUSES } from '@/modules/trips/trip-transitions';
@@ -20,8 +21,8 @@ export default async function TripsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await auth();
-  if (!session?.user?.id) redirect('/login');
+    const session = await getAuth().api.getSession({ headers: await headers() });
+  if (!session) redirect('/login');
   const params = await searchParams;
   const prisma = getPrisma();
   const companies = await prisma.company.findMany({
@@ -46,7 +47,7 @@ export default async function TripsPage({
       </main>
     );
   }
-  const canManage = hasRequiredScope(permission.scopes, 'GLOBAL') || hasRequiredScope(permission.scopes, 'COMPANY');
+  const canManage = permission.scopes.includes('GLOBAL') || permission.scopes.includes('COMPANY');
 
   const status = firstParam(params.status);
   const validStatus = status && (TRIP_STATUSES as readonly string[]).includes(status) ? status : undefined;

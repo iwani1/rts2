@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { auth } from '@/modules/auth/auth';
+import { headers } from 'next/headers';
+import { getAuth } from '@/server/auth';
 import { getPrisma } from '@/server/prisma';
 import { ClientBindingNotFoundError, getCorporateDashboard } from '@/modules/clients/dashboard';
 
@@ -17,8 +18,8 @@ export default async function CorporateDashboardPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await auth();
-  if (!session?.user?.id) redirect('/login');
+    const session = await getAuth().api.getSession({ headers: await headers() });
+  if (!session) redirect('/login');
   const params = await searchParams;
   const prisma = getPrisma();
   const companies = await prisma.company.findMany({

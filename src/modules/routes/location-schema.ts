@@ -19,9 +19,9 @@ const locationFieldsSchema = z.object({
 });
 
 export const locationInputSchema = locationFieldsSchema;
-export const locationRequestSchema = locationFieldsSchema.extend({
+export const locationRequestSchema = locationFieldsSchema.and(z.object({
   reason: z.string().trim().min(8).max(500),
-});
+}));
 export const locationListQuerySchema = z.object({
   search: z.string().trim().max(100).optional(),
   cursor: z.string().min(1).max(128).optional(),

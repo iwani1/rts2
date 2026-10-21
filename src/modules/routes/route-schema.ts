@@ -25,9 +25,9 @@ const routeFieldsSchema = z.object({
 });
 
 export const routeInputSchema = routeFieldsSchema;
-export const routeRequestSchema = routeFieldsSchema.extend({
+export const routeRequestSchema = routeFieldsSchema.and(z.object({
   reason: z.string().trim().min(8).max(500),
-});
+}));
 export const routeListQuerySchema = z.object({
   search: z.string().trim().max(100).optional(),
   clientId: z.string().trim().min(1).max(128).optional(),

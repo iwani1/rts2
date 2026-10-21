@@ -36,7 +36,7 @@ export default async function Home() {
   const canManageEmployees = employeeAccess.allowed && employeeAccess.scopes.some((scope) => ['GLOBAL', 'COMPANY'].includes(scope));
   const canManageRoutes = routeAccess.allowed && routeAccess.scopes.some((scope) => ['GLOBAL', 'COMPANY'].includes(scope));
   const canManageBookings = bookingAccess.allowed && bookingAccess.scopes.some((scope) => ['GLOBAL', 'COMPANY'].includes(scope));
-  const tripAccess = await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'trip:dispatch' });
+  const tripAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'trip:dispatch' }) : { allowed: false, scopes: [] };
   const canManageTrips = tripAccess.allowed && tripAccess.scopes.some((scope) => ['GLOBAL', 'COMPANY'].includes(scope));
   const invoiceAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'invoice:manage' }) : { allowed: false, scopes: [] };
   const canManageInvoices = invoiceAccess.allowed && invoiceAccess.scopes.some((scope) => ['GLOBAL', 'COMPANY'].includes(scope));

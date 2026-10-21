@@ -75,3 +75,13 @@ Until resolved, settings remain unset and dependent actions must be blocked with
   `Client.corporateInvoices` back-relation for `CorporateInvoice.client`. Fixed in the follow-up commit;
   a full duplicate/pairing audit of the schema was run in-sandbox and is clean. Lesson recorded: sandbox
   schema edits must always pair-check relations because `prisma` cannot run it locally.
+
+## Typecheck fixed patterns (Fedora run 3, 2026-10-21)
+- The Phase 1B typecheck pass surfaced that code written after the sandbox git-metadata incident used
+  imagined helpers (`@/modules/auth/api` `requireApiSession`, `@/modules/auth/auth`) and Prisma shapes
+  copied from the summary instead of the real repo (Location `type`/`clientId`, Route `transportMode`,
+  RouteSchedule `name`). All are fixed to the real patterns: API routes use `getAuth().api.getSession`
+  + `NextResponse` exactly like the bookings routes; pages use `getAuth`/`next/headers`; fixtures use the
+  real model fields; Zod request schemas compose refined field schemas with `.and(z.object({ reason }))`;
+  the two pending settings keys are annotated through `SettingKey` with the registry-row gap unchanged
+  (owner approval still required).

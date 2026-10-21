@@ -7,7 +7,7 @@ import { driverEventSchema, driverTripListQuerySchema, type DriverEventType } fr
 
 const companyIdSchema = z.string().trim().min(1).max(128);
 const tripIdSchema = z.string().trim().min(1).max(128);
-const MANIFEST_STATUSES = ['Assigned', 'Boarded', 'Completed'] as const;
+const MANIFEST_STATUSES = ['Assigned', 'Boarded', 'Completed'];
 
 export class DriverCompanyNotFoundError extends Error {
   readonly code = 'COMPANY_NOT_FOUND';

@@ -1,14 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getPrisma } from '@/server/prisma';
-import { createClient } from '../clients/clients';
-import { createContract, transitionContract } from '../contracts/contracts';
-import { createBooking, transitionBooking } from '../bookings/bookings';
-import { assignBookingToTrip, generateTripsFromSchedules, transitionTrip } from '../trips/trips';
-import { assignTripResources, getDispatchBoard, recordTripNoShow } from '../dispatch/dispatch';
-import { linkDriverAccount, listDriverTrips, postDriverEvent } from '../driver/driver';
-import { generateCorporateInvoice } from '../finance/invoices';
-import { bindUserClient, getCorporateDashboard } from '../clients/dashboard';
+import { createClient } from './clients/clients';
+import { createContract, transitionContract } from './contracts/contracts';
+import { createBooking, transitionBooking } from './bookings/bookings';
+import { assignBookingToTrip, generateTripsFromSchedules, transitionTrip } from './trips/trips';
+import { assignTripResources, getDispatchBoard, recordTripNoShow } from './dispatch/dispatch';
+import { linkDriverAccount, listDriverTrips, postDriverEvent } from './driver/driver';
+import { generateCorporateInvoice } from './finance/invoices';
+import { bindUserClient, getCorporateDashboard } from './clients/dashboard';
 
 const prisma = getPrisma();
 let companyId = '';
@@ -78,19 +78,19 @@ describe('Phase 1B workflow: booking to invoice and corporate dashboard', () => 
     const active = await transitionContract({ toStatus: 'Active', reason: 'Workflow fixture approved' }, managerId, companyId, draft.id);
     contractId = active.id;
     const [origin, destination] = await Promise.all([
-      prisma.location.create({ data: { companyId, name: 'Depot', type: 'DEPOT', clientId } }),
-      prisma.location.create({ data: { companyId, name: 'Client HQ', type: 'CLIENT_PREMISES', clientId } }),
+      prisma.location.create({ data: { companyId, name: 'Depot' } }),
+      prisma.location.create({ data: { companyId, name: 'Client HQ' } }),
     ]);
     const route = await prisma.route.create({
       data: {
-        companyId, clientId, name: 'Morning inbound', transportMode: 'BUS',
+        companyId, clientId, name: 'Morning inbound', reference: `RTE-${randomUUID().slice(0, 12).toUpperCase()}`, operatingDays: ['MON', 'TUE', 'WED', 'THU', 'FRI'],
         originLocationId: origin.id, destinationLocationId: destination.id,
         capacityRequirement: 40, plannedStartTime: '06:30', active: true,
       },
     });
     await prisma.routeSchedule.create({
       data: {
-        companyId, routeId: route.id, name: 'Weekday mornings', kind: 'RECURRING',
+        companyId, routeId: route.id, kind: 'RECURRING',
         daysOfWeek: ['MON', 'TUE', 'WED', 'THU', 'FRI'], scheduleDate: null,
         plannedStartTime: '06:30', active: true,
       },
@@ -143,7 +143,7 @@ describe('Phase 1B workflow: booking to invoice and corporate dashboard', () => 
     );
     // Driver-side flow: Start, Board remaining rider, Complete.
     const driverTrips = await listDriverTrips({ actorId: driverUserId, companyId, date: DAY });
-    expect(driverTrips.trips.map((entry) => entry.id)).toEqual([generatedTripId]);
+    expect(driverTrips.trips.map((entry: { id: string }) => entry.id)).toEqual([generatedTripId]);
     await postDriverEvent({ eventType: 'START', idempotencyKey: 'flow-start-0001' }, driverUserId, companyId, generatedTripId);
     await postDriverEvent(
       { eventType: 'BOARD', idempotencyKey: 'flow-board-0001', bookingId: booking1Id }, driverUserId, companyId, generatedTripId,
@@ -194,7 +194,7 @@ describe('Phase 1B workflow: booking to invoice and corporate dashboard', () => 
       { userId: hrUserId, clientId, reason: 'Binding workflow HR to its client' }, managerId, companyId,
     );
     const dashboard = await getCorporateDashboard({ actorId: hrUserId, companyId });
-    expect(dashboard.invoices.map((invoice) => invoice.reference)).toEqual([first.invoice.reference]);
-    expect(dashboard.bookings.map((booking) => booking.status).sort()).toEqual(['Cancelled', 'Completed']);
+    expect(dashboard.invoices.map((invoice: { reference: string }) => invoice.reference)).toEqual([first.invoice.reference]);
+    expect(dashboard.bookings.map((booking: { status: string }) => booking.status).sort()).toEqual(['Cancelled', 'Completed']);
   });
 });

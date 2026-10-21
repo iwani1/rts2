@@ -66,12 +66,12 @@ describe('trips, manifests and capacity with PostgreSQL persistence', () => {
     const active = await transitionContract({ toStatus: 'Active', reason: 'Fixture contract approved' }, managerId, companyId, draft.id);
     contractId = active.id;
     const [origin, destination] = await Promise.all([
-      prisma.location.create({ data: { companyId, name: 'Depot', type: 'DEPOT', clientId } }),
-      prisma.location.create({ data: { companyId, name: 'Client HQ', type: 'CLIENT_PREMISES', clientId } }),
+      prisma.location.create({ data: { companyId, name: 'Depot' } }),
+      prisma.location.create({ data: { companyId, name: 'Client HQ' } }),
     ]);
     const route = await prisma.route.create({
       data: {
-        companyId, clientId, name: 'Morning inbound', transportMode: 'BUS',
+        companyId, clientId, name: 'Morning inbound', reference: `RTE-${randomUUID().slice(0, 12).toUpperCase()}`, operatingDays: ['MON', 'TUE', 'WED', 'THU', 'FRI'],
         originLocationId: origin.id, destinationLocationId: destination.id,
         capacityRequirement: 40, active: true,
       },
@@ -79,7 +79,7 @@ describe('trips, manifests and capacity with PostgreSQL persistence', () => {
     routeId = route.id;
     await prisma.routeSchedule.create({
       data: {
-        companyId, routeId, name: 'Weekday mornings', kind: 'RECURRING',
+        companyId, routeId, kind: 'RECURRING',
         daysOfWeek: ['MON', 'TUE', 'WED', 'THU', 'FRI'], scheduleDate: null,
         plannedStartTime: '06:30', active: true,
       },
