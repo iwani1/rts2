@@ -196,3 +196,8 @@ Until resolved, settings remain unset and dependent actions must be blocked with
 - Tooling note (same session): heredoc-written `/tmp` scripts intermittently vanished in this sandbox
   (files absent on the next call). Prefer `edit_file` for surgical changes and verify every change with
   `git diff` before committing — a silent no-op edit batch was caught this way twice.
+
+## Credential hygiene (owner acknowledgement, 2026-10-21)
+- The owner confirms the exposed E2E password is not reused elsewhere and is discarded. No production
+  credentials have been shared. Keep it that way: E2E/admin passwords only ever typed into the local
+  shell; paste only command output that contains no secrets.
