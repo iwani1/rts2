@@ -1172,3 +1172,15 @@ work-order audit history. Sandbox: typecheck + lint clean, unit 436/436
 rides along with the outstanding Phase 1C/2 manual checklists. Recorded
 finding: Tailwind is installed but unwired (utilities inert) — owner
 decision in D-079.
+
+## Route conflict fix (2026-10-21)
+
+`npm run dev` refused to start: the GPS history route
+(`locations/[vehicleId]/history`) collided with the places register's
+`locations/[locationId]` — Next.js forbids sibling dynamic segments
+with different names (introduced by GPS-01; typecheck and the test
+scripts never see it, only dev/build route collection does). The GPS
+history now lives under a static segment:
+`locations/vehicles/[vehicleId]/history`. The fleet locations page
+uses services directly, so nothing else moved. Verified: typecheck
+clean and `next dev` reaches Ready.
