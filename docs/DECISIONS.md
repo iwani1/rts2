@@ -720,3 +720,47 @@ Date: 2026-10-21. Status: decided for Phase 2 construction; recorded for ratific
    service removes older rows (invoked explicitly — no scheduler is
    pretended). Drivers see a consent notice: tracking happens only while on
    an active trip.
+
+## D-078 — Gate ratification of D-061–D-077 and owner policy values (owner-approved 2026-10-21)
+
+Date: 2026-10-21. Status: ratified by the owner ("all", then "go with your
+recommendations" for the policy values). Recorded from the one-page
+sign-off in `docs/SIGN_OFF_D061_D077.md`.
+
+1. **Ratified as built:** D-061 (invoice lifecycle; part-payment as a
+   derived balance, no "Partially Paid" status), D-062 (append-only
+   payments; corrections via a future adjustment/credit-note process),
+   D-065 (passenger self-cancel only before trip assignment; one immutable
+   feedback record per completed journey), D-066 (rental withdrawal only
+   from Draft/Submitted; no quotation acceptance until formal issuance),
+   D-067 (point-in-time operations dashboard), D-068 (notification
+   service, in-app first), D-069 (SMS via Arkesel; honest SENT/DELIVERED
+   states; explicit dispatch), D-070 (email via SMTP; SENT is the
+   strongest claim), D-071 (governed incident lifecycle), D-072
+   (replacement confirmation with audited overrides), D-073 (boarding
+   codes; default posture DISABLED until enabled in Settings), D-074
+   (offline queue for the eight driver trip events), D-075 (computed
+   service reminders; a passed date never completes maintenance),
+   D-076 (2FA required for global Super Administrators), D-077 (GPS
+   interface, honest Not-configured state, 90-day retention).
+2. **On-time pickup threshold (D-064): 10 minutes.** A pickup counts as
+   on time when boarding happens within 10 minutes of the planned start.
+   The report now reads the typed setting `reports.on_time_threshold`
+   (`getOnTimeThresholdMinutes`); once 10 is entered under Settings, RPT-02
+   and its CSV export publish the on-time rate (unset/invalid still shows
+   average delay and coverage with no rate). Chosen over 5 (too strict
+   for Accra traffic) and 15 (too lax to be meaningful); changing it later
+   reclassifies history from the recorded boarding events.
+3. **Revenue by service (D-064): keep the free-text contract service
+   type** as the grouping. A fixed taxonomy is deferred until the client
+   mix justifies it; spelling variants are a known tidy-up item.
+4. **Invoice due dates (D-063): add later.** Invoices keep no due dates
+   for now and outstanding stays grouped by client; due dates plus
+   ageing buckets are recorded as a future requirement (contract payment
+   terms exist to derive them from when the time comes).
+5. **2FA limitation (D-076): accepted.** Enforcement at sign-in and
+   workspace entry is sufficient for the small privileged-user
+   population; hard middleware blocking remains a recorded follow-up.
+6. **What this does not close:** the Phase 1C Fedora run
+   (`./scripts/verify-phase1c.sh`), the Phase 1C and Phase 2 manual
+   checklists, and entering the threshold value (item 2) in Settings.

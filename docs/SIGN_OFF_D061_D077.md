@@ -1,4 +1,5 @@
 # Decision sign-off — D-061 to D-077 (Phases 1C + 2)
+**✅ RATIFIED 2026-10-21** — all rows approved; policy values per D-078 (threshold 10 min, free-text revenue grouping, due dates later, 2FA limitation accepted). Recorded as D-078 in `docs/DECISIONS.md`.
 **Owner approval in one pass.** Tick each row, fill in the two policy values, sign at the bottom. Full texts: `docs/DECISIONS.md`.
 
 ## A. Ratify as built (tick ✓ = approved, ✗ = send back with note)

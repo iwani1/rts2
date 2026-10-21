@@ -1147,3 +1147,17 @@ The script ends pointing at the remaining gate items: the manual browser
 workflows and E2E in `docs/PHASE_2_VERIFICATION.md`, owner ratification
 of D-068–D-077, and the still-outstanding Phase 1C Fedora run
 (`./scripts/verify-phase1c.sh`, expects 25 migrations).
+
+## D-061–D-077 ratified (2026-10-21, D-078)
+
+Owner approved the one-page sign-off (`docs/SIGN_OFF_D061_D077.md`) in
+full, with the recommended policy values: on-time pickup threshold
+**10 minutes**, revenue-by-service keeps the free-text contract field,
+invoice due dates + ageing deferred as a recorded future requirement,
+and the D-076 2FA enforcement limitation accepted. The threshold is now
+wired (`c87fe14`): RPT-02 reads the typed `reports.on_time_threshold`
+setting and publishes the on-time rate once 10 is entered in Settings;
+unit 428/428 in the sandbox, with an integration test for the
+published-rate path awaiting the next Fedora run. Remaining gate items:
+`./scripts/verify-phase1c.sh`, both manual checklists, and entering the
+threshold value in Settings.

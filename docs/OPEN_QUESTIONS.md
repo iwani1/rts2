@@ -238,22 +238,15 @@ docs/PROGRESS.md and docs/PHASE_1C_VERIFICATION.md. For ratification at the Phas
   Phase 1C gate (the MVP gate; Phase 2 must not start until it is approved).
   FIN-07 (D-063), RPT-02/RPT-03/RPT-04 (D-064), PAX-01 (D-065), RNT-09 (D-066) and the
   operations dashboard (D-067) are built.
-- D-065/D-066 need gate ratification: passengers self-cancel only before trip assignment with
-  one immutable feedback record per completed journey; rental customers may withdraw only
-  Draft/Submitted requests, and no quotation acceptance exists until formal issuance lands.
-  Confirm, or ask for changes.
-- D-064 needs gate ratification and two policy inputs: the on-time pickup threshold in minutes
-  (until set, RPT-02 publishes delay averages and coverage but no on-time rate), and whether the
-  RPT-03 "revenue by service" grouping by contract service type matches management's service
-  taxonomy (it is currently the free-text contract field).
-- D-063 (FIN-07) needs gate ratification: margin stays hidden until attributable cost records
-  exist (FIN-05, Phase 3) — confirm no estimated margin should ever be displayed; invoices carry
-  no due dates, so outstanding is grouped by client, not aged — confirm whether invoice due dates
-  (and ageing buckets) should be added in a later phase.
+- **D-061–D-067 ratified 2026-10-21 (D-078)** with the owner policy values: on-time pickup
+  threshold **10 minutes** (enter it under Settings → `reports.on_time_threshold`; RPT-02
+  then publishes the rate); RPT-03 "revenue by service" keeps the free-text contract field;
+  invoice due dates + ageing recorded as a future requirement; margin stays hidden until
+  attributable cost records exist (FIN-05, Phase 3).
 
 - **Phase 2 construction completed 2026-10-21** (owner: "Start Phase 2 now"): NTF-01/02/03,
   INC-01/02, DRV-03, DRV-05, MNT-03, AUTH-06 and GPS-01 (interface + Not-configured state) are
-  built and pushed (HEAD `8ec7088`). Decisions D-068–D-077 await ratification at the Phase 2
+  built and pushed (HEAD `8ec7088`). Decisions D-068–D-077 were ratified 2026-10-21 (D-078)
   gate, and the Phase 1C Fedora run (`./scripts/verify-phase1c.sh`) is still outstanding in
   parallel.
 
@@ -261,6 +254,7 @@ docs/PROGRESS.md and docs/PHASE_1C_VERIFICATION.md. For ratification at the Phas
   (`./scripts/verify-phase2.sh`: 32/32 migrations, unit 427/427, integration
   170/170 with 0 failed and 0 skipped; see docs/PROGRESS.md). Remaining
   Phase 2 gate items: the manual workflows and E2E in
-  `docs/PHASE_2_VERIFICATION.md`, and ratification of D-068–D-077.
-  The Phase 1C gate (`./scripts/verify-phase1c.sh` + D-061–D-067
-  ratification) is still outstanding.
+  `docs/PHASE_2_VERIFICATION.md`. **D-061–D-077 ratified 2026-10-21
+  (D-078).** The Phase 1C gate now needs only
+  `./scripts/verify-phase1c.sh` and the manual checks in
+  `docs/PHASE_1C_VERIFICATION.md`.
