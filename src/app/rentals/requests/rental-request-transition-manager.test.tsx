@@ -15,7 +15,7 @@ describe('RentalRequestTransitionManager', () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ rentalRequest: { status: 'Under Review' } }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     render(<RentalRequestTransitionManager companyId="company-1" request={request('Submitted')} />);
-    expect(screen.getByText(/does not quote, confirm, assign, or reserve any resource/i)).toBeTruthy();
+    expect(screen.getByText(/prepare pricing and then confirm the booking from the lifecycle panel/i)).toBeTruthy();
     const button = screen.getByRole('button', { name: 'Start review' });
     expect((button as HTMLButtonElement).disabled).toBe(true);
     fireEvent.change(screen.getByLabelText('Reason for this status change'), { target: { value: 'Review request details' } });
