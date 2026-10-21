@@ -37,7 +37,6 @@ model Company {
   tripStatusHistory     TripStatusHistory[]
   driverEvents          DriverEvent[]
   corporateInvoices     CorporateInvoice[]
-  corporateInvoiceLines CorporateInvoiceLine[]
   userClientBindings    UserClientBinding[]
 }
 
@@ -58,6 +57,7 @@ model Client {
   company          Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
   contracts        Contract[]
   userBindings     UserClientBinding[]
+  corporateInvoices CorporateInvoice[]
   employees        Employee[]
   routes           Route[]
   bookings         Booking[]
@@ -422,8 +422,6 @@ model Vehicle {
   maintenanceWorkOrders     MaintenanceWorkOrder[]
   safetyBlocks              VehicleSafetyBlock[]
   trips                     Trip[]
-  driverEvents              DriverEvent[]
-  invoiceLines              CorporateInvoiceLine[]
 
   @@unique([companyId, registrationNumber])
   @@unique([companyId, id])

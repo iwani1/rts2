@@ -66,3 +66,12 @@ Until resolved, settings remain unset and dependent actions must be blocked with
   was reset onto `origin/arena/8922811c-rts2` and the FIN-02 change was re-committed as a clean 14-file
   diff (`6bb733f`). No remote history was rewritten and no pushed work was lost. If this recurs: do not
   force-push; recover by resetting onto the fetched remote tip and re-staging only the intended paths.
+
+## Prisma schema defects found by Fedora verification (2026-10-21)
+- Fedora run 1 failed at `prisma generate` (P1012): duplicate `userClientBindings` on `Company` — fixed in `1b463bc`.
+- Fedora run 2 failed at `prisma generate` (P1012 x4): unpairable back-relations from the same late-session
+  schema passes — `Company.corporateInvoiceLines` (CorporateInvoiceLine has no company relation field),
+  `Vehicle.driverEvents` and `Vehicle.invoiceLines` (wrong model; belonged nowhere/Vehicle), and a missing
+  `Client.corporateInvoices` back-relation for `CorporateInvoice.client`. Fixed in the follow-up commit;
+  a full duplicate/pairing audit of the schema was run in-sandbox and is clean. Lesson recorded: sandbox
+  schema edits must always pair-check relations because `prisma` cannot run it locally.
