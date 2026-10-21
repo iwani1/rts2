@@ -1217,3 +1217,21 @@ reports `required/mustEnroll: false`; enrolment remains available at
 challenge until they switch it off there. Integration test updated to
 the suspended behaviour (Fedora re-run pending). Reinstatement is the
 one-line `required` restoration recorded in D-080.
+
+## Phase 3 built (2026-10-21, D-081–D-088)
+
+All Phase 3 slices built and pushed: FIN-05 governed expenses with
+independent approval and audit (`9775ad9`), FIN-05R dashboard costs and
+estimated margin (`5bec7be`), MNT-04 maintenance cost analytics
+(`f006fbd`), FIN-04 Paystack webhook staging inbox with governed
+application (`3329eda`), FIN-08 reconciliation runs with independent
+close (`94a5b9f`), FIN-06 driver pay from approved configurable rules
+with FINAL-only CSV export (`5e886d8`), RTE-05 optimisation contract
+only (`709ce31`), RPT-05 PDF reports (`9366e28`). GRA e-VAT excluded
+(still an open question). Sandbox signals: typecheck clean, lint 0
+errors, unit 475/475, production build green, 36/36 migrations +
+FIN-05 guards exercised on PGlite. **Fedora gate pending:**
+`scripts/verify-phase3.sh` (36 migrations; expect unit 475, integration
+183) plus the manual walkthrough in `docs/PHASE_3_VERIFICATION.md`.
+Paystack is implemented and test-verified but NOT live — no real
+sandbox credentials have been used yet.
