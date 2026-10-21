@@ -370,6 +370,48 @@ export async function generateTripsFromSchedules(input: unknown, actorId: string
   return { created, skipped, fromDate: data.fromDate, toDate: data.toDate };
 }
 
+async function releaseAssignedBookingsForCancelledTripTx(
+  tx: Prisma.TransactionClient,
+  actorId: string,
+  companyId: string,
+  tripId: string,
+  tripReference: string,
+  reason: string,
+): Promise<number> {
+  const assigned = await tx.booking.findMany({
+    where: { companyId, tripId, status: 'Assigned' },
+    select: { id: true, reference: true },
+    take: 500,
+  });
+  let released = 0;
+  for (const booking of assigned) {
+    const changed = await tx.booking.updateMany({
+      where: { id: booking.id, companyId, status: 'Assigned', tripId },
+      data: { status: 'Accepted', tripId: null },
+    });
+    if (changed.count !== 1) continue;
+    const latest = await tx.bookingStatusHistory.findFirst({
+      where: { companyId, bookingId: booking.id },
+      orderBy: { sequence: 'desc' },
+      select: { sequence: true },
+    });
+    await tx.bookingStatusHistory.create({
+      data: {
+        companyId, bookingId: booking.id, sequence: (latest?.sequence ?? 0) + 1, actorId,
+        fromStatus: 'Assigned', toStatus: 'Accepted', reason,
+      },
+    });
+    await tx.auditEvent.create({
+      data: {
+        actorId, companyId, action: 'BOOKING_RELEASED_FROM_CANCELLED_TRIP', entityType: 'BOOKING', entityId: booking.id,
+        summary: { bookingReference: booking.reference, tripReference, reason },
+      },
+    });
+    released += 1;
+  }
+  return released;
+}
+
 export async function transitionTrip(input: unknown, actorId: string, companyIdInput: string, tripIdInput: string) {
   const data = tripTransitionSchema.parse(input);
   const companyId = companyIdSchema.parse(companyIdInput);
@@ -421,6 +463,14 @@ export async function transitionTrip(input: unknown, actorId: string, companyIdI
         summary: { reference: current.reference, fromStatus: current.status, toStatus: data.toStatus, reason: data.reason },
       },
     });
+    if (data.toStatus === 'Cancelled') {
+      // D-054: cancelling a trip releases its Assigned bookings back to
+      // Accepted; Boarded passengers stay linked for incident handling.
+      await releaseAssignedBookingsForCancelledTripTx(
+        tx, actorId, companyId, tripId, current.reference,
+        `Released because trip ${current.reference} was cancelled: ${data.reason}`,
+      );
+    }
     const trip = await tx.trip.findUniqueOrThrow({ where: { id: tripId }, include: tripInclude });
     return presentTrip(trip);
   });

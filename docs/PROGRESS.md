@@ -63,10 +63,10 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | BKG-06 | Not Started | No feature implementation; Phase 1+ approval required. |
 | TRP-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | TRP-02 | Not Started | No feature implementation; Phase 1+ approval required. |
-| DSP-01 | Not Started | No feature implementation; Phase 1+ approval required. |
-| DSP-02 | Not Started | No feature implementation; Phase 1+ approval required. |
-| DSP-03 | Not Started | No feature implementation; Phase 1+ approval required. |
-| DSP-04 | Not Started | No feature implementation; Phase 1+ approval required. |
+| DSP-01 | In Progress | Implemented locally (D-054, commit pending); awaiting Fedora verification. |
+| DSP-02 | In Progress | Implemented locally (D-054, commit pending); awaiting Fedora verification. |
+| DSP-03 | In Progress | Implemented locally (D-054, commit pending); awaiting Fedora verification. |
+| DSP-04 | In Progress | Implemented locally (D-054, commit pending); awaiting Fedora verification. |
 | DRV-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | DRV-02 | Not Started | No feature implementation; Phase 1+ approval required. |
 | DRV-03 | Not Started | No feature implementation; Phase 1+ approval required. |
@@ -444,10 +444,10 @@ Added corporate client records as the first Phase 1B vertical slice, following t
 | BKG-06 | Not Started | Booking change history. |
 | TRP-01 | In Progress | Trip records, lifecycle state machine and schedule generation implemented locally (D-053, commit pending); awaiting Fedora verification. |
 | TRP-02 | In Progress | Passenger manifests implemented locally (D-053, commit pending); awaiting Fedora verification. |
-| DSP-01 | Not Started | Daily dispatch board. |
-| DSP-02 | Not Started | Assign/reassign vehicle and driver. |
-| DSP-03 | Not Started | Emergency trip creation. |
-| DSP-04 | Not Started | Record no-shows and delays. |
+| DSP-01 | In Progress | Daily dispatch board implemented locally (D-054, commit pending); awaiting Fedora verification. |
+| DSP-02 | In Progress | Vehicle/driver assignment with hard blocks and override-and-reason implemented locally (D-054, commit pending); awaiting Fedora verification. |
+| DSP-03 | In Progress | Emergency trips via the audited manual trip creation path (D-054, commit pending); awaiting Fedora verification. |
+| DSP-04 | In Progress | No-show recording and lifecycle delays implemented locally (D-054, commit pending); awaiting Fedora verification. |
 | DRV-01 | Not Started | Mobile-first driver home. |
 | DRV-02 | Not Started | Driver actions (open trip, manifest, navigation, events). |
 | DRV-04 | Not Started | Vehicle defect and breakdown/incident report. |
@@ -496,6 +496,28 @@ Added the routes domain as the fourth Phase 1B vertical slice.
 - **Pages** (`src/app/routes/`): location register + manager, route register, route editor with stop-order editor, manual plan panel, and schedule panel (add/copy/activate with audited reasons). Workspace navigation links Routes and schedules.
 - **Tests**: `route-plan.test.ts`, `route-schema.test.ts`, `routes.integration.test.ts` (locations, stop-order override, plan capacity, schedule conflicts/copy/reactivation, cross-company denial). Not yet run: sandbox has no `node_modules`/database; Fedora verification is batched with CLI-02/EMP.
 - **Limits**: No map provider, no trip generation (TRP-01), no availability/assignment checks (DSP-02), no optimisation (RTE-05, Phase 3).
+
+## Phase 1B — dispatch board, assignment, no-shows (DSP-01..04; D-054; 2026-10-21)
+
+- **Implemented locally (unverified until Fedora runs).** `src/modules/dispatch/` provides the day board
+  (`getDispatchBoard`: trips with resources, load/capacity and conflict warnings, plus accepted bookings not
+  yet on a trip — no map provider, no optimisation claims), DSP-02 resource assignment inside a trip-row-locked
+  transaction with hard blocks (archived vehicle, active vehicle safety block, archived driver, expired driver
+  licence) that even an override cannot pass, and overridable conflicts (same-day vehicle/driver conflicts,
+  vehicle seats below the trip requirement, passengers above vehicle seats) that require `override: true` plus
+  the audited reason, DSP-03 emergency trips through the existing audited manual creation path, and DSP-04
+  no-shows (Assigned booking → Cancelled with the no-show reason in history; seat freed) plus lifecycle delays.
+  Cancelling a trip releases Assigned bookings back to Accepted with history and audit. APIs: board GET, trip
+  `resources` and `noshow` POSTs; `/dispatch` UI with per-trip resource and no-show panels; home navigation
+  links Dispatch.
+- **Tests written (not yet run in sandbox).** PostgreSQL integration: board contents and load; safety-blocked
+  vehicle and expired-licence hard blocks even with override; same-day driver conflict requires override and
+  then audits the warning; below-requirement vehicle needs override and the large vehicle assigns cleanly;
+  no-show frees the seat and cancels the booking; cross-company denial.
+- **Follow-ups recorded.** Driver-side events, boarding and completion remain DRV-01/02; bulk release on trip
+  cancellation is implemented here per D-054 (superseding the D-053 dispatch follow-up note). Batch Fedora
+  verification of CLI-02, EMP, RTE, BKG, TRP and DSP remains at the next phase transition per the owner's
+  standing instruction.
 
 ## Phase 1B — trips, manifests and capacity (TRP-01/02, BKG-04; D-053; 2026-10-21)
 

@@ -55,6 +55,7 @@ export default async function Home() {
         {canManageRoutes && <Link className="header-link" href="/routes">Routes and schedules</Link>}
         {canManageBookings && <Link className="header-link" href="/bookings">Bookings</Link>}
         {canManageTrips && <Link className="header-link" href="/trips">Trips</Link>}
+        {canManageTrips && <Link className="header-link" href="/dispatch">Dispatch</Link>}
         {canManageRentalRequests && <Link className="header-link" href="/rentals/requests">Rental requests</Link>}
         {canManageRentalRequests && <Link className="header-link" href="/rentals/reports">Rental reports</Link>}
         <Link className="header-link" href="/account/profile">My profile</Link>
