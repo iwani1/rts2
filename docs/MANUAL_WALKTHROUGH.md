@@ -144,9 +144,10 @@ As **Fiona Finance**:
 
 ## Part F — rentals end to end (Phases 4–6)
 
-Settings first (as **Admin**): set a **deposit policy** (fixed
-amount), both **resource buffers**, **quotation validity** (7 days),
-and **rental pricing models** (a per-day coach rate). Then:
+Settings first (as **Admin**): set **quotation validity** (7 days),
+**rental pricing models** (a per-day coach rate) and both **resource
+buffers** — but deliberately leave the **deposit policy** unset for
+F.4's fail-closed check.
 
 - [ ] **F.1** As **Kwame Customer** (rental portal): submit an enquiry
   for the coach for a date next week. As **Olivia Ops**: begin review
@@ -158,13 +159,12 @@ and **rental pricing models** (a per-day coach rate). Then:
   (not "none issued"). Accept it. Decline path: on a second enquiry,
   decline a quotation with a reason; staff see the recorded decision
   and reason. An expired or already-decided quote refuses action.
-- [ ] **F.4** Temporarily clear the deposit policy (Admin → Settings,
-  save "not required" is a different state — instead test on a fresh
-  company state if available, or skip): attempt confirmation without
-  the required policy where possible. Expect: confirmation fails
-  closed with a named policy error when configuration is missing.
-  With settings in place, confirm citing the accepted quotation
-  reference, recording the deposit.
+- [ ] **F.4** With the deposit policy still unset, confirm the rental
+  citing the accepted quotation reference. Expect: refusal —
+  "The rental deposit policy is not configured under Settings" (it
+  fails closed; nothing is reserved). Now set a fixed-amount deposit
+  policy in Admin → Settings and confirm again, recording the deposit
+  received. Expect: confirmation succeeds; the reservation exists.
 - [ ] **F.5** Confirm a second overlapping request for the same
   vehicle/window. Expect: refusal with a conflict message (this is
   the double-booking proof in the browser).
@@ -174,12 +174,17 @@ and **rental pricing models** (a per-day coach rate). Then:
   refused (separation of duties). Approve as **Oliver Ops-Two** with
   an approved extra charge. Request becomes Completed showing the
   outstanding figure.
-- [ ] **F.8** As Fiona, create the rental invoice from the completed
-  request. Expect: gross = quoted + approved charge, VAT 10%, deposit
-  deducted, total correct. Create again → same invoice flagged as
-  duplicate. Issue with a due date; record a part payment, then the
-  balance → PAID automatically. A manual "mark paid" before the
-  balance arrives is refused.
+- [ ] **F.8** As Fiona, open the completed request's Billing panel
+  and choose **Create invoice from completion**. Expect: line items
+  for the quoted amount and the approved charge, a "Taxes
+  (configured lines)" row at 10%, a "Deposit already received"
+  deduction, and Total · paid · outstanding figures. The create
+  button is replaced by the invoice — no second invoice can be
+  created for the rental. Issue it (the form requires a due date and
+  an 8+ character reason). Record a part payment, then try **Void
+  invoice**: refused ("This invoice has recorded payments and cannot
+  be voided"). Record the balance → the status flips to PAID
+  automatically; there is deliberately no "mark paid" button.
 - [ ] **F.9** As **Kwame**: the portal home now lists the rental
   invoice and its balance (before payment) / zero after. Submit a
   cancellation for a different future confirmed rental before its

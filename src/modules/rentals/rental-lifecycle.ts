@@ -269,7 +269,7 @@ async function assertNoResourceConflict(
   if (input.bufferMinutes === null) {
     throw new RentalLifecyclePolicyError(
       'RNT_BUFFER_NOT_CONFIGURED',
-      `The ${input.resource === 'vehicleId' ? 'vehicle' : 'driver'} turnaround buffer is not configured under Settings; resource conflicts cannot be evaluated. Configure resources.vehicle_buffer_minutes / resources.driver_buffer_minutes and retry.`,
+      `The ${input.resource === 'vehicleId' ? 'vehicle' : 'driver'} turnaround buffer is not configured under Settings; resource conflicts cannot be evaluated. Configure the vehicle/driver between-job buffers (fleet.vehicle_between_job_buffer_minutes / fleet.driver_between_job_buffer_minutes) in Admin settings and retry.`,
     );
   }
   const others = await tx.rentalAssignment.findMany({
