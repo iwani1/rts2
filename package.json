@@ -18,6 +18,7 @@
     "db:test:migrate": "node scripts/apply-test-migrations.mjs",
     "bootstrap:super-admin": "tsx scripts/bootstrap-super-admin.ts",
     "bootstrap:company": "tsx scripts/bootstrap-company.ts",
+    "reset:super-admin-password": "tsx scripts/reset-super-admin-password.ts",
     "seed:demo:vehicle": "tsx scripts/seed-demo-vehicle.ts"
   },
   "dependencies": {

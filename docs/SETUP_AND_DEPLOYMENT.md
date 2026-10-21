@@ -12,8 +12,9 @@ Node.js 22+, npm 10+, and Docker Compose or Podman Compose for local PostgreSQL.
 6. Set `AUTH_SECRET` to a cryptographically random secret of at least 32 characters and `APP_URL` to the exact application origin.
 7. For a fresh, controlled environment only, run `npm run bootstrap:super-admin -- --confirm` from an interactive local terminal. It refuses non-TTY use and refuses if any active Super Administrator already exists; enter a strong password when prompted (input is hidden). This creates the user, credential, global role and audit event in one transaction. Treat the database credentials and local shell as privileged; public sign-up remains disabled.
 8. Run `npm run bootstrap:company -- --confirm` and enter the active Super Administrator email. This one-time command creates the approved Richie Transport Services tenant and its audit event; it refuses if a company already exists and does not seed settings or operational data.
-9. `npm run dev`.
-10. Verify `GET /api/health` returns `{ "status": "ok", "service": "richie-tms" }`. `GET /api/health/ready` separately checks PostgreSQL connectivity and returns 503 if the database is unavailable.
+9. If the Super Administrator is ever locked out (for example a bootstrap password mistyped into the hidden prompt), reset it with `npm run reset:super-admin-password -- --confirm`. It only resets an existing global Super Administrator, requires the same interactive terminal, revokes that account's sessions, and writes a `SUPER_ADMIN_PASSWORD_RESET` audit event. Protect it exactly like the bootstrap command.
+10. `npm run dev`.
+11. Verify `GET /api/health` returns `{ "status": "ok", "service": "richie-tms" }`. `GET /api/health/ready` separately checks PostgreSQL connectivity and returns 503 if the database is unavailable.
 
 Stop the development server before running `npm run build`; Next.js development and production builds both use `.next` and should not run concurrently. After a build, restart `npm run dev` for browser development. The login form uses POST and the login page clears credential query parameters; never send, bookmark, or share passwords in URLs.
 

@@ -1184,3 +1184,14 @@ history now lives under a static segment:
 `locations/vehicles/[vehicleId]/history`. The fleet locations page
 uses services directly, so nothing else moved. Verified: typecheck
 clean and `next dev` reaches Ready.
+
+## Super-admin password reset CLI (2026-10-21)
+
+Owner lockout during manual-verification setup (a password mistyped
+into a hidden prompt cannot be recovered, and bootstrap is one-time).
+Added `npm run reset:super-admin-password -- --confirm`
+(`scripts/reset-super-admin-password.ts`): interactive-TTY only,
+resets only an existing global Super Administrator's credential,
+revokes their sessions, and writes a `SUPER_ADMIN_PASSWORD_RESET`
+audit event. Documented in `docs/SETUP_AND_DEPLOYMENT.md` step 9 with
+the same handling cautions as the bootstrap command.
