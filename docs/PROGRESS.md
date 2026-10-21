@@ -1363,3 +1363,12 @@ service — so `up` started only db and exited 0. `docker-compose.yml`
 restructured (`app` under `services:`), re-validated with
 podman-compose 1.6.0 and strict YAML. Container build/boot/readiness
 still Fedora-pending.
+
+**Phase 7 fourth Fedora run 2026-10-21 (`8eb6151`): steps 1–7
+PASSED (4th consecutive); container build ran for the first time**
+and failed at `npm ci` in the deps stage. Root cause, reproduced
+locally: the committed lockfile is an npm 11 lockfile — npm 11
+accepts it (as does the Fedora host), npm 10.9.x (bundled with
+node:22-alpine) rejects it over the picomatch 2.3.2/4.0.7 dedup.
+Lockfile intentionally not regenerated (314-line churn). Fix:
+Dockerfile base stage pins `npm@11`. Boot/readiness still pending.

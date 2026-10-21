@@ -70,6 +70,19 @@ Expected:
 > (`services = {app, db}`, `volumes = {postgres_data}`). The
 > in-container build/boot/readiness checks remain unproven until
 > the next Fedora run.
+>
+> Fourth Fedora run (2026-10-21, HEAD `8eb6151`): steps 1–7 PASSED
+> (fourth consecutive time) and the container build finally ran —
+> failing in the deps stage at `npm ci`: "lock file's
+> picomatch@2.3.2 does not satisfy picomatch@4.0.7". Reproduced
+> locally: the committed lockfile is an npm 11 lockfile (npm 11
+> `npm ci` accepts it — the Fedora host evidently runs npm 11,
+> which is why step 1 passes there), while the npm 10.9.x bundled
+> with `node:22-alpine` rejects it in the sync check. The lockfile
+> was deliberately NOT regenerated under npm 10 (314-line diff,
+> differently-shaped tree). Fix: the Dockerfile base stage pins
+> `npm@11`, making the image build independent of the host's npm.
+> Boot/readiness/header checks still unproven.
 
 ## Manual deployment drill (after the automated run)
 

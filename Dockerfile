@@ -3,6 +3,11 @@
 # `next build` with inert build-only env values; no real secret is baked.
 FROM node:22-alpine AS base
 RUN apk add --no-cache libc6-compat openssl
+# The committed package-lock.json is an npm 11 lockfile: npm 11's
+# `npm ci` validates it, but the npm 10.9.x bundled with node:22-alpine
+# rejects it as "out of sync" (picomatch 2.3.2 vs 4.0.7 dedup). Pin
+# npm 11 so the image build does not depend on the host's npm version.
+RUN npm install -g npm@11
 WORKDIR /app
 
 FROM base AS deps
