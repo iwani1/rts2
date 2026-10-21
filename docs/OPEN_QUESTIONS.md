@@ -50,3 +50,11 @@ No business defaults have been invented. Items marked **Phase 1A blocker** preve
 - Production notification providers, maps/GPS hardware, SMS/e-mail/payment credentials and verification test arrangements.
 
 Until resolved, settings remain unset and dependent actions must be blocked with clear explanation.
+
+## Phase 1B settings registry gap (found 2026-10-21, FIN-02)
+- `bookings.creation_cutoff` (D-056) and `finance.corporate_rates` (D-058) are validated in
+  `src/modules/settings/registry.ts` but are NOT rows in `settingRegistry`, so `setCompanySetting`
+  rejects them and the settings UI cannot configure them until the owner approves the registry rows
+  (labels, categories, blocked-feature references). Until then, rate/cut-off configuration is a
+  database-level operation for the implementation team; invoice generation and booking creation
+  fail closed (unset = no rate / no cut-off) by design.

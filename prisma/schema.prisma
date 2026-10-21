@@ -36,6 +36,8 @@ model Company {
   trips                 Trip[]
   tripStatusHistory     TripStatusHistory[]
   driverEvents          DriverEvent[]
+  corporateInvoices     CorporateInvoice[]
+  corporateInvoiceLines CorporateInvoiceLine[]
 }
 
 model Client {
@@ -215,6 +217,7 @@ model Contract {
   client               Client    @relation(fields: [companyId, clientId], references: [companyId, id], onDelete: Restrict)
   statusHistory        ContractStatusHistory[]
   bookings             Booking[]
+  corporateInvoices    CorporateInvoice[]
 
   @@unique([companyId, id])
   @@unique([companyId, reference])
@@ -416,6 +419,7 @@ model Vehicle {
   safetyBlocks              VehicleSafetyBlock[]
   trips                     Trip[]
   driverEvents              DriverEvent[]
+  invoiceLines              CorporateInvoiceLine[]
 
   @@unique([companyId, registrationNumber])
   @@unique([companyId, id])
@@ -690,6 +694,48 @@ model DriverEvent {
   @@index([companyId, driverId, createdAt])
 }
 
+model CorporateInvoice {
+  id             String   @id @default(cuid())
+  companyId      String
+  clientId       String
+  contractId     String
+  reference      String
+  periodStart    DateTime @db.Date
+  periodEnd      DateTime @db.Date
+  status         String
+  subtotalPesewas Int
+  taxPesewas     Int
+  totalPesewas   Int
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(6)
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  client         Client   @relation(fields: [companyId, clientId], references: [companyId, id], onDelete: Restrict)
+  contract       Contract @relation(fields: [companyId, contractId], references: [companyId, id], onDelete: Restrict)
+  lines          CorporateInvoiceLine[]
+
+  @@unique([companyId, id])
+  @@unique([companyId, reference])
+  @@unique([companyId, contractId, periodStart, periodEnd])
+  @@index([companyId, clientId, periodStart])
+}
+
+model CorporateInvoiceLine {
+  id              String   @id @default(cuid())
+  companyId       String
+  invoiceId       String
+  tripId          String?
+  description     String
+  unit            String
+  quantity        Int
+  ratePesewas     Int
+  amountPesewas   Int
+  createdAt       DateTime @default(now()) @db.Timestamptz(6)
+  invoice         CorporateInvoice @relation(fields: [companyId, invoiceId], references: [companyId, id], onDelete: Restrict)
+  trip            Trip?    @relation(fields: [companyId, tripId], references: [companyId, id], onDelete: Restrict)
+
+  @@index([companyId, invoiceId])
+}
+
 model Trip {
   id                     String    @id @default(cuid())
   companyId              String
@@ -719,6 +765,8 @@ model Trip {
   driver                 Driver?   @relation(fields: [companyId, driverId], references: [companyId, id], onDelete: Restrict)
   bookings               Booking[]
   statusHistory          TripStatusHistory[]
+  driverEvents           DriverEvent[]
+  invoiceLines           CorporateInvoiceLine[]
 
   @@unique([companyId, id])
   @@unique([companyId, reference])

@@ -77,7 +77,7 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | INC-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | INC-02 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FIN-01 | Not Started | No feature implementation; Phase 1+ approval required. |
-| FIN-02 | Not Started | No feature implementation; Phase 1+ approval required. |
+| FIN-02 | In Progress | Implemented locally (D-057/D-058, commit pending); awaiting Fedora verification. |
 | FIN-03 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FIN-04 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FIN-05 | Not Started | No feature implementation; Phase 1+ approval required. |
@@ -452,7 +452,7 @@ Added corporate client records as the first Phase 1B vertical slice, following t
 | DRV-02 | In Progress | Driver actions with idempotent event APIs implemented locally (D-055, commit pending); navigation stays text-only (names/locations) without a map provider. |
 | DRV-04 | In Progress | Driver defect/interruption reporting implemented locally (D-055, commit pending); awaiting Fedora verification. |
 | FIN-01 (contract pricing) | Not Started | Contract pricing models. |
-| FIN-02 (corporate invoice) | Not Started | Corporate invoice generation from billable trips. |
+| FIN-02 (corporate invoice) | In Progress | Corporate invoice generation with duplicate-billing protection implemented locally (D-057/D-058, commit pending); awaiting Fedora verification. |
 
 ## Phase 1B — corporate contracts (CLI-02; D-049; 2026-10-20)
 
@@ -496,6 +496,26 @@ Added the routes domain as the fourth Phase 1B vertical slice.
 - **Pages** (`src/app/routes/`): location register + manager, route register, route editor with stop-order editor, manual plan panel, and schedule panel (add/copy/activate with audited reasons). Workspace navigation links Routes and schedules.
 - **Tests**: `route-plan.test.ts`, `route-schema.test.ts`, `routes.integration.test.ts` (locations, stop-order override, plan capacity, schedule conflicts/copy/reactivation, cross-company denial). Not yet run: sandbox has no `node_modules`/database; Fedora verification is batched with CLI-02/EMP.
 - **Limits**: No map provider, no trip generation (TRP-01), no availability/assignment checks (DSP-02), no optimisation (RTE-05, Phase 3).
+
+## Phase 1B — corporate invoices (FIN-02; D-057/D-058; 2026-10-21)
+
+- **Implemented locally (unverified until Fedora runs).** Migration `20261020190000_corporate_invoices` adds
+  immutable `CorporateInvoice`/`CorporateInvoiceLine` tables (amount/period CHECKs, unique contract+period,
+  partial unique index so a trip is billed once). Money comes only from the typed `finance.corporate_rates`
+  setting (D-058; PER_TRIP/PER_PASSENGER pesewas rates, validated in the settings registry); generation fails
+  closed without a rate, bills Completed trips with Completed contract bookings, applies configured tax lines,
+  and is idempotent per contract+period (a duplicate generation returns the stored invoice). Note: trips
+  completed later for an already-invoiced period need a fresh period. APIs under
+  `/api/companies/[companyId]/invoices` and a `/invoices` UI; `invoice:manage` GLOBAL/COMPANY per
+  `docs/PERMISSIONS.md`; home navigation links Invoices.
+- **Settings gap recorded.** `bookings.creation_cutoff` and `finance.corporate_rates` are validated in the
+  registry module but are not yet rows in `settingRegistry`, so the settings UI cannot configure them until
+  the owner approves the registry rows (see `docs/OPEN_QUESTIONS.md`). Generation fails closed in the meantime.
+- **Tests written (not yet run in sandbox).** PostgreSQL integration: no-rate refusal, per-passenger invoice
+  totals (GH₵150.00), duplicate generation returning the same invoice, no-billable-trips refusal,
+  cross-company denial.
+- **Batch verification.** CLI-02, EMP, RTE, BKG, TRP, DSP, DRV and FIN-02 remain Fedora-unverified; batched
+  commands are recorded for the Phase 1B gate per the owner's standing instruction.
 
 ## Phase 1B — booking cut-off and waiting list (BKG-05a/05b, BKG-06; D-056; 2026-10-21)
 

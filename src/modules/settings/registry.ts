@@ -42,6 +42,22 @@ const taxLinesKey: SettingKey = 'finance.tax_lines';
 const depositPolicyKey: SettingKey = 'rental.deposit_policy';
 const inactiveContractPolicyKey: SettingKey = 'contracts.inactive_booking_policy';
 const bookingCreationCutoffKey: SettingKey = 'bookings.creation_cutoff';
+const corporateRatesKey: SettingKey = 'finance.corporate_rates';
+const corporateRateSchema = z.object({
+  contractId: z.string().trim().min(1).max(128),
+  unit: z.enum(['PER_TRIP', 'PER_PASSENGER']),
+  ratePesewas: z.number().int().positive().safe(),
+}).strict();
+export const corporateRatesSchema = z.array(corporateRateSchema).max(200).superRefine((rates, context) => {
+  const seen = new Set<string>();
+  rates.forEach((rate, index) => {
+    if (seen.has(rate.contractId)) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: [index, 'contractId'], message: 'Each contract may have only one corporate rate.' });
+    }
+    seen.add(rate.contractId);
+  });
+});
+export type CorporateRate = z.infer<typeof corporateRateSchema>;
 export const bookingCreationCutoffSchema = z.discriminatedUnion('mode', [
   z.object({ mode: z.literal('NONE') }).strict(),
   z.object({ mode: z.literal('HOURS_BEFORE_JOURNEY'), hours: z.number().int().min(0).max(720).safe() }).strict(),
@@ -92,6 +108,7 @@ const registryByKey = new Map(settingRegistry.map((definition) => [definition.ke
 function validateRegisteredValue(key: SettingKey, value: SettingJsonValue): SettingJsonValue {
   if (key === 'contracts.inactive_booking_policy') return inactiveContractBookingPolicySchema.parse(value);
   if (key === bookingCreationCutoffKey) return bookingCreationCutoffSchema.parse(value) as SettingJsonValue;
+  if (key === corporateRatesKey) return corporateRatesSchema.parse(value) as SettingJsonValue;
   if (resourceBufferKeys.has(key)) return resourceBufferMinutesSchema.parse(value);
   if (key === quoteValidityKey) return quoteValidityDaysSchema.parse(value);
   if (key === pricingModelsKey) return rentalPricingModelsSchema.parse(value) as SettingJsonValue;
@@ -135,6 +152,7 @@ export async function listCompanySettingStatus(companyIdInput: string) {
         if (definition.key === depositPolicyKey) depositPolicySchema.parse(row.value);
         if (definition.key === inactiveContractPolicyKey) inactiveContractBookingPolicySchema.parse(row.value);
         if (definition.key === bookingCreationCutoffKey) bookingCreationCutoffSchema.parse(row.value);
+        if (definition.key === corporateRatesKey) corporateRatesSchema.parse(row.value);
       } catch { configured = false; }
     }
     return {
@@ -172,6 +190,7 @@ export async function requireCompanySetting(companyIdInput: string, keyInput: st
   if (key === depositPolicyKey) return depositPolicySchema.parse(row.value);
   if (key === inactiveContractPolicyKey) return inactiveContractBookingPolicySchema.parse(row.value);
   if (key === bookingCreationCutoffKey) return bookingCreationCutoffSchema.parse(row.value);
+  if (key === corporateRatesKey) return corporateRatesSchema.parse(row.value);
   return row.value;
 }
 
@@ -203,6 +222,22 @@ export async function getBookingCreationCutoff(companyIdInput: string): Promise<
   if (!row?.configured || row.value === null) return null;
   const parsed = bookingCreationCutoffSchema.safeParse(row.value);
   return parsed.success ? parsed.data : null;
+}
+
+/** Returns the configured corporate rate for a contract, or null when unset (D-058). */
+export async function getCorporateRate(companyIdInput: string, contractId: string): Promise<CorporateRate | null> {
+  const companyId = companyIdSchema.parse(companyIdInput);
+  const prisma = getPrisma();
+  const company = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true } });
+  if (!company) throw new CompanyNotFoundError();
+  const row = await prisma.setting.findUnique({
+    where: { companyId_key: { companyId, key: corporateRatesKey } },
+    select: { value: true, configured: true },
+  });
+  if (!row?.configured || row.value === null) return null;
+  const parsed = corporateRatesSchema.safeParse(row.value);
+  if (!parsed.success) return null;
+  return parsed.data.find((rate) => rate.contractId === contractId) ?? null;
 }
 
 /** Returns the explicitly configured quote-validity duration, or null when unset. */

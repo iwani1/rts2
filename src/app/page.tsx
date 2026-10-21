@@ -38,6 +38,8 @@ export default async function Home() {
   const canManageBookings = bookingAccess.allowed && bookingAccess.scopes.some((scope) => ['GLOBAL', 'COMPANY'].includes(scope));
   const tripAccess = await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'trip:dispatch' });
   const canManageTrips = tripAccess.allowed && tripAccess.scopes.some((scope) => ['GLOBAL', 'COMPANY'].includes(scope));
+  const invoiceAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'invoice:manage' }) : { allowed: false, scopes: [] };
+  const canManageInvoices = invoiceAccess.allowed && invoiceAccess.scopes.some((scope) => ['GLOBAL', 'COMPANY'].includes(scope));
   return <main className="app-shell">
     <header className="app-header">
       <Link className="wordmark" href="/" aria-label="Richie TMS home">R<span>.</span>TS</Link>
@@ -56,6 +58,7 @@ export default async function Home() {
         {canManageBookings && <Link className="header-link" href="/bookings">Bookings</Link>}
         {canManageTrips && <Link className="header-link" href="/trips">Trips</Link>}
         {canManageTrips && <Link className="header-link" href="/dispatch">Dispatch</Link>}
+        {canManageInvoices && <Link className="header-link" href="/invoices">Invoices</Link>}
         {canManageRentalRequests && <Link className="header-link" href="/rentals/requests">Rental requests</Link>}
         {canManageRentalRequests && <Link className="header-link" href="/rentals/reports">Rental reports</Link>}
         <Link className="header-link" href="/account/profile">My profile</Link>
