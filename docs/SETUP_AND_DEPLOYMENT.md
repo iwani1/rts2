@@ -53,5 +53,28 @@ The Playwright tests use only a disposable local database. `e2e/rental-request-s
 
 The Playwright configuration refuses non-local application/database hosts and database names without the `_test` suffix. It starts its own Next development server and will fail rather than reuse an already-running server. Never use live customer records or production credentials for this test.
 
-## Production notes
-Do not deploy until secrets, auth, monitoring, backups/restore, migrations, hosting capabilities, privacy policy and owner-approved business configuration are in place. Build with `npm ci && npx prisma generate && npm run build`; run the Node server with `npm start`. Configure `DATABASE_URL`, `AUTH_SECRET`, and `APP_URL` from the deployment secret manager. This is a scaffold, not a deployable operational TMS.
+## Production notes (D-092)
+
+Container path (primary): set `AUTH_SECRET` (≥32 chars) and `APP_URL`
+in the shell or a compose `.env`, then `podman compose build app &&
+podman compose up -d`. The app service waits for the database
+healthcheck, applies `prisma migrate deploy` on entry, serves on
+port 3000 as a non-root user, and reports readiness at
+`/api/health/ready`. Production startup refuses to boot without
+`DATABASE_URL`, `AUTH_SECRET` (≥32) and a valid `APP_URL`
+(`src/instrumentation.ts`); a non-HTTPS `APP_URL` warns because a
+TLS-terminating proxy may be in front. Put a TLS reverse proxy in
+front of the app before exposing it; the security headers (CSP,
+HSTS, frame blocking) switch to their strict form under
+`NODE_ENV=production` automatically.
+
+Bare-Node fallback: `npm ci && npx prisma generate && npm run build`
+then `npm start`, with the same environment from the deployment
+secret manager.
+
+Backups: see `docs/BACKUP_AND_RECOVERY.md` for the scripts and the
+restore drill. Still owner decisions before launch: hosting/TLS
+termination, monitoring and alerting, backup provider/retention,
+privacy policy publication and business configuration sign-off. Do
+not expose the database port beyond the compose network in a real
+deployment.
