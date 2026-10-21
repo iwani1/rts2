@@ -35,6 +35,12 @@ function JourneyCard({
           <div><dt className="font-medium text-slate-500">Bus</dt><dd>{journey.vehicleRegistration ?? 'To be confirmed'} ({journey.tripReference})</dd></div>
         ) : null}
       </dl>
+      {journey.boardingCode ? (
+        <p className="mt-3 rounded-md bg-slate-900 px-3 py-2 text-sm text-white">
+          Boarding code: <strong className="tracking-widest">{journey.boardingCode}</strong>
+          <span className="block text-xs text-slate-300">Show or read this code to your driver when you board. It works once, today only.</span>
+        </p>
+      ) : null}
       {journey.feedback ? (
         <p className="mt-3 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
           Your feedback{journey.feedback.rating ? ` (${journey.feedback.rating}/5)` : ''}: “{journey.feedback.comment}”

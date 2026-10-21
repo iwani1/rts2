@@ -16,7 +16,7 @@ import {
 } from './incident-response';
 
 const prisma = getPrisma();
-const DAY = '2026-05-12';
+const DAY = '2027-08-03';
 let companyId = '';
 let opsId = '';
 let driverUserId = '';

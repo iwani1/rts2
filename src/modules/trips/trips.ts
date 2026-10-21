@@ -7,6 +7,7 @@ import {
   bookingAssignedNotification,
   notifyLinkedEmployee,
 } from '@/modules/notifications/notifications';
+import { issueBoardingCode } from '@/modules/driver/boarding';
 import {
   tripAssignBookingSchema,
   tripGenerateSchema,
@@ -560,6 +561,10 @@ export async function assignBookingToTrip(input: unknown, actorId: string, compa
         actorId, companyId, action: 'BOOKING_ASSIGNED_TO_TRIP', entityType: 'BOOKING', entityId: booking.id,
         summary: { bookingReference: booking.reference, tripReference: trip.reference, reason: data.reason },
       },
+    });
+    // DRV-03 (D-073): every assignment issues a fresh single-use boarding code.
+    await issueBoardingCode(tx, {
+      companyId, bookingId: booking.id, tripId, tripDate: trip.tripDate,
     });
     // NTF-01 (D-068): tell the linked passenger their bus is assigned.
     const assignedBooking = await tx.booking.findUniqueOrThrow({

@@ -23,6 +23,8 @@ model Company {
   notificationPreferences   NotificationPreference[]
   incidents                 Incident[]
   incidentStatusHistory     IncidentStatusHistory[]
+  boardingCodes             BookingBoardingCode[]
+  boardingAttempts          BoardingVerificationAttempt[]
   rentalRequests  RentalRequest[]
   pricingWorksheets RentalPricingWorksheet[]
   maintenanceWorkOrders MaintenanceWorkOrder[]
@@ -279,6 +281,7 @@ model User {
   notifications     Notification[]
   notificationPreferences NotificationPreference[]
   incidentsReported  Incident[]            @relation("IncidentReporter")
+  boardingAttempts   BoardingVerificationAttempt[]
   incidentsAssigned  Incident[]            @relation("IncidentResponder")
   incidentStatusChanges IncidentStatusHistory[]
   driverEvents      DriverEvent[]
@@ -671,6 +674,8 @@ model Booking {
   pickupLocation   Location? @relation("BookingPickup", fields: [companyId, pickupLocationId], references: [companyId, id], onDelete: Restrict)
   dropoffLocation  Location? @relation("BookingDropoff", fields: [companyId, dropoffLocationId], references: [companyId, id], onDelete: Restrict)
   statusHistory    BookingStatusHistory[]
+  boardingCode     BookingBoardingCode?
+  boardingAttempts BoardingVerificationAttempt[]
   passengerFeedback PassengerFeedback[]
 
   @@unique([companyId, id])
@@ -867,6 +872,8 @@ model Trip {
   driverEvents           DriverEvent[]
   invoiceLines           CorporateInvoiceLine[]
   incidents              Incident[]
+  boardingCodes          BookingBoardingCode[]
+  boardingAttempts       BoardingVerificationAttempt[]
 
   @@unique([companyId, id])
   @@unique([companyId, reference])
@@ -988,4 +995,41 @@ model IncidentStatusHistory {
 
   @@unique([companyId, incidentId, sequence])
   @@index([companyId, incidentId, sequence])
+}
+
+model BookingBoardingCode {
+  id        String    @id @default(cuid())
+  companyId String
+  bookingId String
+  tripId    String
+  code      String    @db.VarChar(6)
+  expiresAt DateTime  @db.Timestamptz(6)
+  usedAt    DateTime? @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(6)
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  booking   Booking   @relation(fields: [companyId, bookingId], references: [companyId, id], onDelete: Restrict)
+  trip      Trip      @relation(fields: [companyId, tripId], references: [companyId, id], onDelete: Restrict)
+
+  @@unique([companyId, bookingId])
+  @@index([companyId, tripId])
+}
+
+model BoardingVerificationAttempt {
+  id        String   @id @default(cuid())
+  companyId String
+  bookingId String
+  tripId    String
+  actorId   String
+  method    String   @db.VarChar(16)
+  result    String   @db.VarChar(16)
+  reason    String?  @db.VarChar(500)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  booking   Booking  @relation(fields: [companyId, bookingId], references: [companyId, id], onDelete: Restrict)
+  trip      Trip     @relation(fields: [companyId, tripId], references: [companyId, id], onDelete: Restrict)
+  actor     User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, bookingId, createdAt])
+  @@index([companyId, tripId, createdAt])
 }

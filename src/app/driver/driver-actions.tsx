@@ -24,12 +24,15 @@ export function DriverActions({
   returnTo,
   tripId,
   tripStatus,
+  boardingCodeRequired = false,
 }: {
   companyId: string;
   manifest: ManifestEntry[];
   returnTo: string;
   tripId: string;
   tripStatus: string;
+  /** DRV-03 (D-073): when true, boarding needs the passenger's code or a manual reason. */
+  boardingCodeRequired?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -38,6 +41,8 @@ export function DriverActions({
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
   const [bookingId, setBookingId] = useState('');
+  const [boardingCode, setBoardingCode] = useState('');
+  const [manualReason, setManualReason] = useState('');
 
   const send = async (eventType: string, booking?: string) => {
     setBusy(true); setError(null); setMessage(null);
@@ -51,6 +56,8 @@ export function DriverActions({
           reason: reason.trim() || null,
           bookingId: booking ?? null,
           notes: eventType === 'COMPLETE' || eventType === 'REPORT_DEFECT' ? (notes.trim() || null) : null,
+          boardingCode: eventType === 'BOARD' && boardingCode.trim() ? boardingCode.trim() : null,
+          manualReason: eventType === 'BOARD' && manualReason.trim() ? manualReason.trim() : null,
         }),
       });
       const data: unknown = await response.json().catch(() => null);
@@ -62,7 +69,7 @@ export function DriverActions({
       }
       const duplicate = typeof data === 'object' && data !== null && (data as { duplicate?: unknown }).duplicate === true;
       setMessage(duplicate ? 'Already recorded (safe retry).' : `${eventType} recorded.`);
-      setReason(''); setNotes(''); setBookingId('');
+      setReason(''); setNotes(''); setBookingId(''); setBoardingCode(''); setManualReason('');
       router.push(returnTo);
       router.refresh();
     } catch (caught) {
@@ -110,9 +117,31 @@ export function DriverActions({
               ))}
             </select>
           </label>
+          {boardingCodeRequired ? (
+            <>
+              <label className="grid gap-1 text-sm text-slate-700">
+                Boarding code (from the passenger)
+                <input
+                  className="rounded-md border border-slate-300 px-3 py-2 tracking-widest"
+                  inputMode="numeric" maxLength={6} placeholder="6-digit code"
+                  onChange={(event) => setBoardingCode(event.target.value.replace(/[^0-9]/g, ''))}
+                  value={boardingCode}
+                />
+              </label>
+              <label className="grid gap-1 text-sm text-slate-700">
+                Or manual verification reason (if the passenger cannot produce the code)
+                <input
+                  className="rounded-md border border-slate-300 px-3 py-2"
+                  maxLength={500} placeholder="e.g. Passenger known to me, phone battery dead"
+                  onChange={(event) => setManualReason(event.target.value)}
+                  value={manualReason}
+                />
+              </label>
+            </>
+          ) : null}
           <div className="flex flex-wrap gap-2">
-            <button className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-50" disabled={busy || !bookingId} onClick={() => void send('BOARD', bookingId)} type="button">
-              Board passenger
+            <button className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-50" disabled={busy || !bookingId || (boardingCodeRequired && boardingCode.length !== 6 && manualReason.trim().length < 8)} onClick={() => void send('BOARD', bookingId)} type="button">
+              {boardingCodeRequired ? 'Verify & board passenger' : 'Board passenger'}
             </button>
             <button className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50" disabled={busy || !bookingId} onClick={() => void send('NO_SHOW', bookingId)} type="button">
               Mark no-show

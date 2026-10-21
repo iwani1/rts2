@@ -69,7 +69,7 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | DSP-04 | Tested | Dispatch history/audit surfaces per D-054. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
 | DRV-01 | Tested | Driver account link (audited, unique userId) per D-055. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
 | DRV-02 | Tested | Driver own-trips list/detail with linked-driver isolation per D-055. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
-| DRV-03 | Not Started | No feature implementation; Phase 1+ approval required. |
+| DRV-03 | In Progress | Boarding verification per D-073: per-booking 6-digit single-use codes from a secure random source (issued at assignment, passenger-only visibility, end-of-trip-day expiry), typed policy `trips.boarding_code_policy` (unset = DRV-02 tap-to-board), recorded attempts, controlled manual verification with reason, inside the idempotent BOARD event. Sandbox-verified 2026-10-21 (unit 412/412; PGlite 29/29 migrations); Fedora verification pending. |
 | DRV-04 | Tested | Idempotent driver event API (replay/conflict) per D-055. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
 | DRV-05 | Not Started | No feature implementation; Phase 1+ approval required. |
 | PAX-01 | In Progress | Passenger portal per D-065: audited passenger↔employee link (`Employee.userId`, link/unlink in the employee editor), own-profile projection, transport arrangements (active contracts + client routes), journey requests through the shared booking creation core, portal cancellation while Pending/Accepted, passenger-facing journey states, append-only feedback on Completed journeys (migration `20261021120000_passenger_portal`). Sandbox-verified 2026-10-21 (unit 390/390 incl. status-mapper suite; 24/24 migrations on PGlite with guard checks); Fedora verification pending. |
@@ -985,3 +985,27 @@ No new migration.
   build compiled. Fedora run pending.
 - **Next:** boarding verification (DRV-03), driver offline queue (DRV-05),
   preventive-maintenance reminders (MNT-03), two-factor authentication (AUTH-06).
+
+## Phase 2 — boarding verification (DRV-03; D-073; 2026-10-21)
+
+Sixth Phase 2 slice. Migration 29 (`20261021170000_boarding_verification`).
+
+- **Codes:** `BookingBoardingCode` — six digits from `crypto.randomInt`, issued
+  at trip assignment (regenerated on reassignment), expiring at the end of the
+  trip day, consumed on first successful use (DB CHECK enforces the 6-digit
+  shape). The passenger sees only their own code in **My journeys**; the driver
+  manifest never carries codes.
+- **Policy:** typed setting `trips.boarding_code_policy` = `{"mode": "DISABLED"
+  | "REQUIRED"}` (validated in the settings registry). Unset deliberately keeps
+  DRV-02 tap-to-board so upgrades never break boarding (recorded in D-073).
+- **Enforcement:** inside the idempotent `BOARD` driver event — a supplied code
+  is always checked; under `REQUIRED`, boarding needs a valid code or a manual
+  reason (≥ 8 chars). Every attempt lands in `BoardingVerificationAttempt`
+  (method/result/reason); failed attempts are recorded after the boarding
+  transaction rolls back so results are never lost.
+- **Tests:** `driver/boarding.integration.test.ts` (issue + passenger-only
+  visibility, wrong-code refusal + recording, single-use consumption,
+  manual-reason gate, expiry, DISABLED fallback). Sandbox: unit 412/412,
+  PGlite 29/29 migrations + code-shape check, build compiled. Fedora pending.
+- **Next:** driver offline queue (DRV-05), preventive-maintenance reminders
+  (MNT-03), two-factor authentication (AUTH-06).

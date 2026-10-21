@@ -131,6 +131,7 @@ export default async function DriverPage({
                 <p className="mt-2 text-sm text-slate-600">No passengers on the manifest.</p>
               )}
               <DriverActions
+                boardingCodeRequired={detail.boardingCodeRequired}
                 companyId={company.id}
                 manifest={detail.manifest}
                 returnTo={`/driver?${new URLSearchParams({ date, trip: detail.id }).toString()}`}

@@ -116,3 +116,19 @@ Status: **SLICE BUILT — Fedora run required.** The verification script include
    in the audit history, linked passengers are notified, and with the boxes
    ticked the original vehicle is safety-blocked and a work order (`WO-…`) is
    opened. Resolve the incident afterwards from the same page.
+
+# Phase 2 verification — boarding verification (DRV-03; D-073)
+
+Status: **SLICE BUILT — Fedora run required.** The verification script includes
+`driver/boarding.integration.test.ts` and applies migration 29
+(`20261021170000_boarding_verification`).
+
+## Manual workflow (browser)
+
+1. Assign a booking to a trip: the passenger's **My journeys** now shows a
+   6-digit boarding code (theirs only). The driver manifest never shows codes.
+2. In **Settings**, set `trips.boarding_code_policy` to `{"mode": "REQUIRED"}`.
+3. As the driver, board the passenger: the wrong code is refused and recorded;
+   the correct code boards them once; without a code, boarding asks for a
+   manual-verification reason. With the policy unset/`DISABLED`, tap-to-board
+   works exactly as before.

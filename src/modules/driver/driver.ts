@@ -4,6 +4,7 @@ import { PermissionDeniedError, resolvePermission } from '@/modules/auth/permiss
 import { getPrisma } from '@/server/prisma';
 import { isAllowedTripTransition, type TripStatus } from '@/modules/trips/trip-transitions';
 import { driverEventSchema, driverTripListQuerySchema, type DriverEventType } from './driver-schema';
+import { getBoardingCodePolicy } from '@/modules/settings/registry';
 
 const companyIdSchema = z.string().trim().min(1).max(128);
 const tripIdSchema = z.string().trim().min(1).max(128);
@@ -55,6 +56,8 @@ export type DriverTripDetail = DriverTripSummary & {
     bookingType: string; pickupName: string | null; dropoffName: string | null; status: string;
   }>;
   events: Array<{ eventType: string; createdAt: Date }>;
+  /** DRV-03 (D-073): whether this company currently requires boarding codes. Codes themselves are never shown to the driver. */
+  boardingCodeRequired: boolean;
 };
 
 /**
@@ -218,6 +221,7 @@ export async function getDriverTrip(input: {
     events: row.driverEvents.map((event: { eventType: string; createdAt: Date }) => ({
       eventType: event.eventType, createdAt: event.createdAt,
     })),
+    boardingCodeRequired: (await getBoardingCodePolicy(companyId)) === 'REQUIRED',
   };
 }
 
@@ -228,6 +232,23 @@ const EVENT_TARGET: Partial<Record<DriverEventType, TripStatus>> = {
   INTERRUPT: 'Interrupted',
   COMPLETE: 'Completed',
 };
+
+/**
+ * DRV-03 (D-073): carries a failed verification out of the rolled-back
+ * boarding transaction so the FAILED attempt can still be recorded.
+ */
+class BoardingVerificationFailedError extends Error {
+  readonly method: 'CODE' | 'MANUAL';
+  readonly bookingId: string;
+  readonly attemptReason: string;
+  constructor(input: { method: 'CODE' | 'MANUAL'; bookingId: string; attemptReason: string; message: string }) {
+    super(input.message);
+    this.name = 'BoardingVerificationFailedError';
+    this.method = input.method;
+    this.bookingId = input.bookingId;
+    this.attemptReason = input.attemptReason;
+  }
+}
 
 export type DriverEventResult = {
   eventId: string;
@@ -261,7 +282,8 @@ export async function postDriverEvent(
     return { eventId: existing.id, duplicate: true, tripStatus: trip.status };
   }
 
-  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+  try {
+    return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const rows = await tx.$queryRaw<Array<{
       status: string; reference: string; driverId: string | null; actualStartAt: Date | null;
     }>>`
@@ -302,6 +324,51 @@ export async function postDriverEvent(
       }
       if (data.eventType === 'BOARD' && !['Dispatched', 'In Progress', 'Delayed'].includes(trip.status)) {
         throw new DriverValidationError(`Passengers can board only after dispatch; this trip is ${trip.status}.`);
+      }
+      if (data.eventType === 'BOARD') {
+        // DRV-03 (D-073): verify the per-booking code when one is supplied
+        // (always allowed), or enforce the company policy. Successful
+        // attempts commit with the boarding; failures are recorded by the
+        // caller after this transaction rolls back.
+        const policy = await getBoardingCodePolicy(companyId, tx);
+        const suppliedCode = data.boardingCode ?? null;
+        const manualReason = (data.manualReason ?? '').trim();
+        if (suppliedCode) {
+          const codeRow = await tx.bookingBoardingCode.findUnique({
+            where: { companyId_bookingId: { companyId, bookingId: booking.id } },
+            select: { id: true, tripId: true, code: true, expiresAt: true, usedAt: true },
+          });
+          const valid = codeRow !== null && codeRow.tripId === tripId && codeRow.usedAt === null
+            && codeRow.expiresAt >= new Date() && codeRow.code === suppliedCode;
+          if (!valid) {
+            throw new BoardingVerificationFailedError({
+              method: 'CODE', bookingId: booking.id,
+              attemptReason: 'Code did not match, was already used, or had expired.',
+              message: 'That boarding code did not match, was already used, or has expired. Ask the passenger to check their code.',
+            });
+          }
+          await tx.boardingVerificationAttempt.create({
+            data: { companyId, bookingId: booking.id, tripId, actorId, method: 'CODE', result: 'SUCCESS', reason: null },
+          });
+          await tx.bookingBoardingCode.update({
+            where: { id: codeRow.id }, data: { usedAt: new Date() },
+          });
+        } else if (policy === 'REQUIRED') {
+          if (manualReason.length < 8) {
+            throw new BoardingVerificationFailedError({
+              method: 'MANUAL', bookingId: booking.id,
+              attemptReason: 'Manual boarding attempted without an adequate reason while codes are required.',
+              message: 'Boarding codes are required. Enter the passenger code, or record a manual-verification reason of at least 8 characters.',
+            });
+          }
+          await tx.boardingVerificationAttempt.create({
+            data: { companyId, bookingId: booking.id, tripId, actorId, method: 'MANUAL', result: 'SUCCESS', reason: manualReason },
+          });
+        } else if (manualReason.length >= 8) {
+          await tx.boardingVerificationAttempt.create({
+            data: { companyId, bookingId: booking.id, tripId, actorId, method: 'MANUAL', result: 'SUCCESS', reason: manualReason },
+          });
+        }
       }
       const changed = await tx.booking.updateMany({
         where: { id: booking.id, companyId, status: 'Assigned', tripId },
@@ -397,6 +464,20 @@ export async function postDriverEvent(
         summary: { reference: trip.reference, eventType: data.eventType, reason, bookingId: data.bookingId ?? null },
       },
     });
-    return { eventId: event.id, duplicate: false, tripStatus: nextStatus };
-  });
+      return { eventId: event.id, duplicate: false, tripStatus: nextStatus };
+    });
+  } catch (error) {
+    if (error instanceof BoardingVerificationFailedError) {
+      // The boarding transaction rolled back; record the FAILED attempt in
+      // its own transaction so verification results are never lost (D-073).
+      await prisma.boardingVerificationAttempt.create({
+        data: {
+          companyId, bookingId: error.bookingId, tripId, actorId,
+          method: error.method, result: 'FAILED', reason: error.attemptReason,
+        },
+      }).catch(() => undefined);
+      throw new DriverValidationError(error.message);
+    }
+    throw error;
+  }
 }

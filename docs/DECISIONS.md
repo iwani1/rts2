@@ -605,3 +605,28 @@ Date: 2026-10-21. Status: decided for Phase 2 construction; recorded for ratific
 4. **Passengers.** Passengers assigned or boarded on the trip are notified through
    NTF-01 (plus SMS/email copies where configured). The incident stays open until a
    dispatcher resolves it through the normal transition.
+
+## D-073 — Boarding verification: per-booking one-time codes (DRV-03)
+
+Date: 2026-10-21. Status: decided for Phase 2 construction; recorded for ratification at the Phase 2 gate.
+
+1. **Code.** When a booking is assigned to a trip, the system issues a per-booking
+   six-digit boarding code from a cryptographically secure random source. The
+   passenger sees only **their own** code (passenger view); the driver manifest
+   never shows codes (minimal passenger data). Codes expire at the end of the
+   trip day (Africa/Accra = UTC) and are **single-use**: a successful
+   verification consumes the code. Reassignment regenerates the code.
+2. **Policy.** The typed setting `trips.boarding_code_policy` accepts
+   `{ "mode": "DISABLED" | "REQUIRED" }`. While the setting is unset, behaviour
+   stays exactly as DRV-02 shipped (driver taps to board) — a deliberate,
+   recorded choice so existing operations are not broken by an upgrade; the
+   owner can require codes at any time from Settings.
+3. **Verification.** Under `REQUIRED`, boarding needs the passenger's code.
+   Every attempt (success or failure) is recorded with the method and result.
+   A driver may instead board a passenger manually, but only with a recorded
+   reason of at least 8 characters ("controlled manual verification").
+   Under `DISABLED`, boardings are recorded as manual-with-reason too when a
+   reason is supplied, otherwise as plain driver confirmations.
+4. **Placement.** Verification happens inside the existing idempotent driver
+   event (`BOARD`), so DRV-05 offline retries keep their exactly-once
+   guarantee.

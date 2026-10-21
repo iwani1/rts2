@@ -44,6 +44,11 @@ const taxLinesKey: SettingKey = 'finance.tax_lines';
 const depositPolicyKey: SettingKey = 'rental.deposit_policy';
 const inactiveContractPolicyKey: SettingKey = 'contracts.inactive_booking_policy';
 const bookingCreationCutoffKey: SettingKey = 'bookings.creation_cutoff'; // registry row approved by owner at the Phase 1B gate (2026-10-21)
+const boardingCodePolicyKey: SettingKey = 'trips.boarding_code_policy';
+export const boardingCodePolicySchema = z.object({
+  mode: z.enum(['DISABLED', 'REQUIRED']),
+}).strict();
+export type BoardingCodePolicy = z.infer<typeof boardingCodePolicySchema>;
 const corporateRatesKey: SettingKey = 'finance.corporate_rates'; // registry row approved by owner at the Phase 1B gate (2026-10-21)
 const corporateRateSchema = z.object({
   contractId: z.string().trim().min(1).max(128),
@@ -110,6 +115,7 @@ const registryByKey = new Map(settingRegistry.map((definition) => [definition.ke
 function validateRegisteredValue(key: SettingKey, value: SettingJsonValue): SettingJsonValue {
   if (key === 'contracts.inactive_booking_policy') return inactiveContractBookingPolicySchema.parse(value);
   if (key === bookingCreationCutoffKey) return bookingCreationCutoffSchema.parse(value) as SettingJsonValue;
+  if (key === boardingCodePolicyKey) return boardingCodePolicySchema.parse(value) as SettingJsonValue;
   if (key === corporateRatesKey) return corporateRatesSchema.parse(value) as SettingJsonValue;
   if (resourceBufferKeys.has(key)) return resourceBufferMinutesSchema.parse(value);
   if (key === quoteValidityKey) return quoteValidityDaysSchema.parse(value);
@@ -192,6 +198,7 @@ export async function requireCompanySetting(companyIdInput: string, keyInput: st
   if (key === depositPolicyKey) return depositPolicySchema.parse(row.value);
   if (key === inactiveContractPolicyKey) return inactiveContractBookingPolicySchema.parse(row.value);
   if (key === bookingCreationCutoffKey) return bookingCreationCutoffSchema.parse(row.value);
+  if (key === boardingCodePolicyKey) return boardingCodePolicySchema.parse(row.value);
   if (key === corporateRatesKey) return corporateRatesSchema.parse(row.value);
   return row.value;
 }
@@ -382,4 +389,26 @@ export async function setCompanySetting(input: unknown) {
     });
     return { key: setting.key, configured: true, updatedAt: setting.updatedAt };
   });
+}
+
+
+/**
+ * DRV-03 (D-073): the company's boarding-code policy. Unset means DISABLED
+ * (the DRV-02 tap-to-board behaviour) so an upgrade never breaks boarding;
+ * accepts a transaction client so verification reads the policy inside the
+ * boarding transaction.
+ */
+export async function getBoardingCodePolicy(
+  companyIdInput: string,
+  client?: Pick<Prisma.TransactionClient, 'setting'>,
+): Promise<'DISABLED' | 'REQUIRED'> {
+  const companyId = companyIdSchema.parse(companyIdInput);
+  const prisma = client ?? getPrisma();
+  const row = await prisma.setting.findUnique({
+    where: { companyId_key: { companyId, key: boardingCodePolicyKey } },
+    select: { value: true, configured: true },
+  });
+  if (!row?.configured || row.value === null) return 'DISABLED';
+  const parsed = boardingCodePolicySchema.safeParse(row.value);
+  return parsed.success ? parsed.data.mode : 'DISABLED';
 }

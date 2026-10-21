@@ -11,6 +11,9 @@ export const driverEventSchema = z.object({
   reason: z.string().trim().max(500).nullable().optional(),
   bookingId: z.string().trim().min(1).max(128).nullable().optional(),
   notes: z.string().trim().max(2000).nullable().optional(),
+  // DRV-03 (D-073): boarding verification payload for BOARD events.
+  boardingCode: z.string().trim().regex(/^[0-9]{6}$/, 'Enter the 6-digit boarding code.').nullable().optional(),
+  manualReason: z.string().trim().max(500).nullable().optional(),
 }).strict().superRefine((data, context) => {
   if (['DELAY', 'INTERRUPT', 'NO_SHOW', 'REPORT_DEFECT'].includes(data.eventType) && (!data.reason || data.reason.trim().length < 8)) {
     context.addIssue({

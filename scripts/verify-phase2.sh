@@ -55,7 +55,7 @@ export APP_URL="http://localhost:3000"
 export AUTH_SECRET="$(openssl rand -hex 32)"
 
 echo
-echo "== 3/7 Apply test migrations (expect: 28 applied) =="
+echo "== 3/7 Apply test migrations (expect: 29 applied) =="
 npm run db:test:migrate
 
 echo

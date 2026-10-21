@@ -104,6 +104,8 @@ export type PassengerJourney = {
   dropoffLocation: string | null;
   pickupTime: string | null;
   tripReference: string | null;
+  /** DRV-03 (D-073): the passenger's own single-use boarding code, shown only while it can still be used. */
+  boardingCode: string | null;
   vehicleRegistration: string | null;
   canCancel: boolean;
   feedback: { rating: number | null; comment: string; createdAt: Date } | null;
@@ -118,6 +120,7 @@ type JourneyRow = {
     vehicle: { registrationNumber: string } | null;
   } | null;
   passengerFeedback: Array<{ rating: number | null; comment: string; createdAt: Date }>;
+  boardingCode: { code: string; expiresAt: Date; usedAt: Date | null } | null;
 };
 
 function presentJourney(row: JourneyRow): PassengerJourney {
@@ -135,6 +138,10 @@ function presentJourney(row: JourneyRow): PassengerJourney {
     tripReference: row.trip?.reference ?? null,
     vehicleRegistration: row.trip?.vehicle?.registrationNumber ?? null,
     canCancel: row.status === 'Pending' || row.status === 'Accepted',
+    boardingCode: row.status === 'Assigned' && row.boardingCode && !row.boardingCode.usedAt
+      && row.boardingCode.expiresAt >= new Date()
+      ? row.boardingCode.code
+      : null,
     feedback: row.passengerFeedback[0]
       ? {
         rating: row.passengerFeedback[0].rating,
@@ -155,6 +162,7 @@ const journeyInclude = {
     },
   },
   passengerFeedback: { select: { rating: true, comment: true, createdAt: true } },
+  boardingCode: { select: { code: true, expiresAt: true, usedAt: true } },
 } satisfies Prisma.BookingInclude;
 
 export type PassengerHome = {
