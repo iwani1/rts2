@@ -133,6 +133,10 @@ export default async function FinanceReportPage({
               : <>Reconciliation warning: revenue {cedis(report.totals.recognizedRevenuePesewas)} does not equal payments {cedis(report.totals.paymentsReceivedPesewas)} + outstanding {cedis(report.totals.outstandingPesewas)}.</>}
           </p>
 
+          <p className="mt-4 text-sm text-slate-600">
+            Recognised revenue {cedis(report.totals.recognizedRevenuePesewas)} = corporate {cedis(report.totals.corporateRevenuePesewas)} + rentals {cedis(report.totals.rentalRevenuePesewas)} (all time, D-091).
+          </p>
+
           <section className="mt-6 grid gap-6 lg:grid-cols-2">
             <div className="overflow-x-auto rounded-lg border border-slate-200">
               <h2 className="bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900">Revenue by client (window)</h2>

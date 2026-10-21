@@ -26,7 +26,7 @@ export function financeReportPdfModel(report: FinanceReport): PdfDocumentModel {
     windowLabel: windowLabel(report.window),
     filtersLabel: report.clientId ? `clientId=${report.clientId}` : 'none',
     formulaNotes: [
-      'Recognised revenue = ISSUED + PAID invoice totals; payments = recorded invoice payments; outstanding is derived per issued invoice (docs/KPIS.md RPT-03, FIN-07).',
+      'Recognised revenue = ISSUED + PAID corporate and rental invoice totals (D-091); payments = recorded invoice payments; outstanding is derived per issued invoice (docs/KPIS.md RPT-03, FIN-07).',
       `Reconciliation: revenue ${cedis(report.totals.recognizedRevenuePesewas)} = payments ${cedis(report.totals.paymentsReceivedPesewas)} + outstanding ${cedis(report.totals.outstandingPesewas)} -> ${report.totals.reconciles ? 'RECONCILED' : 'MISMATCH'}.`,
       'Windowed revenue counts standing invoices by their ISSUED history timestamp; payments are dated by receivedAt.',
       `Coverage: issued invoices with timestamp ${report.coverage.issuedInvoicesWithTimestamp.numerator}/${report.coverage.issuedInvoicesWithTimestamp.denominator}; payments with method ${report.coverage.paymentsWithMethod.numerator}/${report.coverage.paymentsWithMethod.denominator}; payments with reference ${report.coverage.paymentsWithReference.numerator}/${report.coverage.paymentsWithReference.denominator}.`,
@@ -39,6 +39,8 @@ export function financeReportPdfModel(report: FinanceReport): PdfDocumentModel {
         columns: ['Metric', 'GHS'],
         rows: [
           ['Recognised revenue', cedis(report.totals.recognizedRevenuePesewas)],
+          ['— of which corporate contracts', cedis(report.totals.corporateRevenuePesewas)],
+          ['— of which rentals', cedis(report.totals.rentalRevenuePesewas)],
           ['Payments received', cedis(report.totals.paymentsReceivedPesewas)],
           ['Outstanding', cedis(report.totals.outstandingPesewas)],
           ['Estimated gross margin', report.margin.status === 'ESTIMATED' ? cedis(report.margin.marginPesewas) : 'insufficient data'],

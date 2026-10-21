@@ -11,6 +11,7 @@ import {
   submitRentalCompletion,
 } from '@/modules/rentals/rental-lifecycle';
 import { getFinanceDashboard } from './dashboard';
+import { getFinanceReport } from '../reports/finance-reports';
 import {
   RentalInvoicePaymentExceedsError,
   createRentalInvoice,
@@ -180,5 +181,12 @@ describe('Phase 5A rental invoices with PostgreSQL (D-090)', () => {
     expect(dashboard.streams.corporate.recognizedRevenuePesewas).toBe(0);
     expect(dashboard.recognizedRevenuePesewas).toBe(18900);
     expect(dashboard.reconciliation.reconciles).toBe(true);
+
+    const report = await getFinanceReport({ actorId: financeId, companyId });
+    expect(report.totals.rentalRevenuePesewas).toBe(18900);
+    expect(report.totals.corporateRevenuePesewas).toBe(0);
+    expect(report.revenueByService).toEqual([
+      { serviceType: 'Rentals', invoiceCount: 2, revenuePesewas: 18900 },
+    ]);
   });
 });

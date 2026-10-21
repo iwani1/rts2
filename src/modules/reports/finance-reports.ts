@@ -17,6 +17,8 @@ export type FinanceReport = {
     paymentsReceivedPesewas: number;
     outstandingPesewas: number;
     reconciles: boolean;
+    corporateRevenuePesewas: number;
+    rentalRevenuePesewas: number;
   };
   revenueByClient: Array<{ clientId: string; clientName: string; invoiceCount: number; revenuePesewas: number }>;
   revenueByService: Array<{ serviceType: string; invoiceCount: number; revenuePesewas: number }>;
@@ -44,12 +46,15 @@ export type FinanceReport = {
 };
 
 /**
- * RPT-03 / D-064: financial report. Headline totals are the FIN-07 dashboard's
- * reconciled figures (D-063); this report adds the windowed breakdowns —
- * revenue by client and by contract service type (standing invoices by their
- * ISSUED history timestamp), payments received in the window by method — and
- * the point-in-time outstanding-invoice list. The dashboard's estimated
- * gross margin (approved FIN-05 expenses, D-082) passes through unchanged.
+ * RPT-03 / D-064 + D-091: financial report. Headline totals are the FIN-07
+ * dashboard's reconciled combined figures (corporate + rental, D-091);
+ * revenue by service carries a Rentals line from the rental invoice ledger
+ * on the same issued-in-window/standing basis (omitted under a client
+ * filter, because rentals have no corporate client). This report adds the
+ * windowed breakdowns — revenue by client and by contract service type
+ * (standing invoices by their ISSUED history timestamp), payments received
+ * in the window by method — and the point-in-time corporate outstanding
+ * list. The dashboard's estimated gross margin passes through unchanged.
  */
 export async function getFinanceReport(input: {
   actorId: string; companyId: string;
@@ -76,7 +81,7 @@ export async function getFinanceReport(input: {
     ...(window.endExclusive ? { lt: window.endExclusive } : {}),
   } : undefined;
 
-  const [issuedHistory, paymentsSum, paymentsCount, paymentsByMethod, issuedInvoices] = await Promise.all([
+  const [issuedHistory, paymentsSum, paymentsCount, paymentsByMethod, issuedInvoices, rentalIssuedHistory] = await Promise.all([
     prisma.corporateInvoiceStatusHistory.findMany({
       where: {
         companyId, toStatus: 'ISSUED',
@@ -117,6 +122,17 @@ export async function getFinanceReport(input: {
         payments: { select: { amountPesewas: true } },
       },
     }),
+    // Rentals have no corporate client: a client-filtered report excludes
+    // the rental stream entirely (D-091 §4).
+    query.clientId
+      ? Promise.resolve([])
+      : prisma.rentalInvoiceStatusHistory.findMany({
+        where: {
+          companyId, toStatus: 'ISSUED',
+          ...(historyWindowFilter ? { createdAt: historyWindowFilter } : {}),
+        },
+        select: { invoiceId: true },
+      }),
   ]);
 
   const issuedIds = [...new Set(issuedHistory.map((row: { invoiceId: string }) => row.invoiceId))];
@@ -133,6 +149,21 @@ export async function getFinanceReport(input: {
       },
     })
     : [];
+
+  const rentalIssuedIds = [...new Set((rentalIssuedHistory as Array<{ invoiceId: string }>).map((row) => row.invoiceId))];
+  const rentalRecognised = rentalIssuedIds.length > 0
+    ? await prisma.rentalInvoice.findMany({
+      where: { companyId, id: { in: rentalIssuedIds }, status: { not: 'VOID' } },
+      select: { totalPesewas: true },
+    })
+    : [];
+  const rentalsServiceLine = (rentalRecognised as Array<{ totalPesewas: number }>).length > 0
+    ? {
+      serviceType: 'Rentals',
+      invoiceCount: rentalRecognised.length,
+      revenuePesewas: (rentalRecognised as Array<{ totalPesewas: number }>).reduce((sum, invoice) => sum + invoice.totalPesewas, 0),
+    }
+    : null;
 
   const clientMap = new Map<string, { clientId: string; clientName: string; invoiceCount: number; revenuePesewas: number }>();
   const serviceMap = new Map<string, { serviceType: string; invoiceCount: number; revenuePesewas: number }>();
@@ -179,10 +210,12 @@ export async function getFinanceReport(input: {
       paymentsReceivedPesewas: dashboard.paymentsReceivedPesewas,
       outstandingPesewas: dashboard.outstandingPesewas,
       reconciles: dashboard.reconciliation.reconciles,
+      corporateRevenuePesewas: dashboard.streams.corporate.recognizedRevenuePesewas,
+      rentalRevenuePesewas: dashboard.streams.rental.recognizedRevenuePesewas,
     },
     revenueByClient: [...clientMap.values()]
       .sort((a, b) => b.revenuePesewas - a.revenuePesewas || a.clientName.localeCompare(b.clientName)),
-    revenueByService: [...serviceMap.values()]
+    revenueByService: [...serviceMap.values(), ...(rentalsServiceLine ? [rentalsServiceLine] : [])]
       .sort((a, b) => b.revenuePesewas - a.revenuePesewas || a.serviceType.localeCompare(b.serviceType)),
     paymentsInWindow: {
       totalPesewas: paymentsSum._sum.amountPesewas ?? 0,
