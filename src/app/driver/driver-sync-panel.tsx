@@ -8,6 +8,7 @@ import {
   removeEvent,
   type QueuedDriverEvent,
 } from './offline-queue';
+import { pushDriverToast } from './driver-toasts';
 
 /**
  * DRV-05 (D-074): shows driver events waiting on this phone and syncs them
@@ -18,7 +19,7 @@ export function DriverSyncPanel() {
   const router = useRouter();
   const [queue, setQueue] = useState<QueuedDriverEvent[]>([]);
   const [syncing, setSyncing] = useState(false);
-  const [note, setNote] = useState<string | null>(null);
+  const [announced, setAnnounced] = useState(false);
 
   const sync = useCallback(async () => {
     setSyncing(true);
@@ -29,15 +30,25 @@ export function DriverSyncPanel() {
       });
       setQueue(next);
       if (summary.sent + summary.duplicates > 0) {
-        setNote(`${summary.sent + summary.duplicates} queued event(s) confirmed by the server.`);
+        pushDriverToast({
+          tone: 'success',
+          title: `${summary.sent + summary.duplicates} queued event(s) confirmed`,
+          body: 'The server accepted them; the queue below is up to date.',
+        });
+        setAnnounced(true);
         router.refresh();
-      } else if (summary.stillPending > 0) {
-        setNote('Still offline — queued events will send when connection returns.');
+      } else if (summary.stillPending > 0 && !announced) {
+        pushDriverToast({
+          tone: 'info',
+          title: 'Still offline',
+          body: 'Queued events will send when connection returns.',
+        });
+        setAnnounced(true);
       }
     } finally {
       setSyncing(false);
     }
-  }, [router]);
+  }, [router, announced]);
 
   useEffect(() => {
     setQueue(loadQueue(window.localStorage));
@@ -47,7 +58,7 @@ export function DriverSyncPanel() {
     return () => window.removeEventListener('online', onOnline);
   }, [sync]);
 
-  if (queue.length === 0 && !note) return null;
+  if (queue.length === 0) return null;
 
   return (
     <section className="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-5">
@@ -68,7 +79,6 @@ export function DriverSyncPanel() {
         Trip events made without connection stay here as <strong>pending sync</strong> until the server
         confirms them. Nothing is lost if you close the page.
       </p>
-      {note ? <p className="mt-2 text-sm text-slate-700" role="status">{note}</p> : null}
       <ul className="mt-3 grid gap-2">
         {queue.map((entry) => (
           <li className="rounded-md bg-white px-3 py-2 text-sm text-slate-700" key={entry.id}>

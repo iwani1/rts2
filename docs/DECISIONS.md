@@ -764,3 +764,36 @@ sign-off in `docs/SIGN_OFF_D061_D077.md`.
 6. **What this does not close:** the Phase 1C Fedora run
    (`./scripts/verify-phase1c.sh`), the Phase 1C and Phase 2 manual
    checklists, and entering the threshold value (item 2) in Settings.
+
+## D-079 — UI interaction pilot: OTP input, driver toasts, status timeline (beUI-inspired)
+
+Date: 2026-10-21. Owner pointed at https://beui.dev for UI inspiration;
+three of its interaction patterns were adopted where they fit existing
+governed flows, hand-implemented in the house design system
+(`globals.css`, navy/teal) with **no new runtime dependency** (beUI's
+`motion` package deliberately not added; CSS transitions/keyframes only,
+all disabled under `prefers-reduced-motion`):
+
+1. **Boarding code entry (DRV-03)** is now an OTP-style six-slot input
+   (`boarding-code-input.tsx`): gliding focus ring over one real numeric
+   input (paste/autofill/keyboard unchanged), digit pop-in, and a shake
+   when a verification is rejected. Codes, attempts and the manual-reason
+   path behave exactly as D-073 specifies; only the surface changed.
+2. **Driver feedback** is a toast stack (`driver-toasts.tsx`): recorded,
+   queued-offline and sync-confirmed outcomes morph by tone; errors stay
+   until dismissed. The store is module-level so a toast raised before
+   the in-page navigation back to the trip view is still seen. The
+   offline queue itself (D-074) is untouched — toasts only report what
+   the server/queue decided. Inline message paragraphs were removed.
+3. **Status-history timeline** (`src/components/status-timeline.tsx`)
+   renders the append-only sequence (from → to, reason, actor, Accra
+   timestamp, latest highlighted) and is wired into the work-order audit
+   history first; other registers can adopt it without data changes.
+
+**Recorded finding (owner decision needed, not changed here):**
+`tailwindcss` sits in devDependencies but is never imported or
+configured — the utility classes used in some client components are
+inert today, and the hand-written semantic CSS does all styling.
+Either wire Tailwind v4 properly (an app-wide visual change needing its
+own review) or standardise on the semantic CSS; this pilot follows the
+semantic CSS.

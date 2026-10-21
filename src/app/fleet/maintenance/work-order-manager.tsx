@@ -1,5 +1,6 @@
 'use client';
 
+import { StatusTimeline } from '@/components/status-timeline';
 import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
 import { accraLocalDateTimeToISOString, formatAccraDateTime } from '@/modules/time/accra-date-time';
@@ -235,13 +236,7 @@ export function WorkOrderManager({ companyId, vehicles, vehiclesHaveMore = false
       </details>)}
       {initialWorkOrders.map((item) => <details key={`history-${item.id}`} className="vehicle-editor">
         <summary>{item.reference}: status audit history ({item.statusHistory.length} of up to 50 events)</summary>
-        {item.statusHistory.length === 0 ? <p className="form-help">No status history is available for this record.</p> : <ol>
-          {item.statusHistory.map((event) => <li key={event.sequence}>
-            <strong>{event.fromStatus ? `${event.fromStatus} → ` : ''}{event.toStatus}</strong>
-            <p>{event.reason}</p>
-            <p className="muted">{event.actorName} · {dateTimeGhana(event.createdAt)} · event {event.sequence}</p>
-          </li>)}
-        </ol>}
+        {item.statusHistory.length === 0 ? <p className="form-help">No status history is available for this record.</p> : <StatusTimeline entries={item.statusHistory} />}
       </details>)}
       {initialWorkOrders.filter((item) => (nextStatuses[item.status] ?? []).length > 0).map((item) => <details key={`transition-${item.id}`} className="vehicle-editor">
         <summary>{item.reference}: transition from {item.status}</summary>

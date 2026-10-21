@@ -1161,3 +1161,14 @@ unit 428/428 in the sandbox, with an integration test for the
 published-rate path awaiting the next Fedora run. Remaining gate items:
 `./scripts/verify-phase1c.sh`, both manual checklists, and entering the
 threshold value in Settings.
+
+## UI interaction pilot (2026-10-21, D-079)
+
+beUI-inspired patterns in the house design system (no new dependency):
+OTP-style boarding-code input with rejection shake; driver toast stack
+reporting event and sync outcomes; status-history timeline wired into
+work-order audit history. Sandbox: typecheck + lint clean, unit 436/436
+(8 new component tests), production build compiled. Manual feel-check
+rides along with the outstanding Phase 1C/2 manual checklists. Recorded
+finding: Tailwind is installed but unwired (utilities inert) — owner
+decision in D-079.

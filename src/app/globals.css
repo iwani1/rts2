@@ -269,3 +269,50 @@ button:disabled { opacity: .65; cursor: wait; }
 .customer-history-list li:last-child { border-bottom: 0; }
 .customer-history-list strong { color: var(--navy-800); font-size: 13px; text-transform: capitalize; }
 .customer-history-list span, .customer-history-list p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+/* --- UI interaction pilot (D-079, beUI-inspired patterns in the house design system) --- */
+
+/* OTP-style boarding code input: six slots, one gliding focus ring over a real input. */
+.rt-code { position: relative; width: max-content; max-width: 100%; }
+.rt-code-slots { display: flex; gap: 8px; }
+.rt-code-slot { display: grid; place-items: center; width: 44px; height: 52px; border: 1.5px solid #b9c5cb; border-radius: 10px; background: var(--surface); color: var(--navy-950); font-size: 20px; font-weight: 700; }
+.rt-code-slot.is-filled { border-color: var(--navy-800); }
+.rt-code-ring { position: absolute; top: -3px; left: -3px; width: 50px; height: 58px; border: 2.5px solid var(--focus); border-radius: 13px; pointer-events: none; opacity: 0; transition: transform .28s cubic-bezier(.22, 1, .36, 1), opacity .18s ease; }
+.rt-code:focus-within .rt-code-ring { opacity: 1; }
+.rt-code-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; cursor: text; }
+.rt-code-digit { animation: rt-pop .22s cubic-bezier(.22, 1, .36, 1); }
+@keyframes rt-pop { from { transform: translateY(6px) scale(.82); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+.rt-shake { animation: rt-shake .4s ease; }
+@keyframes rt-shake { 10%, 90% { transform: translateX(-1px); } 20%, 80% { transform: translateX(2px); } 30%, 50%, 70% { transform: translateX(-4px); } 40%, 60% { transform: translateX(4px); } }
+
+/* Driver toast stack: morphing status feedback that survives in-page navigation. */
+.rt-toasts { position: fixed; right: 16px; bottom: 16px; z-index: 60; display: grid; gap: 10px; width: min(360px, calc(100vw - 32px)); }
+.rt-toast { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--line); border-left: 4px solid var(--navy-800); border-radius: 10px; background: var(--surface); box-shadow: 0 12px 32px #10203026; animation: rt-toast-in .3s cubic-bezier(.22, 1, .36, 1); transition: border-color .3s ease; }
+.rt-toast-success { border-left-color: var(--teal-700); }
+.rt-toast-info { border-left-color: var(--navy-800); }
+.rt-toast-error { border-left-color: var(--danger); }
+.rt-toast-dot { flex: none; width: 10px; height: 10px; margin-top: 5px; border-radius: 999px; background: var(--navy-800); transition: background .3s ease; }
+.rt-toast-success .rt-toast-dot { background: var(--teal-700); }
+.rt-toast-error .rt-toast-dot { background: var(--danger); }
+.rt-toast-body { flex: 1; min-width: 0; }
+.rt-toast-title { margin: 0; color: var(--navy-950); font-size: 14px; font-weight: 650; }
+.rt-toast-text { margin: 2px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+.rt-toast-close { flex: none; border: 0; background: transparent; color: var(--muted); font-size: 16px; line-height: 1; padding: 2px 4px; cursor: pointer; }
+@keyframes rt-toast-in { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* Status-history timeline: dotted rail, latest event highlighted. */
+.rt-timeline { list-style: none; margin: 8px 0 0; padding: 0; position: relative; }
+.rt-timeline::before { content: ""; position: absolute; left: 7px; top: 10px; bottom: 10px; width: 2px; background: var(--line); }
+.rt-timeline-item { position: relative; padding: 0 0 18px 28px; }
+.rt-timeline-item:last-child { padding-bottom: 2px; }
+.rt-timeline-dot { position: absolute; left: 0; top: 3px; width: 16px; height: 16px; border-radius: 999px; border: 3px solid var(--paper); background: #9db2bd; }
+.rt-timeline-item.is-latest .rt-timeline-dot { background: var(--teal-700); box-shadow: 0 0 0 3px #087c7825; }
+.rt-timeline-status { color: var(--navy-950); font-size: 14px; font-weight: 650; }
+.rt-timeline-from { color: var(--muted); font-weight: 550; }
+.rt-timeline-reason { margin: 2px 0 0; color: var(--ink); font-size: 13.5px; line-height: 1.5; }
+.rt-timeline-meta { margin: 2px 0 0; color: var(--muted); font-size: 12.5px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rt-code-ring, .rt-toast { transition: none; }
+  .rt-code-digit, .rt-shake, .rt-toast { animation: none; }
+}

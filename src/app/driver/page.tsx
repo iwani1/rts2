@@ -11,6 +11,7 @@ import {
 import { DriverActions } from './driver-actions';
 import { DriverIncidentReportForm } from './incident-report-form';
 import { DriverSyncPanel } from './driver-sync-panel';
+import { DriverToastStack } from './driver-toasts';
 
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -159,6 +160,7 @@ export default async function DriverPage({
         />
       ) : null}
 
+      <DriverToastStack />
       <footer className="mt-8 border-t border-slate-200 pt-4">
         <Link className="text-sm font-medium text-slate-700 underline" href="/">Back to home</Link>
       </footer>

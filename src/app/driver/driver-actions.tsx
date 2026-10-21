@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { enqueueEvent } from './offline-queue';
+import { BoardingCodeInput } from './boarding-code-input';
+import { pushDriverToast } from './driver-toasts';
 
 type ManifestEntry = {
   bookingId: string;
@@ -41,8 +43,7 @@ export function DriverActions({
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [invalidPulse, setInvalidPulse] = useState(0);
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
   const [bookingId, setBookingId] = useState('');
@@ -50,7 +51,7 @@ export function DriverActions({
   const [manualReason, setManualReason] = useState('');
 
   const send = async (eventType: string, booking?: string) => {
-    setBusy(true); setError(null); setMessage(null);
+    setBusy(true);
     // DRV-05 (D-074): the key is generated once for this tap and stored
     // with the queued payload, so an offline retry can never double-apply.
     const idempotencyKey = crypto.randomUUID();
@@ -85,17 +86,30 @@ export function DriverActions({
         throw new Error(typeof serverMessage === 'string' && serverMessage ? serverMessage : 'The event could not be recorded.');
       }
       const duplicate = typeof data === 'object' && data !== null && (data as { duplicate?: unknown }).duplicate === true;
-      setMessage(duplicate ? 'Already recorded (safe retry).' : `${eventType} recorded.`);
+      pushDriverToast({
+        tone: 'success',
+        title: duplicate ? 'Already recorded (safe retry)' : `${eventType} recorded`,
+        body: duplicate ? 'The server had this event already; nothing was duplicated.' : undefined,
+      });
       setReason(''); setNotes(''); setBookingId(''); setBoardingCode(''); setManualReason('');
       router.push(returnTo);
       router.refresh();
     } catch (caught) {
       if (caught instanceof QueuedOfflineError) {
-        setMessage(`${eventType} saved on this phone (pending sync). It will send automatically when connection returns.`);
+        pushDriverToast({
+          tone: 'info',
+          title: `${eventType} saved on this phone — pending sync`,
+          body: 'It will send automatically when connection returns.',
+        });
         setReason(''); setNotes(''); setBookingId(''); setBoardingCode(''); setManualReason('');
         router.refresh();
       } else {
-        setError(caught instanceof Error ? caught.message : 'The event could not be recorded.');
+        if (eventType === 'BOARD') setInvalidPulse((pulse) => pulse + 1);
+        pushDriverToast({
+          tone: 'error',
+          title: `${eventType} could not be recorded`,
+          body: caught instanceof Error ? caught.message : 'The event could not be recorded.',
+        });
       }
     } finally { setBusy(false); }
   };
@@ -142,15 +156,16 @@ export function DriverActions({
           </label>
           {boardingCodeRequired ? (
             <>
-              <label className="grid gap-1 text-sm text-slate-700">
-                Boarding code (from the passenger)
-                <input
-                  className="rounded-md border border-slate-300 px-3 py-2 tracking-widest"
-                  inputMode="numeric" maxLength={6} placeholder="6-digit code"
-                  onChange={(event) => setBoardingCode(event.target.value.replace(/[^0-9]/g, ''))}
+              <div className="grid gap-1 text-sm text-slate-700">
+                <span id="boarding-code-label">Boarding code (from the passenger)</span>
+                <BoardingCodeInput
+                  ariaLabel="Boarding code from the passenger"
+                  disabled={busy}
+                  invalidPulse={invalidPulse}
+                  onChange={setBoardingCode}
                   value={boardingCode}
                 />
-              </label>
+              </div>
               <label className="grid gap-1 text-sm text-slate-700">
                 Or manual verification reason (if the passenger cannot produce the code)
                 <input
@@ -178,8 +193,6 @@ export function DriverActions({
           <input className="rounded-md border border-slate-300 px-3 py-2" onChange={(event) => setNotes(event.target.value)} value={notes} />
         </label>
       ) : null}
-      {error ? <p className="text-sm text-red-700" role="alert">{error}</p> : null}
-      {message ? <p className="text-sm text-green-700" role="status">{message}</p> : null}
     </div>
   );
 }
