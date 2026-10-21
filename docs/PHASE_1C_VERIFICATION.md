@@ -75,3 +75,25 @@ Status: **SLICE BUILT — Fedora run required.** Same automated run as above
    metrics with reasons, and that no margin percentage appears anywhere.
 5. Sign in as an Operations Manager: the dashboard reports that access is not permitted
    (read-only invoice scope does not include finance totals).
+
+---
+
+# Phase 1C verification — reports and exports (RPT-02, RPT-03, RPT-04; D-064)
+
+Status: **SLICE BUILT — Fedora run required.** The same `./scripts/verify-phase1c.sh` run
+executes the whole suite, including `reports.integration.test.ts`, `csv.test.ts` and
+`report-math.test.ts`.
+
+## Manual workflow (browser)
+
+1. Sign in as an Operations Manager, open **Reports → Staff transport & fleet**. Check the booking
+   flow counts against the Bookings register for the same window, then download the CSV and
+   confirm the metadata lines (window, timezone, formulas) and that figures match the page.
+2. Note the pickup panel: delay averages and coverage appear, but no on-time percentage is shown
+   (the threshold policy is unset). Route utilisation lists excluded trips.
+3. Sign in as a Finance Officer: the transport report is refused, the financial report opens and
+   its banner reconciles against the Finance dashboard. Download its CSV as well.
+4. Sign in as a Dispatcher: the transport report opens (dispatch scope) and the financial report
+   is refused. Exports must refuse in exactly the same cases as the pages.
+5. Try a window longer than 366 days or an inverted range: both reports show a validation
+   message instead of data.

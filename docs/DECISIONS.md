@@ -392,3 +392,42 @@
 - **Source:** FIN-07 in `richie-tms-standing-brief.md` ("totals reconcile to transaction records;
   margin only when cost and revenue data are sufficient"); KPI formulas in `docs/KPIS.md` (RPT-03).
   Recorded for ratification at the Phase 1C gate.
+
+## D-064 — Reports and CSV exports (RPT-02, RPT-03, RPT-04)
+- **Decision:** Reports are read-only services under `src/modules/reports/` whose numbers come only
+  from persisted records, following the formulas in `docs/KPIS.md`. **RPT-02** counts booking flow
+  from `BookingStatusHistory` event timestamps in the window (distinct bookings per transition:
+  received →Pending, confirmed →Accepted, boarded →Boarded, completed →Completed, cancelled
+  →Cancelled, rejected →Rejected); no-shows are cancellations whose history reason records a
+  passenger no-show (both the dispatch and driver paths write that reason, and driver NO_SHOW
+  events corroborate). Passengers transported = distinct bookings reaching Completed in the
+  window. Pickup delay compares each BOARD driver-event time with the trip's planned start
+  (`tripDate` + `plannedStartTime` HH:MM; Africa/Accra is UTC year-round); because the on-time
+  threshold is still unset (owner policy), the on-time *rate* is reported as insufficient data
+  while average delay (all samples, and late-only), sample size and coverage
+  (boarded pickups lacking a planned start or a BOARD event are excluded and counted) are shown.
+  Route utilisation = Σ boarded-or-completed passengers / Σ `capacityLimit` over Completed trips
+  in the window that have both a capacity and a manifest; other trips are counted as excluded.
+  Vehicles have no persisted operational status, so the fleet section reports recorded category
+  counts, active safety blocks and archived counts, plus document-expiry counts from the vehicle
+  date fields (insurance / roadworthiness / registration) and driver licences — expiring inside
+  the window and already expired — with downtime and fuel/mileage declared insufficient data (no
+  status history, no fuel records). Maintenance shows work orders by status with recorded cost
+  sums (labour+parts+other) and a cost-data coverage pair. Contract performance is insufficient
+  data until service-level targets are defined. **RPT-03** reuses the FIN-07 dashboard (D-063) for
+  its reconciled all-time totals and adds windowed revenue by client and by contract service type
+  (standing invoices by their ISSUED history timestamp), windowed payments by method, and the
+  point-in-time outstanding-invoice list; expenses, cost per trip/passenger and margin remain
+  insufficient data. **RPT-04**: both reports accept the same optional filters (date window
+  ≤ 366 days, client, route, driver, vehicle, service type, status) applied inside the
+  permission-scoped queries — never after the fact — and every report has a CSV export produced
+  from the same service result, carrying filter period, generation time, timezone
+  (Africa/Accra), formula and coverage metadata lines, so an export can never contain records
+  the exporter may not see. Authorisation uses the seeded `report:export` permission:
+  RPT-02 requires GLOBAL/OPERATIONAL/DISPATCH_SCOPE/FLEET_SCOPE, RPT-03 requires
+  GLOBAL/FINANCE_SCOPE (per `docs/PERMISSIONS.md`); exports inherit exactly the same checks as
+  the report they serialize.
+- **Source:** RPT-02/RPT-03/RPT-04 in `richie-tms-standing-brief.md` §7 and the Phase 1C prompt in
+  `richie-tms-phase-prompts.md` (workflows A/B/C/F visible in reports; KPIs matching
+  `docs/KPIS.md` with coverage; permission-scoped exports). Recorded for ratification at the
+  Phase 1C gate.

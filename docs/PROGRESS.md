@@ -88,9 +88,9 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | NTF-02 | Not Started | No feature implementation; Phase 1+ approval required. |
 | NTF-03 | Not Started | No feature implementation; Phase 1+ approval required. |
 | RPT-01 | In Progress | D-047/D-048 provide an all-time, manager-only request status/source aggregate plus audited `Draft → Submitted` count. Draft-inclusive scope and unavailable quote, confirmed/completed, financial, utilization and cancellation metrics are explicit; this is not a date-filtered complete RPT-01 report. Focused tests pass; database and browser E2E remain unrun. |
-| RPT-02 | Not Started | No feature implementation; Phase 1+ approval required. |
-| RPT-03 | Not Started | No feature implementation; Phase 1+ approval required. |
-| RPT-04 | Not Started | No feature implementation; Phase 1+ approval required. |
+| RPT-02 | In Progress | Staff transport & fleet report per D-064: booking flow from status-history events, no-shows, passengers transported, pickup-delay averages with coverage (on-time rate withheld — threshold unset), route utilisation from Completed trips with capacity+manifest, fleet/document-expiry/maintenance summaries; downtime, fuel/mileage and contract performance declared insufficient-data. Sandbox-verified 2026-10-21; Fedora verification pending. |
+| RPT-03 | In Progress | Financial report per D-064: FIN-07 reconciled totals plus windowed revenue by client/service, payments by method, point-in-time outstanding-invoice list; expenses/unit costs/margin insufficient-data. Sandbox-verified 2026-10-21; Fedora verification pending. |
+| RPT-04 | In Progress | Shared filters (window ≤366 days, client/route/driver/vehicle/service/status) applied inside permission-scoped report queries; CSV exports serialized from the same scoped results with period/timezone/formula/coverage metadata. `report:export` scope mapping per D-064 (transport: operational scopes; finance: finance scope). Sandbox-verified 2026-10-21; Fedora verification pending. |
 | RPT-05 | Not Started | No feature implementation; Phase 1+ approval required. |
 | GPS-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 
@@ -727,3 +727,40 @@ Second Phase 1C slice, built under the owner's Phase 1C go-ahead. D-063 is recor
 - **Remaining Phase 1C scope:** RPT-02/RPT-03/RPT-04 next (FIN-07 supplies their reconciliation
   proof), then PAX-01 passenger portal, RNT-09 rental customer portal, role dashboards and the
   hardening pass, per `richie-tms-phase-prompts.md`.
+
+## Phase 1C — reports and exports (RPT-02, RPT-03, RPT-04; D-064; 2026-10-21)
+
+Third Phase 1C slice, built under the owner's Phase 1C go-ahead. D-064 is recorded in
+`docs/DECISIONS.md` for ratification at the Phase 1C gate.
+
+- **RPT-02 (`getTransportReport`):** booking flow counted from `BookingStatusHistory` event
+  timestamps as distinct bookings per transition (received/confirmed/boarded/completed/cancelled/
+  rejected), no-shows from no-show cancellation reasons (both dispatch and driver paths),
+  passengers transported = bookings reaching Completed. Pickup delay compares BOARD history times
+  with trip planned starts (`tripDate` + `plannedStartTime`); both average-delay variants and
+  coverage are shown, but the on-time *rate* is withheld (threshold is an unset owner policy).
+  Route utilisation sums boarded/completed passengers over `capacityLimit` for Completed trips
+  with capacity + manifest, excluded trips counted. Fleet: category counts, active safety blocks,
+  archived count; document expiry from vehicle date fields + driver licences (in-window and
+  already-expired). Maintenance: work orders by status with recorded cost sums and coverage.
+  Downtime, fuel/mileage and contract performance are declared insufficient-data with reasons.
+- **RPT-03 (`getFinanceReport`):** FIN-07's reconciled totals plus windowed revenue by client and
+  by contract service type (standing invoices by ISSUED history timestamp), payments in window by
+  method, and the point-in-time outstanding-invoice list (capped at 100, totals uncapped).
+  Expenses, cost per trip/passenger and margin remain insufficient-data.
+- **RPT-04:** both services share one filter schema (window ≤366 days; client, route, driver,
+  vehicle, service type, status) applied inside permission-scoped queries. CSV exports are built
+  from the same service results (no separate export queries) with `#` metadata lines for period,
+  generation time, timezone (Africa/Accra), formulas and coverage. Authorisation: seeded
+  `report:export` — transport requires GLOBAL/OPERATIONAL/DISPATCH_SCOPE/FLEET_SCOPE, finance
+  requires GLOBAL/FINANCE_SCOPE; exports inherit the identical checks.
+- **Surface:** `/reports` hub (permission-aware), `/reports/transport`, `/reports/finance` pages
+  with filter forms and CSV download links, four API routes (`reports/transport`,
+  `reports/transport/export`, `reports/finance`, `reports/finance/export`), home navigation.
+- **Tests:** unit `csv.test.ts` + `report-math.test.ts`; integration `reports.integration.test.ts`
+  (7 tests over a two-trip + no-show + maintenance + invoicing fixture: flow counts, utilisation
+  exclusion rule, delay coverage without a rate, fleet/expiry/maintenance, financial
+  reconciliation and window semantics, scope enforcement and company isolation, export content).
+  Fedora run pending.
+- **Remaining Phase 1C scope:** PAX-01 passenger portal, RNT-09 rental customer portal, role
+  dashboards and the hardening pass, per `richie-tms-phase-prompts.md`.
