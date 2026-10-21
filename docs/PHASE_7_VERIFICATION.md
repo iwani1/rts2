@@ -83,6 +83,21 @@ Expected:
 > differently-shaped tree). Fix: the Dockerfile base stage pins
 > `npm@11`, making the image build independent of the host's npm.
 > Boot/readiness/header checks still unproven.
+>
+> Fifth Fedora run (2026-10-21, HEAD `c3be8e3`): steps 1–7 PASSED
+> (fifth consecutive time); the image now builds end-to-end and
+> both containers start, but the app crash-loops in its entrypoint:
+> `Cannot find module 'effect'` from `@prisma/config` — the runner
+> copied the Prisma CLI but not its transitive dependency closure,
+> which Next's standalone tracing does not include. Reproduced
+> and enumerated in the sandbox by running the entrypoint against
+> a pruned `node_modules`: the missing closure is c12, deepmerge-ts,
+> defu, destr, effect, empathic, exsolve, fast-check, jiti, pathe,
+> perfect-debounce, pkg-types, pure-rand, rc9; with those present
+> the config loads and Prisma proceeds to engine acquisition.
+> Fix: the builder stages those lock-pinned packages into
+> `/prisma-cli-deps` and the runner copies them into its
+> `node_modules`. Readiness/header checks still unproven.
 
 ## Manual deployment drill (after the automated run)
 

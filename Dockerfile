@@ -22,6 +22,17 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     APP_URL="http://localhost:3000" \
     AUTH_SECRET="build-only-secret-that-is-long-enough-32chars"
 RUN npx prisma generate && npm run build
+# Stage the Prisma CLI's runtime dependency closure for the runner:
+# the entrypoint's `migrate deploy` loads @prisma/config, whose own
+# dependencies (c12, effect, ...) are not part of Next's standalone
+# trace. This list is the closure @prisma/config@6.19.3 requires,
+# derived by running the entrypoint against a pruned node_modules;
+# if a Prisma upgrade changes it, the Phase 7 container smoke test
+# names the next missing module.
+RUN mkdir -p /prisma-cli-deps && cd node_modules && cp -r \
+  c12 deepmerge-ts defu destr effect empathic exsolve fast-check jiti \
+  pathe perfect-debounce pkg-types pure-rand rc9 \
+  /prisma-cli-deps/
 
 FROM node:22-alpine AS runner
 RUN apk add --no-cache openssl
@@ -37,6 +48,7 @@ COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/dotenv ./node_modules/dotenv
+COPY --from=builder /prisma-cli-deps/ ./node_modules/
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 USER node

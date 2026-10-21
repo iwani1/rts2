@@ -1372,3 +1372,13 @@ accepts it (as does the Fedora host), npm 10.9.x (bundled with
 node:22-alpine) rejects it over the picomatch 2.3.2/4.0.7 dedup.
 Lockfile intentionally not regenerated (314-line churn). Fix:
 Dockerfile base stage pins `npm@11`. Boot/readiness still pending.
+
+**Phase 7 fifth Fedora run 2026-10-21 (`c3be8e3`): steps 1–7 PASSED
+(5th consecutive); image builds fully, both containers start,** app
+crash-loops in entrypoint: `Cannot find module 'effect'`
+(@prisma/config's transitive closure absent from the runner —
+standalone tracing excludes it). Closure enumerated by sandbox
+simulation (14 lock-pinned packages: c12, effect, jiti, …); with
+them the config loads and Prisma reaches engine acquisition.
+Fix: builder stages them to /prisma-cli-deps, runner copies them
+in. Readiness/headers still Fedora-pending.
