@@ -58,3 +58,11 @@ Until resolved, settings remain unset and dependent actions must be blocked with
   (labels, categories, blocked-feature references). Until then, rate/cut-off configuration is a
   database-level operation for the implementation team; invoice generation and booking creation
   fail closed (unset = no rate / no cut-off) by design.
+
+## Sandbox persistence incident (2026-10-21)
+- During the FIN-02 turn the local checkout's git metadata was reset: `.git` history and index were lost
+  (only base commit `43dd4c1` remained tracked) while working-tree file contents survived. The pushed
+  remote branch `arena/8922811c-rts2` still held the full history through `aae103e`, so the local branch
+  was reset onto `origin/arena/8922811c-rts2` and the FIN-02 change was re-committed as a clean 14-file
+  diff (`6bb733f`). No remote history was rewritten and no pushed work was lost. If this recurs: do not
+  force-push; recover by resetting onto the fetched remote tip and re-staging only the intended paths.
