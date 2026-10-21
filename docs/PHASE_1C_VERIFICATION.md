@@ -1,3 +1,37 @@
+# Phase 1C verification catch-up (2026-10-21)
+
+**Why this note exists.** Phase 1C shipped in five slices. The first
+(invoice lifecycle, below) was Fedora-verified at `51bfbd6` with 23
+migrations. The other four sections of this document — FIN-07 finance
+dashboard (D-063), RPT reports/exports (D-064), PAX-01 passenger portal
+(D-065), RNT-09 rental portal (D-066) and D-067 role dashboards — were
+left marked "Fedora run required" and were never given a formal
+closing run of their own. Their integration suites have, however, run
+inside every later phase gate: at the most recent (Phase 6,
+`fcfad47`, database `richie_tms_p6_20261021225603_test`) the Phase 1C
+evidence suites passed — `finance-dashboard` 8/8, `reports` 8/8,
+`passenger` 5/5, `rental-portal` 4/4, `operations/dashboard` 2/2,
+`invoice-lifecycle` 7/7, `invoices` 4/4.
+
+**Script refreshed.** `scripts/verify-phase1c.sh` has been updated
+from its 25-migration-era form (it also named the wrong script in its
+usage line) to the current tree: fresh disposable database, **42
+migrations**, full typecheck/lint/unit/integration, matching the later
+phase scripts. Counts quoted in the sections below (23–25 migrations,
+unit 375/375, integration 111/111) are historical, from build time.
+
+**Formal closing run:** `./scripts/verify-phase1c.sh` — pending owner
+execution at the time of this note. When it passes, say so in
+`docs/PROGRESS.md` and this record is closed. Browser checks for all
+Phase 1C features live in `docs/MANUAL_WALKTHROUGH.md` (Parts B–E).
+
+**"Known limits" below are also historical:** overdue tracking
+landed as dashboard ageing (D-090/5C), PDF export as RPT-05 (Phase 3),
+payment reconciliation as FIN-08 (Phase 3), and the corporate-rates
+editor as D-090/5C. Credit notes remain unmodelled by design (D-091).
+
+---
+
 # Phase 1C verification — corporate invoice lifecycle and payments (FIN-02 extension, FIN-03)
 
 Status: **FEDORA-VERIFIED 2026-10-21 at commit `51bfbd6`** (log

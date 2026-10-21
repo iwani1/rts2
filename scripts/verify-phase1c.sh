@@ -1,12 +1,20 @@
 #!/usr/bin/env bash
 # Phase 1C verification on Fedora (docs/PHASE_1C_VERIFICATION.md).
 #
+# Refreshed 2026-10-21 for the post-Phase-6 tree: the first Phase 1C slice
+# (invoice lifecycle) was Fedora-verified at 51bfbd6, and the remaining
+# slices (FIN-07 dashboard, RPT reports/exports, PAX-01 passenger portal,
+# RNT-09 rental portal, D-067 role dashboards) have been exercised inside
+# every Phase 2-6 gate's full integration run ever since. This refreshed
+# script is the formal closing run for the Phase 1C record against the
+# current codebase (42 migrations); it changes no behaviour.
+#
 # Creates a FRESH disposable *_test database, applies all migrations, then
 # runs typecheck, lint, the unit suite and the PostgreSQL integration suite.
 # Integration suites create synthetic companies/users and never clean them up
 # (AuditEvent is append-only), so never point this at a database you reuse.
 #
-# Usage:  ./scripts/verify-phase1b.sh
+# Usage:  ./scripts/verify-phase1c.sh
 # Env overrides: COMPOSE="podman compose" | "docker compose" (auto-detected)
 set -euo pipefail
 
@@ -33,7 +41,7 @@ mkdir -p verification-logs
 LOG="verification-logs/phase1c-$(date +%Y%m%d%H%M%S).log"
 exec > >(tee -a "$LOG") 2>&1
 
-echo "== Phase 1C verification =="
+echo "== Phase 1C verification (catch-up closing run) =="
 echo "Repo:      $(pwd)"
 echo "Commit:    $(git rev-parse --short HEAD) on $(git branch --show-current)"
 echo "Database:  $DB_NAME (fresh, disposable)"
@@ -55,7 +63,7 @@ export APP_URL="http://localhost:3000"
 export AUTH_SECRET="$(openssl rand -hex 32)"
 
 echo
-echo "== 3/7 Apply test migrations (expect: 25 applied) =="
+echo "== 3/7 Apply test migrations (expect: 42 applied) =="
 npm run db:test:migrate
 
 echo
@@ -67,11 +75,11 @@ echo "== 5/7 Lint =="
 npm run lint
 
 echo
-echo "== 6/7 Unit tests (incl. 7x7 booking and 8x8 trip state matrices) =="
+echo "== 6/7 Unit tests (incl. the booking/trip state matrices and dashboard summaries) =="
 npm test
 
 echo
-echo "== 7/7 Integration tests (PostgreSQL; includes the booking -> invoice workflow) =="
+echo "== 7/7 Integration tests (PostgreSQL; the Phase 1C evidence suites are invoice-lifecycle, invoices, finance-dashboard, reports, passenger, rental portal and operations dashboard, inside the full corpus) =="
 npm run test:integration
 
 echo
@@ -79,4 +87,4 @@ echo "== Phase 1C verification finished =="
 echo "Test database kept for inspection: $DB_NAME"
 echo "Drop it later with: $COMPOSE_CMD exec -T db dropdb -U tms $DB_NAME"
 echo "Full log: $LOG"
-echo "Next (E2E, separate fresh DB): follow 'E2E' in docs/PHASE_1C_VERIFICATION.md."
+echo "Manual acceptance: docs/MANUAL_WALKTHROUGH.md (Parts B-E cover the Phase 1C browser checks)."
