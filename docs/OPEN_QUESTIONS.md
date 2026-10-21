@@ -164,3 +164,6 @@ Until resolved, settings remain unset and dependent actions must be blocked with
   the E2E admin was never created, and the literal placeholder `AUTH_SECRET` (30 chars) also fails the
   32+ character gate. No secrets are recorded here or needed in chat: the correct password is the one
   in the repo's local `.env` used by `podman compose` (the same one `verify-phase1b.sh` derives).
+- Owner note (2026-10-21): an E2E-admin password was pasted into chat during the failed E2E setup.
+  Treat it as exposed; rotate it anywhere it is reused. E2E admin passwords should be throwaway values
+  typed only into the local shell, never shared in chat.
