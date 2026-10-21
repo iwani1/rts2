@@ -37,3 +37,26 @@ Status: **SLICE BUILT — Fedora run required.**
    inbox. Confirm no other login can see or mark them (each inbox is strictly its own).
 5. Confirm the SMS/email preference switches save, with the note that those channels
    switch on with NTF-02/03 — nothing is claimed as sent by SMS or email yet.
+
+---
+
+# Phase 2 verification — SMS (NTF-02; D-069)
+
+Status: **SLICE BUILT — Fedora run required.** `./scripts/verify-phase2.sh` now applies
+**27 migrations** and includes `notifications/sms.integration.test.ts` plus the SMS unit
+tests.
+
+## Manual workflow (browser + optional live provider)
+
+1. Without SMS env vars: sign in as a linked passenger with a telephone on their
+   employee record, have Operations create a booking, and open **Notifications**:
+   the SMS section says *not configured*, and the message waits as "Waiting to send".
+   Nothing is claimed as sent.
+2. As Super Admin, `POST /api/notifications/sms/dispatch`: the response reports
+   `configured: false` and zero attempts.
+3. (Optional, needs a real vendor account) Set `SMS_PROVIDER=arkesel`,
+   `ARKESEL_API_KEY`, `ARKESEL_SENDER_ID` and `SMS_WEBHOOK_SECRET` in the
+   environment, restart, dispatch again: the row moves to "Sent — awaiting delivery
+   confirmation". Point the provider's delivery reports at
+   `/api/notifications/sms/dlr` with header `x-webhook-secret`: only then does the
+   row show "Delivered". Verify pricing/sender-id rules with the vendor first.

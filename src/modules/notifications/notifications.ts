@@ -37,6 +37,10 @@ export type NotifyInput = {
   entityType?: string;
   entityId?: string;
   dedupeKey: string;
+  /** SMS/EMAIL delivery target when the channel needs one (NTF-02/03). */
+  destination?: string;
+  /** In-app commits as DELIVERED; provider channels start PENDING. */
+  initialStatus?: 'DELIVERED' | 'PENDING';
 } & NotificationContent;
 
 async function channelEnabled(
@@ -85,7 +89,8 @@ export async function notifyUserInTransaction(
         entityType: input.entityType ?? null,
         entityId: input.entityId ?? null,
         dedupeKey: input.dedupeKey,
-        status: 'DELIVERED',
+        status: input.initialStatus ?? 'DELIVERED',
+        destination: input.destination ?? null,
       },
       select: { id: true },
     });
@@ -104,11 +109,24 @@ export async function notifyLinkedEmployee(
   input: Omit<NotifyInput, 'userId'> & { employeeId: string },
 ): Promise<boolean> {
   const employee = await tx.employee.findUnique({
-    where: { id: input.employeeId }, select: { userId: true },
+    where: { id: input.employeeId }, select: { userId: true, telephone: true },
   });
   if (!employee?.userId) return false;
   const { employeeId: _employeeId, ...rest } = input;
-  return notifyUserInTransaction(tx, { ...rest, userId: employee.userId });
+  const delivered = await notifyUserInTransaction(tx, { ...rest, userId: employee.userId });
+  if (employee.telephone) {
+    // NTF-02 (D-069): queue the SMS copy; the dispatcher sends it later and
+    // only a provider confirmation may call it delivered.
+    await notifyUserInTransaction(tx, {
+      ...rest,
+      userId: employee.userId,
+      channel: 'SMS',
+      destination: employee.telephone,
+      dedupeKey: `${rest.dedupeKey}:sms`,
+      initialStatus: 'PENDING',
+    });
+  }
+  return delivered;
 }
 
 /** Resolves the linked rental-customer login for a customer, if any. */
@@ -117,11 +135,22 @@ export async function notifyLinkedCustomer(
   input: Omit<NotifyInput, 'userId'> & { customerId: string },
 ): Promise<boolean> {
   const customer = await tx.customer.findUnique({
-    where: { id: input.customerId }, select: { userId: true },
+    where: { id: input.customerId }, select: { userId: true, telephone: true },
   });
   if (!customer?.userId) return false;
   const { customerId: _customerId, ...rest } = input;
-  return notifyUserInTransaction(tx, { ...rest, userId: customer.userId });
+  const delivered = await notifyUserInTransaction(tx, { ...rest, userId: customer.userId });
+  if (customer.telephone) {
+    await notifyUserInTransaction(tx, {
+      ...rest,
+      userId: customer.userId,
+      channel: 'SMS',
+      destination: customer.telephone,
+      dedupeKey: `${rest.dedupeKey}:sms`,
+      initialStatus: 'PENDING',
+    });
+  }
+  return delivered;
 }
 
 export type OwnNotification = {
@@ -132,6 +161,16 @@ export type OwnNotification = {
   entityType: string | null;
   entityId: string | null;
   readAt: Date | null;
+  createdAt: Date;
+};
+
+export type OwnSmsDelivery = {
+  notificationId: string;
+  type: string;
+  title: string;
+  destination: string | null;
+  status: string;
+  attempts: number;
   createdAt: Date;
 };
 
@@ -153,7 +192,7 @@ export async function listOwnNotifications(input: { userId: string; companyId: s
   const companyId = companyIdSchema.parse(input.companyId);
   await assertCompany(companyId);
   const prisma = getPrisma();
-  const [rows, unreadCount, totalCount] = await Promise.all([
+  const [rows, unreadCount, totalCount, smsRows] = await Promise.all([
     prisma.notification.findMany({
       where: { companyId, userId: input.userId, channel: 'IN_APP' },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
@@ -169,6 +208,15 @@ export async function listOwnNotifications(input: { userId: string; companyId: s
     prisma.notification.count({
       where: { companyId, userId: input.userId, channel: 'IN_APP' },
     }),
+    prisma.notification.findMany({
+      where: { companyId, userId: input.userId, channel: 'SMS' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: 50,
+      select: {
+        id: true, type: true, title: true, destination: true,
+        status: true, attempts: true, createdAt: true,
+      },
+    }),
   ]);
   const notifications: OwnNotification[] = rows.map((row) => ({
     notificationId: row.id,
@@ -180,7 +228,16 @@ export async function listOwnNotifications(input: { userId: string; companyId: s
     readAt: row.readAt,
     createdAt: row.createdAt,
   }));
-  return { companyId, notifications, unreadCount, totalCount };
+  const smsDeliveries: OwnSmsDelivery[] = smsRows.map((row) => ({
+    notificationId: row.id,
+    type: row.type,
+    title: row.title,
+    destination: row.destination,
+    status: row.status,
+    attempts: row.attempts,
+    createdAt: row.createdAt,
+  }));
+  return { companyId, notifications, unreadCount, totalCount, smsDeliveries };
 }
 
 /** NTF-01: counts only, for the workspace bell. */

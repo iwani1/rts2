@@ -85,7 +85,7 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | FIN-07 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FIN-08 | Not Started | No feature implementation; Phase 1+ approval required. |
 | NTF-01 | In Progress | In-app notification service per D-068: `Notification`/`NotificationPreference` (migration `20261021140000_notifications`), transactional emitter with per-event dedupe keys and channel preferences, wired to booking created/status-changed/trip-assigned (linked passenger) and rental status changes (linked customer), own-inbox page with unread bell, mark-read/read-all and preference switches. SMS/email channels stored but not yet delivered (NTF-02/03). Sandbox-verified 2026-10-21 (unit 400/400; 26/26 migrations on PGlite); Fedora verification pending. |
-| NTF-02 | Not Started | No feature implementation; Phase 1+ approval required. |
+| NTF-02 | In Progress | SMS channel per D-069: `SmsProvider` interface with an env-activated Arkesel-shaped adapter (feature is *Not configured* without credentials — nothing is sent or claimed sent), SMS fan-out at emit time to the linked employee/customer telephone (migration `20261021150000_sms_notifications`), explicit Super-Admin/scheduler dispatch with attempts/backoff, and DELIVERED only via the secret-checked delivery-report webhook. Sandbox-verified 2026-10-21 (unit 405/405; 27/27 migrations on PGlite); provider live-verification and Fedora run pending. |
 | NTF-03 | Not Started | No feature implementation; Phase 1+ approval required. |
 | RPT-01 | In Progress | D-047/D-048 provide an all-time, manager-only request status/source aggregate plus audited `Draft → Submitted` count. Draft-inclusive scope and unavailable quote, confirmed/completed, financial, utilization and cancellation metrics are explicit; this is not a date-filtered complete RPT-01 report. Focused tests pass; database and browser E2E remain unrun. |
 | RPT-02 | In Progress | Staff transport & fleet report per D-064: booking flow from status-history events, no-shows, passengers transported, pickup-delay averages with coverage (on-time rate withheld — threshold unset), route utilisation from Completed trips with capacity+manifest, fleet/document-expiry/maintenance summaries; downtime, fuel/mileage and contract performance declared insufficient-data. Sandbox-verified 2026-10-21; Fedora verification pending. |
@@ -884,3 +884,28 @@ recorded as passed.
 - **Next Phase 2 slices:** NTF-02 SMS adapter, NTF-03 email adapter, then incidents and
   breakdown workflow, boarding verification, driver offline queue,
   preventive-maintenance reminders, two-factor authentication.
+
+## Phase 2 — SMS adapter (NTF-02; D-069; 2026-10-21)
+
+Second Phase 2 slice. D-069 recorded in `docs/DECISIONS.md` for gate ratification.
+
+- **Fan-out:** booking/rental notifications now also queue an SMS copy (own dedupe key,
+  status `PENDING`, destination = the linked employee/customer telephone) whenever the
+  recipient's SMS preference is on and a telephone is recorded; no telephone → no SMS row.
+- **Provider:** `SmsProvider` interface (`src/modules/notifications/sms.ts`) with one
+  Arkesel-v2-shaped adapter, activated only by `SMS_PROVIDER=arkesel` +
+  `ARKESEL_API_KEY` + `ARKESEL_SENDER_ID`. Otherwise the feature is honestly
+  **Not configured** (shown on the Notifications page) and dispatch is a no-op that
+  reports exactly that. Vendor pricing/account verification remains an owner task.
+- **Delivery truthfulness:** dispatch (Super-Admin endpoint
+  `POST /api/notifications/sms/dispatch`, or any external scheduler calling the service)
+  moves rows to `SENT` with attempts/backoff (max 3); only the secret-checked webhook
+  `POST /api/notifications/sms/dlr` (`SMS_WEBHOOK_SECRET`) may mark `DELIVERED`.
+  Users see their own SMS states in the inbox ("Waiting to send" / "Sent — awaiting
+  delivery confirmation" / "Delivered" / failed with attempts).
+- **Tests:** unit `sms.test.ts` (configuration detection, adapter request/response
+  handling with stubbed fetch) and `sms.integration.test.ts` (fan-out, unconfigured
+  dispatch no-op, SENT→DELIVERED only via confirmation, failure backoff and
+  exhaustion, preference-off suppression). Fedora run pending.
+- **Next:** NTF-03 email adapter, then incidents/breakdown, boarding verification,
+  driver offline queue, maintenance reminders, two-factor authentication.

@@ -522,3 +522,23 @@ Date: 2026-10-21. Status: decided for Phase 2 construction.
    (no settings keys exist yet) and is not claimed as configurable in the UI.
 5. **Own-inbox only.** Notification reads require no new permission vocabulary: a login can
    only ever list, read and set preferences for its own notifications.
+
+## D-069 — SMS delivery: provider interface, honest delivery states, explicit dispatch (NTF-02)
+
+Date: 2026-10-21. Status: decided for Phase 2 construction; recorded for ratification at the Phase 2 gate.
+
+1. **Interface before provider.** SMS sending goes through an `SmsProvider` interface. The one
+   concrete adapter targets the Arkesel v2 HTTP API shape and activates only when
+   `SMS_PROVIDER=arkesel` with `ARKESEL_API_KEY` and `ARKESEL_SENDER_ID` set; otherwise the
+   feature is **Not configured** and nothing is sent or claimed sent. Provider availability and
+   pricing verification with the vendor remains an owner task; no delivery is ever fabricated.
+2. **Delivery truthfulness.** SMS rows start `PENDING`; a provider send moves them to `SENT`
+   (accepted, not delivered); only a provider delivery confirmation (secret-checked webhook)
+   may mark `DELIVERED`. Failures record attempts (max 3) and the provider error, with a
+   backoff timestamp; exhausted rows stay `FAILED` for staff visibility.
+3. **Fan-out at emit time.** When a passenger (linked employee telephone) or rental customer
+   (customer telephone) is notified and their SMS preference is on, a `PENDING` SMS row is
+   stored beside the in-app row with its own dedupe key. No recorded telephone → no SMS row.
+4. **Explicit dispatch.** Sending is performed by `dispatchPendingSmsNotifications`, invoked
+   from a Super-Admin-only endpoint (and reusable by an external scheduler); the app has no
+   background worker, and the UI/docs say so rather than implying real-time sending.

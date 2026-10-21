@@ -897,6 +897,11 @@ model Notification {
   entityId   String?
   dedupeKey String    @db.VarChar(200)
   status    String    @default("DELIVERED")
+  destination String? @db.VarChar(254)
+  providerMessageId String? @db.VarChar(128)
+  attempts  Int       @default(0)
+  lastError String?   @db.VarChar(500)
+  nextAttemptAt DateTime? @db.Timestamptz(6)
   readAt    DateTime? @db.Timestamptz(6)
   createdAt DateTime  @default(now()) @db.Timestamptz(6)
   company   Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
@@ -905,6 +910,7 @@ model Notification {
   @@unique([companyId, userId, channel, dedupeKey])
   @@index([companyId, userId, readAt, createdAt])
   @@index([companyId, userId, createdAt])
+  @@index([channel, status, nextAttemptAt])
 }
 
 model NotificationPreference {
