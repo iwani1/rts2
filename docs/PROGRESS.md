@@ -1281,3 +1281,11 @@ undated invoices counted separately. Sandbox: PGlite 42/42, unit
 489/489, production build clean, tsc clean. Fedora gate:
 `scripts/verify-phase5.sh` (42 migrations) — see
 `docs/PHASE_5_VERIFICATION.md`.
+
+**Phase 5 automated Fedora verification PASSED 2026-10-21 at `ef29773`:**
+42/42 migrations, unit 489/489 (134 files), integration 201/201 (48
+suites) — `rental-invoices` 4/4 (idempotent create, deposit-exceeds
+refusal, void-with-payments refusal), `rental-quotations` 4/4,
+finance-dashboard ageing 8/8. One fix round (`ef29773`) added the
+D-090 due date to corporate-issue fixtures in three older suites and
+pinned the no-due-date refusal in `invoice-lifecycle`.

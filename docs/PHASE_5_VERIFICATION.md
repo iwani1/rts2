@@ -32,10 +32,16 @@ Expected:
   portal accept/decline receipts, confirm citing an accepted quotation)
   and the finance-dashboard ageing scenario
 
-> Status: built in the sandbox (PGlite migration sweep 42/42, unit
-> 489/489, production build clean, tsc clean at `4bfa1d2`). Fedora
-> automated verification is **outstanding**; the manual walkthrough
-> below also remains outstanding.
+> Status: **automated verification PASSED on Fedora 2026-10-21 at
+> `ef29773`** (database `richie_tms_p5_20261021222932_test`): 42/42
+> migrations, typecheck + lint clean (0 errors), unit 489/489 (134
+> files), integration 201/201 (48 suites) — including
+> `rental-invoices` 4/4, `rental-quotations` 4/4, the finance-dashboard
+> ageing scenario and the new due-date refusal pin in
+> `invoice-lifecycle`. One fix round (`ef29773`: due dates on
+> corporate-issue fixtures in the provider-payments, reconciliations
+> and reports suites) — the due-date policy held; the fixtures had
+> lagged it. The manual walkthrough below remains outstanding.
 
 ## Manual walkthrough
 
