@@ -11,6 +11,7 @@ import {
   recordInvoicePayment,
   transitionCorporateInvoice,
 } from '../finance/invoices';
+import { createWorkOrder, transitionWorkOrder } from '../maintenance/work-orders';
 import { getTransportReport } from './transport-reports';
 import { getFinanceReport } from './finance-reports';
 import { financeReportCsv, transportReportCsv } from './exports';
@@ -98,6 +99,8 @@ describe('staff transport, fleet and financial reports with exports (RPT-02/03/0
     dispatcherId = dispatcher.id;
     driverUserId = driverUser.id;
     await assignRole(opsId, 'OPS_MANAGER');
+    const fleetManager = await makeUser('Reports Fleet Manager');
+    await assignRole(fleetManager.id, 'FLEET_MANAGER');
     await assignRole(financeId, 'FINANCE_OFFICER');
     await assignRole(dispatcherId, 'DISPATCHER');
     await assignRole(driverUserId, 'DRIVER');
@@ -155,20 +158,36 @@ describe('staff transport, fleet and financial reports with exports (RPT-02/03/0
         reason: 'Failed brake inspection in fixture', appliedById: opsId,
       },
     });
-    await prisma.maintenanceWorkOrder.create({
-      data: {
-        companyId, vehicleId: vehicleOneId, reference: `WO-${randomUUID().replaceAll('-', '').slice(0, 16).toUpperCase()}`,
-        reportedFault: 'Brake pads worn', dateReported: new Date('2028-01-10'), safetyRelated: false,
-        reason: 'Report fixture work order', createdById: opsId,
-        labourCostPesewas: BigInt(10000), partsCostPesewas: BigInt(5000), otherCostPesewas: null,
-      },
+    const costedWorkOrder = await createWorkOrder({
+      actorId: opsId, companyId, vehicleId: vehicleOneId, reportedFault: 'Brake pads worn',
+      dateReported: '2028-01-10', safetyRelated: false, reason: 'Report fixture work order',
     });
-    await prisma.maintenanceWorkOrder.create({
-      data: {
-        companyId, vehicleId: vehicleOneId, reference: `WO-${randomUUID().replaceAll('-', '').slice(0, 16).toUpperCase()}`,
-        reportedFault: 'Mirror cracked', dateReported: new Date('2028-01-11'), safetyRelated: false,
-        reason: 'Report fixture work order without costs', createdById: opsId,
-      },
+    await transitionWorkOrder({
+      actorId: opsId, companyId, workOrderId: costedWorkOrder.id, toStatus: 'Awaiting Inspection',
+      reason: 'Report fixture inspection request',
+    });
+    await transitionWorkOrder({
+      actorId: fleetManager.id, companyId, workOrderId: costedWorkOrder.id, toStatus: 'Approved',
+      reason: 'Report fixture repair approval', requiredWork: 'Replace worn brake pads', parts: 'Brake pad set',
+    });
+    await transitionWorkOrder({
+      actorId: opsId, companyId, workOrderId: costedWorkOrder.id, toStatus: 'In Progress',
+      reason: 'Report fixture repair started',
+    });
+    await transitionWorkOrder({
+      actorId: opsId, companyId, workOrderId: costedWorkOrder.id, toStatus: 'Awaiting Review',
+      reason: 'Report fixture repair finished',
+    });
+    await transitionWorkOrder({
+      actorId: opsId, companyId, workOrderId: costedWorkOrder.id, toStatus: 'Completed',
+      reason: 'Report fixture completion recorded',
+      completionDate: new Date(Date.now() - 60_000).toISOString(),
+      inspectionResults: 'Brake pads replaced and braking verified',
+      labourCostPesewas: 10000, partsCostPesewas: 5000,
+    });
+    await createWorkOrder({
+      actorId: opsId, companyId, vehicleId: vehicleOneId, reportedFault: 'Mirror cracked',
+      dateReported: '2028-01-11', safetyRelated: false, reason: 'Report fixture work order without costs',
     });
 
     // T1: two passengers, planned start, capacity -> boarded + completed.
