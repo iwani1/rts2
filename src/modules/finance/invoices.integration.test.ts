@@ -18,7 +18,6 @@ const prisma = getPrisma();
 let companyId = '';
 let otherCompanyId = '';
 let financeId = '';
-let managerId = '';
 let clientId = '';
 let contractId = '';
 let secondContractId = '';
@@ -57,8 +56,7 @@ describe('corporate invoices with PostgreSQL persistence', () => {
     const manager = await prisma.user.create({
       data: { name: 'Invoice Ops Manager', email: `inv-mgr-${randomUUID()}@example.invalid`, status: 'ACTIVE' },
     });
-    managerId = manager.id;
-    await prisma.userRoleAssignment.create({
+        await prisma.userRoleAssignment.create({
       data: { userId: manager.id, companyId, roleCode: 'OPS_MANAGER', reason: 'Integration setup', assignedById: null },
     });
     const makeActiveContractAsManager = async () => {
@@ -85,7 +83,7 @@ describe('corporate invoices with PostgreSQL persistence', () => {
     }, manager.id, companyId);
     const vehicle = await prisma.vehicle.create({
       data: {
-        companyId, registrationNumber: `INV-${randomUUID().slice(0, 8)}`,
+        companyId, registrationNumber: `INV-${randomUUID().slice(0, 8).toUpperCase()}`,
         make: 'Testbus', model: 'Coach', category: 'BUS', seatCount: 40,
       },
     });

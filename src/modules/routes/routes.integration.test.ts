@@ -115,7 +115,7 @@ describe('locations, routes and schedules with PostgreSQL persistence', () => {
     }, managerId, companyId, route.id);
     await prisma.vehicle.create({
       data: {
-        companyId, registrationNumber: `GR-${randomUUID().slice(0, 8)}`, make: 'Test', model: 'Bus',
+        companyId, registrationNumber: `GR-${randomUUID().slice(0, 8).toUpperCase()}`, make: 'Test', model: 'Bus',
         category: 'Bus', seatCount: 20,
       },
     });

@@ -162,7 +162,7 @@ describe('trips, manifests and capacity with PostgreSQL persistence', () => {
     )).rejects.toBeInstanceOf(TripPolicyError);
     const vehicle = await prisma.vehicle.create({
       data: {
-        companyId, registrationNumber: `TRP-${randomUUID().slice(0, 8)}`,
+        companyId, registrationNumber: `TRP-${randomUUID().slice(0, 8).toUpperCase()}`,
         make: 'Testbus', model: 'Coach', category: 'BUS', seatCount: 30,
       },
     });

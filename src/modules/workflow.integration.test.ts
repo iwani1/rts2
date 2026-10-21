@@ -97,7 +97,7 @@ describe('Phase 1B workflow: booking to invoice and corporate dashboard', () => 
     });
     const vehicle = await prisma.vehicle.create({
       data: {
-        companyId, registrationNumber: `FLOW-${randomUUID().slice(0, 8)}`,
+        companyId, registrationNumber: `FLOW-${randomUUID().slice(0, 8).toUpperCase()}`,
         make: 'Testbus', model: 'Coach', category: 'BUS', seatCount: 40,
       },
     });

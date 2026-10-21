@@ -105,3 +105,13 @@ Until resolved, settings remain unset and dependent actions must be blocked with
   convention now: one strict object for the fields, a shared `superRefine` function, and
   `.extend({ reason }).strict().superRefine(refine)` for the audited request schema
   (contracts, locations, routes).
+
+## Integration fixture corrections (Fedora run at `c2beb76`, 2026-10-21)
+- Vehicle check constraint `Vehicle_registration_normalized` requires `upper(trim(reg)) = reg`;
+  fixtures now uppercase the random plate suffix (`FLOW-`/`DRV-`/`INV-`/`GR-`/`TRP-`/`DSP-` + 8 hex chars).
+- Role grants (seeded): `OPS_MANAGER` holds `client:manage`/`booking:manage`/`route:manage`/`trip:dispatch`
+  at COMPANY scope; `DISPATCHER` holds `booking:manage`/`trip:dispatch` only. The dispatch fixture user
+  now carries both roles — contracts cannot be created by a Dispatcher-only account, by design.
+- First green milestones in that run: generate, 21/21 migrations, typecheck, lint (0 errors),
+  **unit suite 373/373**, and 88 integration tests passing; remaining failures were the two fixture
+  issues above.

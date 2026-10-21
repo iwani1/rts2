@@ -77,7 +77,7 @@ describe('driver interface with PostgreSQL persistence', () => {
     });
     const vehicle = await prisma.vehicle.create({
       data: {
-        companyId, registrationNumber: `DRV-${randomUUID().slice(0, 8)}`,
+        companyId, registrationNumber: `DRV-${randomUUID().slice(0, 8).toUpperCase()}`,
         make: 'Testbus', model: 'Coach', category: 'BUS', seatCount: 40,
       },
     });

@@ -18,7 +18,6 @@ let otherCompanyId = '';
 let managerId = '';
 let clientId = '';
 let routeId = '';
-let vehicleId = '';
 let bigVehicleId = '';
 let blockedVehicleId = '';
 let driverId = '';
@@ -43,8 +42,11 @@ describe('dispatch board and resource assignment with PostgreSQL persistence', (
     companyId = company.id;
     otherCompanyId = otherCompany.id;
     managerId = manager.id;
-    await prisma.userRoleAssignment.create({
-      data: { userId: managerId, companyId, roleCode: 'DISPATCHER', reason: 'Integration setup', assignedById: null },
+    await prisma.userRoleAssignment.createMany({
+      data: [
+        { userId: managerId, companyId, roleCode: 'DISPATCHER', reason: 'Integration setup', assignedById: null },
+        { userId: managerId, companyId, roleCode: 'OPS_MANAGER', reason: 'Integration setup', assignedById: null },
+      ],
     });
     const client = await prisma.client.create({ data: { companyId, name: `Dispatch Client ${randomUUID()}` } });
     clientId = client.id;
@@ -69,11 +71,11 @@ describe('dispatch board and resource assignment with PostgreSQL persistence', (
     routeId = route.id;
     const makeVehicle = async (seatCount: number) => prisma.vehicle.create({
       data: {
-        companyId, registrationNumber: `DSP-${randomUUID().slice(0, 8)}`,
+        companyId, registrationNumber: `DSP-${randomUUID().slice(0, 8).toUpperCase()}`,
         make: 'Testbus', model: 'Coach', category: 'BUS', seatCount,
       },
     });
-    vehicleId = (await makeVehicle(30)).id;
+    await makeVehicle(30);
     bigVehicleId = (await makeVehicle(45)).id;
     blockedVehicleId = (await makeVehicle(30)).id;
     await prisma.vehicleSafetyBlock.create({
@@ -150,7 +152,7 @@ describe('dispatch board and resource assignment with PostgreSQL persistence', (
   it('requires an override when vehicle seats are below the requirement, and assigns when clean', async () => {
     const small = await prisma.vehicle.create({
       data: {
-        companyId, registrationNumber: `DSP-${randomUUID().slice(0, 8)}`,
+        companyId, registrationNumber: `DSP-${randomUUID().slice(0, 8).toUpperCase()}`,
         make: 'Testbus', model: 'Mini', category: 'MINIBUS', seatCount: 5,
       },
     });
