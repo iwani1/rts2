@@ -949,3 +949,20 @@ phase prompt allows it only once confirmed required.
 3. Runs are `OPEN → FINAL`; a different authorised user finalises
    (recomputed snapshot stored). **CSV export is served only for FINAL
    runs** — the export is the approved payroll, never a draft estimate.
+
+## D-087 — RTE-05: optimisation interface only; nothing is called "optimal"
+
+1. Phase 3 ships the **contract** for a later route-optimisation service:
+   typed request (depots, stops with coordinates and optional time
+   windows, vehicles with capacity) and a candidate-plan response whose
+   stops are ordered per vehicle. Outputs are `candidatePlan`s — the word
+   "optimal" is reserved for a defined objective that has been evaluated,
+   which no code does today.
+2. The service port is `RouteOptimisationService.proposePlan`. The only
+   implementation wired in is `UnconfiguredOptimisationService`, which
+   refuses with an honest "Not configured" — no heuristic silently fills
+   the gap, no dispatch screen consumes a plan, and the endpoint answers
+   503 until a real service and an agreed objective exist.
+3. Request validation (schema) rejects empty fleets, out-of-range
+   coordinates and inverted time windows, so a future provider integrates
+   against a tested boundary.
