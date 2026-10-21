@@ -868,3 +868,23 @@ phase prompt allows it only once confirmed required.
 4. The finance JSON report (RPT-03) and exports pass the dashboard margin
    through unchanged, so they gain an estimated margin exactly when the
    dashboard has one.
+
+## D-083 — MNT-04: maintenance cost analytics definitions
+
+1. **Finished work** = work orders in `Completed` or `Closed` with a
+   completion date. Spend (by vehicle, by repair type, parts vs labour)
+   sums the recorded labour/parts/other pesewas of that set; work orders
+   without any recorded cost are counted in a coverage pair, never assumed
+   to be zero-cost repairs — the totals are "recorded costs" (KPIS.md).
+2. **Downtime** is not a recorded vehicle state in this system, so it is
+   reported as **repair turnaround**: calendar days from `dateReported`
+   to the completion date per finished work order (summed/averaged per
+   vehicle) — explicitly labelled recorded repair days, never presented
+   as fleet availability.
+3. **Recurring faults** are factual repeats, not diagnosis: the same
+   vehicle with ≥2 work orders of the same normalised work type, and the
+   same vehicle with ≥2 identical normalised fault descriptions.
+4. The window (optional, ≤366 days) filters spend by completion date and
+   recurring-fault counts by report date; each section states its basis.
+   Open (unfinished) work orders are reported as a backlog with ageing by
+   report date. Reads use the `maintenance:manage` permission scopes.
