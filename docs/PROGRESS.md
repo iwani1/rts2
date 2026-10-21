@@ -58,11 +58,11 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | BKG-01 | In Progress | Booking types and dated-journey booking records implemented per D-052; Fedora verification pending. |
 | BKG-02 | In Progress | Creation validation implemented per D-052 (eligibility, contract status with typed inactive-contract policy, route/client match, past dates, DB-enforced duplicate journeys incl. parallel requests); Fedora verification pending. |
 | BKG-03 | In Progress | Pending → Accepted/Rejected/Cancelled staff workflow with sequenced history implemented per D-052; assignment/boarding/completion paths land with TRP/DRV. Fedora verification pending. |
-| BKG-04 | Not Started | No feature implementation; Phase 1+ approval required. |
+| BKG-04 | In Progress | Implemented locally (D-053, commits 2e63cc8/d06532b); awaiting Fedora verification. |
 | BKG-05 | In Progress | Implemented locally (D-056, commit pending); awaiting Fedora verification. |
 | BKG-06 | In Progress | Implemented locally (D-056, commit pending); awaiting Fedora verification. |
-| TRP-01 | Not Started | No feature implementation; Phase 1+ approval required. |
-| TRP-02 | Not Started | No feature implementation; Phase 1+ approval required. |
+| TRP-01 | In Progress | Implemented locally (D-053, commit d06532b); awaiting Fedora verification. |
+| TRP-02 | In Progress | Implemented locally (D-053, commit d06532b); awaiting Fedora verification. |
 | DSP-01 | In Progress | Implemented locally (D-054, commit pending); awaiting Fedora verification. |
 | DSP-02 | In Progress | Implemented locally (D-054, commit pending); awaiting Fedora verification. |
 | DSP-03 | In Progress | Implemented locally (D-054, commit pending); awaiting Fedora verification. |
@@ -496,6 +496,22 @@ Added the routes domain as the fourth Phase 1B vertical slice.
 - **Pages** (`src/app/routes/`): location register + manager, route register, route editor with stop-order editor, manual plan panel, and schedule panel (add/copy/activate with audited reasons). Workspace navigation links Routes and schedules.
 - **Tests**: `route-plan.test.ts`, `route-schema.test.ts`, `routes.integration.test.ts` (locations, stop-order override, plan capacity, schedule conflicts/copy/reactivation, cross-company denial). Not yet run: sandbox has no `node_modules`/database; Fedora verification is batched with CLI-02/EMP.
 - **Limits**: No map provider, no trip generation (TRP-01), no availability/assignment checks (DSP-02), no optimisation (RTE-05, Phase 3).
+
+## Phase 1B gate — awaiting Fedora verification and owner approval (2026-10-21)
+
+- **Implemented locally and pushed:** CLI-01 (Fedora-verified), CLI-02, CLI-03, EMP-01..03, RTE-01..04,
+  BKG-01..06, TRP-01/02, DSP-01..04, DRV-01/02/04, FIN-02 (commits `6c2ba81`, `9520371`, `ef83d47`,
+  `2e63cc8`, `d06532b`, `d2e9573`, `d54faaf`, `aae103e`, `6bb733f`, `f55be6f`). Everything after CLI-01
+  remains **UNVERIFIED** until the owner runs `docs/PHASE_1B_VERIFICATION.md` on Fedora (expected: 20
+  migrations on a fresh `*_test` database, typecheck/lint green, unit matrices, DB-backed integration suites,
+  then E2E). Exit criteria are encoded as tests: workflows A/B/F/G analogues (booking→trip→dispatch→driver→
+  invoice, corporate dashboard), cross-company isolation on every company-scoped route, capacity under
+  parallel assignment, full from-to matrices for trips/bookings/contracts, a no-map dispatch board, and
+  driver-only-own-trips isolation.
+- **Owner decisions owed at the gate:** ratify or reshape D-059 (client binding); approve settings-registry
+  rows for `bookings.creation_cutoff` (D-056) and `finance.corporate_rates` (D-058); define or descope
+  DRV-03/DRV-05; confirm the DRAFT-only invoice lifecycle scope for Phase 1C planning.
+- **Stop line honoured:** no Phase 1C work begins until the owner verifies and approves.
 
 ## Phase 1B — corporate dashboard (CLI-03; D-059; 2026-10-21)
 
