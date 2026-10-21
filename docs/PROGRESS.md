@@ -1123,3 +1123,27 @@ First Fedora run of `verify-phase2.sh` (commit `5610bb3`): steps 1–6 passed
 
 Expected on re-run: 0 failures, 0 skipped in these suites. Integration
 remains Fedora-verified only — the sandbox has no PostgreSQL engine.
+
+## Phase 2 Fedora verification PASSED — automated gate (2026-10-21)
+
+`./scripts/verify-phase2.sh` is fully green at commit `a438d89` on Fedora
+(DB `richie_tms_p2_20261021180752_test`): 32/32 migrations applied,
+typecheck clean, lint 0 errors (4 warnings), unit 427/427, integration
+**170 passed / 0 failed / 0 skipped** (40 suites). All Phase 2 integration
+suites pass on real PostgreSQL: notifications, SMS, email, incidents,
+incident response, boarding codes, service plans, two-factor gate, GPS —
+plus reports (RPT-02/03/04) 7/7, first run green after fixture repairs.
+
+Getting there took four fix rounds, all in fixtures or the defects they
+exposed (never weakened product rules): permission vocabulary
+(`trip:dispatch`, not `trip:manage`); passenger completed-journey
+classification; rental portal not-found error mapping; and layered
+reports-fixture repairs — required `operatingDays`, `WO-[A-F0-9]{16}`
+reference format, non-safety intake (D-058), and seeding work orders
+through the governed lifecycle so the status-history trigger and
+approval segregation are honoured.
+
+The script ends pointing at the remaining gate items: the manual browser
+workflows and E2E in `docs/PHASE_2_VERIFICATION.md`, owner ratification
+of D-068–D-077, and the still-outstanding Phase 1C Fedora run
+(`./scripts/verify-phase1c.sh`, expects 25 migrations).

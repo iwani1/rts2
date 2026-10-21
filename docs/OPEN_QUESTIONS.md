@@ -255,6 +255,12 @@ docs/PROGRESS.md and docs/PHASE_1C_VERIFICATION.md. For ratification at the Phas
   INC-01/02, DRV-03, DRV-05, MNT-03, AUTH-06 and GPS-01 (interface + Not-configured state) are
   built and pushed (HEAD `8ec7088`). Decisions D-068–D-077 await ratification at the Phase 2
   gate, and the Phase 1C Fedora run (`./scripts/verify-phase1c.sh`) is still outstanding in
-  parallel — neither gate is claimed as passed until the Fedora results exist. Next owner
-  action: `./scripts/verify-phase2.sh` (fresh disposable DB, 32 migrations) plus the manual
-  workflows in `docs/PHASE_2_VERIFICATION.md`.
+  parallel.
+
+- **Phase 2 automated Fedora verification PASSED 2026-10-21** at commit `a438d89`
+  (`./scripts/verify-phase2.sh`: 32/32 migrations, unit 427/427, integration
+  170/170 with 0 failed and 0 skipped; see docs/PROGRESS.md). Remaining
+  Phase 2 gate items: the manual workflows and E2E in
+  `docs/PHASE_2_VERIFICATION.md`, and ratification of D-068–D-077.
+  The Phase 1C gate (`./scripts/verify-phase1c.sh` + D-061–D-067
+  ratification) is still outstanding.
