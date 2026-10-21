@@ -1324,3 +1324,14 @@ migrations, unit 491/491, integration 202/202 (48 suites). Phase 1C's
 previously un-gated slices (FIN-07, RPT-02/03/04, PAX-01, RNT-09,
 D-067) are now formally closed; every phase gate (1B–6) has an
 automated Fedora pass on record.
+
+**Phase 7 built 2026-10-21 at `5dece9a` (behind owner-run Fedora verification):**
+D-092 production hardening — 7A containerised runtime (multi-stage
+Dockerfile, standalone output, migrate-on-boot entrypoint, compose
+`app` service; `db` untouched), 7B security headers (CSP, HSTS,
+production-only frame blocking so the dev preview still embeds),
+7C fail-fast production env validation via instrumentation, 7D
+executable backup/restore scripts with the documented drill.
+Sandbox: unit green, `next build` compiles, scripts syntax-checked.
+Fedora gate: `scripts/verify-phase7.sh` (42 migrations + step 8/8
+container smoke) — see `docs/PHASE_7_VERIFICATION.md`.
