@@ -136,3 +136,10 @@ Until resolved, settings remain unset and dependent actions must be blocked with
 - `assignTripResources` now returns `warnings: introduced` (the conflicts the change introduced and
   the dispatcher accepted), while the audit event keeps the full conflict snapshot. The board
   continues to evaluate the trip's current resources, so pre-existing conflicts remain visible there.
+
+## Phase 1B automated verification PASSED (Fedora, 2026-10-21, commit `3e32798`)
+- `./scripts/verify-phase1b.sh` 7/7 green on fresh `richie_tms_p1b_20261021011206_test`: generate,
+  21/21 migrations, typecheck, lint 0 errors, unit **373/373**, integration **105/105**.
+  Remaining before the Phase 1B gate can close: owners E2E run (§3 of
+  `docs/PHASE_1B_VERIFICATION.md`) and the four gate decisions (D-059, two settings-registry rows,
+  DRV-03/DRV-05, DRAFT-only invoice lifecycle).

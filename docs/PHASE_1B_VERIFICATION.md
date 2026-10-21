@@ -1,12 +1,11 @@
 # Phase 1B verification on Fedora (owner-run, 2026-10-21)
 
-**Status: NOT YET RUN.** Everything below is expected output for slices that
-are implemented locally and pushed, but unverified until these commands run:
-CLI-02 (`6c2ba81`), EMP (`9520371`), RTE (`ef83d47`), BKG (`2e63cc8`), TRP
-(`d06532b`), DSP (`d2e9573`), DRV (`d54faaf`), BKG-05/06 (`aae103e`), FIN-02
-(`6bb733f`), CLI-03 (`f55be6f`), gate docs (`917e3b7`) and the end-to-end
-workflow evidence (`8347a7b`). A fresh database should apply 21 migrations.
-Do not treat any of them as working until this checklist passes.
+**Status: AUTOMATED STEPS PASSED at commit `3e32798` (2026-10-21).**
+`./scripts/verify-phase1b.sh` completed 7/7 on a fresh disposable database
+(`richie_tms_p1b_20261021011206_test`): Prisma generate, 21/21 migrations,
+typecheck, lint (0 errors), unit 373/373, integration 105/105 against real
+PostgreSQL. Log: `verification-logs/phase1b-20261021011206.log`. Only §3 (E2E,
+separate fresh database) and the §4 gate decisions remain.
 
 ## 0. Pull and generate
 

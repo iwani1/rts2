@@ -497,21 +497,23 @@ Added the routes domain as the fourth Phase 1B vertical slice.
 - **Tests**: `route-plan.test.ts`, `route-schema.test.ts`, `routes.integration.test.ts` (locations, stop-order override, plan capacity, schedule conflicts/copy/reactivation, cross-company denial). Not yet run: sandbox has no `node_modules`/database; Fedora verification is batched with CLI-02/EMP.
 - **Limits**: No map provider, no trip generation (TRP-01), no availability/assignment checks (DSP-02), no optimisation (RTE-05, Phase 3).
 
-## Phase 1B gate — awaiting Fedora verification and owner approval (2026-10-21)
+## Phase 1B gate — automated verification PASSED on Fedora (2026-10-21); owner approval pending
 
-- **Final evidence (commit pending):** a cross-slice `workflow.integration.test.ts` walks one Monday end to end —
-  contract → bookings → schedule trip generation → resource assignment → booking assignment → dispatch no-show
-  → linked-driver START/BOARD/COMPLETE → per-passenger invoice (GH₵200.00) billed exactly once → bound-HR
-  dashboard — plus D-056/D-058 settings-schema unit tests. Self-contained (journeys dated next month).
-- **Implemented locally and pushed:** CLI-01 (Fedora-verified), CLI-02, CLI-03, EMP-01..03, RTE-01..04,
-  BKG-01..06, TRP-01/02, DSP-01..04, DRV-01/02/04, FIN-02 (commits `6c2ba81`, `9520371`, `ef83d47`,
-  `2e63cc8`, `d06532b`, `d2e9573`, `d54faaf`, `aae103e`, `6bb733f`, `f55be6f`). Everything after CLI-01
-  remains **UNVERIFIED** until the owner runs `docs/PHASE_1B_VERIFICATION.md` on Fedora (expected: 20
-  migrations on a fresh `*_test` database, typecheck/lint green, unit matrices, DB-backed integration suites,
-  then E2E). Exit criteria are encoded as tests: workflows A/B/F/G analogues (booking→trip→dispatch→driver→
-  invoice, corporate dashboard), cross-company isolation on every company-scoped route, capacity under
-  parallel assignment, full from-to matrices for trips/bookings/contracts, a no-map dispatch board, and
-  driver-only-own-trips isolation.
+- **Verified at commit `3e32798`** by `./scripts/verify-phase1b.sh` on a fresh disposable database
+  (`richie_tms_p1b_20261021011206_test`): Prisma generate ✅, 21/21 migrations ✅, `tsc --noEmit` ✅,
+  ESLint ✅ (0 errors; 2 pre-existing Phase 1A warnings in `customer-picker.tsx`), **unit suite 373/373 ✅**
+  (incl. the full 7×7 booking and 8×8 trip state matrices), **integration suite 105/105 ✅** against real
+  PostgreSQL. Log: `verification-logs/phase1b-20261021011206.log`.
+- **Exit criteria demonstrated by those tests:** the cross-slice `workflow.integration.test.ts` walks one
+  Monday end to end — contract → bookings → schedule trip generation → resource assignment → booking
+  assignment → dispatch no-show → linked-driver START/BOARD/COMPLETE → per-passenger invoice billed exactly
+  once → bound-HR corporate dashboard. Per-slice suites cover cross-company isolation on every
+  company-scoped route, capacity under parallel assignment (exactly one of two racers wins), schedule
+  generation idempotency, dispatch hard blocks (safety block, expired licence) that override cannot bypass,
+  driver idempotent events with own-trips-only isolation, invoice duplicate-billing protection, and the
+  no-map dispatch board.
+- **Still outstanding:** the E2E pass (`docs/PHASE_1B_VERIFICATION.md` §3, separate fresh
+  `richie_tms_e2e_phase1b_test` database) — owner-run, not yet executed.
 - **Owner decisions owed at the gate:** ratify or reshape D-059 (client binding); approve settings-registry
   rows for `bookings.creation_cutoff` (D-056) and `finance.corporate_rates` (D-058); define or descope
   DRV-03/DRV-05; confirm the DRAFT-only invoice lifecycle scope for Phase 1C planning.
