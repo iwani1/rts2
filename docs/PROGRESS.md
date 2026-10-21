@@ -44,8 +44,8 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | MNT-02 | In Progress | D-045 adds atomic, reason-audited application of approved safety blocks, register visibility without reason disclosure, one-time release with completed-work timestamp and passed inspection, and database immutability/one-active-block constraints. The release API returns only block ID, status, and release timestamp. No assignment workflow exists, so assignment prevention is not active. |
 | MNT-03 | Not Started | No feature implementation; Phase 1+ approval required. |
 | MNT-04 | Not Started | No feature implementation; Phase 1+ approval required. |
-| CLI-01 | Not Started | No feature implementation; Phase 1+ approval required. |
-| CLI-02 | Not Started | No feature implementation; Phase 1+ approval required. |
+| CLI-01 | Tested | Corporate client register implemented (schema, migration, service, API, pages). PostgreSQL integration tests pass 7/7 within the 14-suite/58-test integration run on a disposable `*_test` database (2026-10-20). |
+| CLI-02 | In Progress | Contract register implemented per D-049: `Contract`/`ContractStatusHistory` schema and migration with database transition guards, service with row-locked reason-audited transitions, API routes, contract register pages, unit tests for schemas and the full from-to matrix, and PostgreSQL integration tests. Verification run on Fedora is pending; see the Phase 1B CLI-02 section below. |
 | CLI-03 | Not Started | No feature implementation; Phase 1+ approval required. |
 | EMP-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | EMP-02 | Not Started | No feature implementation; Phase 1+ approval required. |
@@ -426,8 +426,8 @@ Added corporate client records as the first Phase 1B vertical slice, following t
 
 | Feature ID | Status | Notes |
 |---|---|---|
-| CLI-01 | In Progress | Corporate client register: schema, migration, service, API routes, pages, unit + integration tests. Contracts (CLI-02) and corporate dashboard (CLI-03) not started. |
-| CLI-02 | Not Started | Contracts: reference, client, dates, status, service type, routes, pricing model, billing frequency, renewal reminders, approval history. |
+| CLI-01 | Tested | Corporate client register: schema, migration, service, API routes, pages, unit + integration tests. Integration suite green on Fedora (14 files / 58 tests, including 7 client tests) against `richie_tms_cli_test`. |
+| CLI-02 | In Progress | Contracts implemented per D-049 (see CLI-02 section below); Fedora verification pending. |
 | CLI-03 | Not Started | Corporate dashboard limited to the client's own records. |
 | EMP-01 | Not Started | Employee register. |
 | EMP-02 | Not Started | CSV import with preview and row-level errors. |
@@ -453,5 +453,22 @@ Added corporate client records as the first Phase 1B vertical slice, following t
 | DRV-04 | Not Started | Vehicle defect and breakdown/incident report. |
 | FIN-01 (contract pricing) | Not Started | Contract pricing models. |
 | FIN-02 (corporate invoice) | Not Started | Corporate invoice generation from billable trips. |
+
+## Phase 1B — corporate contracts (CLI-02; D-049; 2026-10-20)
+
+Added the contract register as the second Phase 1B vertical slice, following the rental-request/work-order lifecycle patterns.
+
+- **Prisma schema**: Added `Contract` (companyId, clientId composite FK to `Client`, generated `CON-…` reference unique per company, optional serviceType/startDate/endDate/renewalDate, routesAndStops, serviceDaysAndShifts, vehicleRequirements, pricingModel, billingFrequency, paymentTerms, serviceLevelTargets, notes — all optional agreed text with no defaults) and append-only `ContractStatusHistory`. Added `contracts` relations to `Company`/`Client` and `contractStatusChanges` to `User`.
+- **Migration**: `prisma/migrations/20261020130000_contracts/migration.sql` creates both tables with a status CHECK, an ordered-dates CHECK, a history allowed-transition CHECK, an append-only history trigger, a status-transition guard trigger (contracts are created as Draft; approval to Active requires start/end dates), and deferred history-required/history-matches constraint triggers.
+- **Lifecycle (D-049)**: Draft → Pending Approval → Active; Pending Approval → Draft for amendment; Active → Suspended/Expired/Terminated; Suspended → Active/Expired/Terminated; Expired → Active only as a renewal carrying a new end date that has not passed. Terminated is terminal. Drafts are the only editable state. Suspended reactivation is refused once the end date has passed. Expired/suspended contracts and past-end-date Active contracts surface explicit warnings; whether bookings are allowed under them remains governed by the unset `contracts.inactive_booking_policy` setting and is enforced later in BKG-02.
+- **Service layer** (`src/modules/contracts/contracts.ts`): `listContracts` (search/status/client filters, cursor pagination), `getContract` (with status history), `createContract`, `updateContractDraft`, `transitionContract` (row-locked `FOR UPDATE`, transition-table and precondition checks, history + audit in one transaction), all behind company-scoped `client:manage`.
+- **API routes**: `GET/POST /api/companies/[companyId]/contracts`, `GET/PUT /api/companies/[companyId]/contracts/[contractId]`, `POST /api/companies/[companyId]/contracts/[contractId]/transition`, with session auth, typed error mapping (400/403/404/409), and private/no-store responses.
+- **Pages** (`src/app/contracts/page.tsx` + `contract-manager.tsx`): searchable/filterable contract register, Draft create/edit form with client picker, status-change controls with renewal dates for Expired contracts, approval/status history panel, and explicit unavailable-feature notes (attachments, automatic renewal reminders). Workspace navigation now links Corporate clients and Contracts for `client:manage` users.
+- **Tests**: `contract-schema.test.ts` (validation, renewal-date rules), `contract-transitions.test.ts` (every ordered from-to pair in the 6×6 matrix), `contracts.integration.test.ts` (PostgreSQL CRUD, approval preconditions, lifecycle and renewal, suspended-reactivation refusal, cross-company denial, database guard and append-only history enforcement). Not yet run: sandbox has no `node_modules`/database; Fedora verification commands issued with this slice.
+- **Limits**: No contract attachments (no file-storage provider selected), no automated renewal reminders (delivery channel/recipients unresolved), no structured route/stop links (RTE-02), no money computation from pricing text (FIN-01), no booking-eligibility enforcement (BKG-02), and no automatic expiry job; expiry is a reason-recorded manual transition plus on-screen warnings.
+
+| Feature ID | Status | Notes |
+|---|---|---|
+| CLI-02 | In Progress | Contract register implemented; unit/integration/E2E verification on Fedora pending. CLI-03 (corporate dashboard) not started. |
 
 Phase 1A remains complete: all 4 E2E specs pass against the cleaned test DB (1 company: Richie Transport Services), unit tests 337/337 pass, integration tests 51/51 pass, typecheck and build pass.

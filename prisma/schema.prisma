@@ -25,6 +25,7 @@ model Company {
   maintenanceWorkOrderStatusHistory MaintenanceWorkOrderStatusHistory[]
   vehicleSafetyBlocks  VehicleSafetyBlock[]
   clients               Client[]
+  contracts             Contract[]
 }
 
 model Client {
@@ -42,9 +43,58 @@ model Client {
   createdAt        DateTime @default(now()) @db.Timestamptz(6)
   updatedAt        DateTime @updatedAt @db.Timestamptz(6)
   company          Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  contracts        Contract[]
 
   @@unique([companyId, id])
   @@index([companyId, archivedAt, name])
+}
+
+model Contract {
+  id                   String    @id @default(cuid())
+  companyId            String
+  clientId             String
+  reference            String
+  serviceType          String?
+  startDate            DateTime? @db.Date
+  endDate              DateTime? @db.Date
+  renewalDate          DateTime? @db.Date
+  routesAndStops       String?
+  serviceDaysAndShifts String?
+  vehicleRequirements  String?
+  pricingModel         String?
+  billingFrequency     String?
+  paymentTerms         String?
+  serviceLevelTargets  String?
+  notes                String?
+  status               String
+  createdAt            DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime  @updatedAt @db.Timestamptz(6)
+  company              Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  client               Client    @relation(fields: [companyId, clientId], references: [companyId, id], onDelete: Restrict)
+  statusHistory        ContractStatusHistory[]
+
+  @@unique([companyId, id])
+  @@unique([companyId, reference])
+  @@index([companyId, status, createdAt])
+  @@index([companyId, clientId, createdAt])
+  @@index([companyId, endDate])
+}
+
+model ContractStatusHistory {
+  id         String   @id @default(cuid())
+  companyId  String
+  contractId String
+  sequence   Int
+  actorId    String
+  fromStatus String?
+  toStatus   String
+  reason     String
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  contract   Contract @relation(fields: [companyId, contractId], references: [companyId, id], onDelete: Restrict)
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, contractId, sequence])
+  @@index([companyId, contractId, createdAt])
 }
 
 model User {
@@ -62,6 +112,7 @@ model User {
   roleAssignments     UserRoleAssignment[] @relation("RoleAssignee")
   assignedRoleChanges UserRoleAssignment[] @relation("RoleAssignmentActor")
   rentalRequestStatusChanges RentalRequestStatusHistory[]
+  contractStatusChanges ContractStatusHistory[]
   createdPricingWorksheets RentalPricingWorksheet[]
   createdMaintenanceWorkOrders MaintenanceWorkOrder[] @relation("WorkOrderCreator")
   maintenanceWorkOrderStatusChanges MaintenanceWorkOrderStatusHistory[]

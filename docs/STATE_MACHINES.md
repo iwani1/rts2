@@ -34,6 +34,9 @@ Approval is tracked per entity: the vehicle status vocabulary and safety/derivat
 | | Active → Suspended/Expired/Terminated | authorized manager/system | policy, effective date, reason; termination approval |
 | | Suspended → Active | authorized approver | conditions met; decision recorded |
 | | Expired → Active | authorized approver | renewal/amendment approved, never silently reactivate |
+| | Pending Approval → Draft | preparer | return for amendment; reason recorded |
+
+**D-049 implemented contract lifecycle:** the rows above plus Pending Approval → Draft are implemented in `contract-transitions.ts`, enforced in the service layer (row lock, permission, preconditions) and in the database (status/transition checks, transition guard, append-only history triggers). Approval requires an active same-company client and start/end dates with end on or after start; Suspended reactivation is refused past the end date; Expired renewal requires a new end date that has not passed. Terminated is terminal. No automatic expiry job exists; expiry is a manual reason-recorded transition, and Active contracts past their end date surface warnings.
 | Invoice | Draft → Pending Approval → Issued → Partially Paid → Paid | finance/approver/payment service | billable event unique; settings/totals valid; payment verified |
 | | Draft/Pending Approval → Void | authorized finance/approver | reason; issued invoice corrected through credit/adjustment, not mutation |
 | | Issued/Partially Paid → Overdue | scheduled process | due date passed, outstanding balance > 0 |

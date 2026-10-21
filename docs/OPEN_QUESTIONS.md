@@ -42,7 +42,7 @@ No business defaults have been invented. Items marked **Phase 1A blocker** preve
 - Named approvers for financial approvals. Finance quotation approval remains gated on a specific delegated-approval policy.
 - Vehicle status transitions: D-019 resolves the authority to apply safety blocks (Ops Managers, Fleet Managers, Super Administrators); Drivers/Technicians report defects and Dispatchers may view availability but cannot change status. D-016 approves the status names/safety boundary; D-018 approves immediate blocking, dispatcher resolution for future assignments without auto-cancellation/reassignment, incident/replacement workflow for an active trip, and Fleet Manager/authorized-releaser approval after work completion and an inspection record (no separate inspector role required). Transition-specific preconditions remain open, as do assignment active statuses, time buffers between jobs, and conflict horizon.
 - Booking cutoff, duplicate-journey identity, capacity/waitlist and no-show rules.
-- Exact shift/route recurrence and local-time behavior; contract approval, suspension and renewal rules.
+- Exact shift/route recurrence and local-time behavior. Contract lifecycle mechanics are resolved by D-049 (transition table, approval dates, suspension, renewal with a new end date); who the named contract approvers are, whether approval needs a person other than the preparer, and termination approval authority remain open.
 - Corporate billing frequency and payment terms; chargeable trip definition and duplicate-billing event key.
 - Invoice numbering, credit note/adjustment and accounting periods.
 - Incident severity/escalation, retention and passenger notification rules.

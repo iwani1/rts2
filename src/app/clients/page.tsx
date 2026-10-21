@@ -111,7 +111,7 @@ export default async function ClientsPage({ searchParams }: PageProps) {
         <div className="fleet-list-heading"><div><h2 id="client-history-title">Client history</h2><p className="muted">Audit events for this record; personal details are not copied into the event summaries.</p></div></div>
         {history.length === 0 ? <p className="fleet-empty">No history recorded.</p> : <ol className="client-history-list">{history.map((event, index) => <li key={`${event.createdAt.toISOString()}-${event.action}-${index}`}><strong>{event.action.replaceAll('_', ' ')}</strong><span>{accraDateTime.format(event.createdAt)} · {event.actorName}</span>{event.reason && <p>{event.reason}</p>}</li>)}</ol>}
       </section>}
-      <p className="fleet-limits">Contract assignment, employee registration and corporate invoicing for this client are not yet implemented pending Phase 1B downstream workflow implementation.</p>
+      <p className="fleet-limits">Contracts for this client are managed in the <Link href="/contracts">contract register</Link>. Employee registration and corporate invoicing are not yet implemented.</p>
     </div>
   </main>;
 }
