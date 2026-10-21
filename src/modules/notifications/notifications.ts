@@ -5,6 +5,7 @@ import {
   bookingAssignedNotification,
   bookingCreatedNotification,
   bookingStatusNotification,
+  rentalQuotationIssuedNotification,
   rentalStatusNotification,
   type NotificationContent,
 } from './templates';
@@ -348,5 +349,6 @@ export {
   bookingAssignedNotification,
   bookingCreatedNotification,
   bookingStatusNotification,
+  rentalQuotationIssuedNotification,
   rentalStatusNotification,
 };

@@ -14,6 +14,7 @@ import { RequestManager } from './request-manager';
 import { RentalRequestTransitionManager } from './rental-request-transition-manager';
 import { RentalLifecycleManager } from './rental-lifecycle-manager';
 import { RentalInvoicePanel } from './rental-invoice-panel';
+import { RentalQuotationPanel } from './rental-quotation-panel';
 import { RentalRequestDetails } from './rental-request-details';
 import { QuotationReadiness } from './quotation-readiness';
 import { RentalPricingPreview } from './pricing-preview';
@@ -130,6 +131,7 @@ export default async function RentalRequestsPage({ searchParams }: PageProps) {
       {result.canManage && editing && editing.status !== 'Draft' && <RentalRequestTransitionManager companyId={company.id} request={editing} />}
       {result.canManage && editing && editing.status !== 'Draft' && <RentalLifecycleManager companyId={company.id} requestId={editing.id} status={editing.status} />}
       {result.canManage && editing?.status === 'Completed' && <RentalInvoicePanel companyId={company.id} requestId={editing.id} />}
+      {result.canManage && editing?.status === 'Under Review' && <RentalQuotationPanel companyId={company.id} requestId={editing.id} />}
       {editing && editing.status !== 'Draft' && <p className="fleet-limits">Submitted requests follow the governed lifecycle: review, decline, confirmation with vehicle reservation, driver assignment, two-step completion, and pre-trip cancellation. Dispatch remains a separate workflow.</p>}
       {editing && <section className="fleet-list-panel" aria-labelledby="request-history-title">
         <div className="fleet-list-heading"><div><h2 id="request-history-title">Status history</h2><p className="muted">Draft details are editable only before submission. Approved status changes are separately audited here.</p></div></div>

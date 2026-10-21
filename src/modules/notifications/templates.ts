@@ -49,6 +49,17 @@ export function bookingAssignedNotification(
   };
 }
 
+export function rentalQuotationIssuedNotification(
+  quotation: { reference: string; totalPesewas: number; expiresAt: Date },
+): NotificationContent {
+  const total = `GH₵ ${(quotation.totalPesewas / 100).toFixed(2)}`;
+  const expiry = quotation.expiresAt.toISOString().slice(0, 10);
+  return {
+    title: 'Your rental quotation is ready',
+    body: `Quotation ${quotation.reference} totals ${total} and is valid until ${expiry}. Sign in to your portal to accept or decline it.`,
+  };
+}
+
 export function rentalStatusNotification(
   request: { pickupLocation: string | null; destination: string | null; serviceDate: string | null },
   toStatus: string,

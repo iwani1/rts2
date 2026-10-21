@@ -53,6 +53,7 @@ model Company {
   driverEvents          DriverEvent[]
   corporateInvoices     CorporateInvoice[]
   rentalInvoices        RentalInvoice[]
+  rentalQuotations      RentalQuotation[]
   userClientBindings    UserClientBinding[]
   passengerFeedback     PassengerFeedback[]
 }
@@ -318,6 +319,7 @@ model User {
   releasedVehicleSafetyBlocks  VehicleSafetyBlock[] @relation("SafetyBlockReleasedBy")
   rentalInvoicePaymentsRecorded RentalInvoicePayment[] @relation("RentalInvoicePaymentRecorder")
   rentalInvoiceHistoryActed     RentalInvoiceStatusHistory[] @relation("RentalInvoiceHistoryActor")
+  rentalQuotationsDecided       RentalQuotation[] @relation("RentalQuotationDecider")
 }
 
 model Role {
@@ -572,6 +574,7 @@ model RentalRequest {
   assignments          RentalAssignment[]
   completions          RentalCompletion[]
   invoices             RentalInvoice[]
+  quotations           RentalQuotation[]
 
   @@unique([companyId, id])
   @@index([companyId, status, createdAt])
@@ -610,8 +613,10 @@ model RentalPricingWorksheet {
   request                RentalRequest @relation(fields: [companyId, requestId], references: [companyId, id], onDelete: Restrict)
   createdBy              User          @relation(fields: [createdById], references: [id], onDelete: Restrict)
 
+  @@unique([companyId, id])
   @@unique([companyId, requestId, version])
   @@index([companyId, requestId, createdAt])
+  quotations             RentalQuotation[]
 }
 
 model VehicleSafetyBlock {
@@ -1044,6 +1049,34 @@ model RentalInvoiceStatusHistory {
 
   @@unique([companyId, invoiceId, sequence])
   @@index([companyId, invoiceId, createdAt])
+}
+
+model RentalQuotation {
+  id               String          @id @default(cuid())
+  companyId        String
+  requestId        String
+  worksheetId      String
+  worksheetVersion Int
+  reference        String
+  status           String          @default("ISSUED")
+  subtotalPesewas  BigInt
+  taxPesewas       BigInt
+  taxSnapshot      Json?
+  totalPesewas     BigInt
+  expiresAt        DateTime        @db.Timestamptz(6)
+  decidedAt        DateTime?       @db.Timestamptz(6)
+  decisionReason   String?         @db.VarChar(500)
+  decidedById      String?
+  createdAt        DateTime        @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime        @updatedAt @db.Timestamptz(6)
+  company          Company         @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  request          RentalRequest   @relation(fields: [companyId, requestId], references: [companyId, id], onDelete: Restrict)
+  worksheet        RentalPricingWorksheet @relation(fields: [companyId, worksheetId], references: [companyId, id], onDelete: Restrict)
+  decidedBy        User?           @relation("RentalQuotationDecider", fields: [decidedById], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, id])
+  @@unique([companyId, reference])
+  @@index([companyId, requestId, status])
 }
 
 model DriverPayRule {

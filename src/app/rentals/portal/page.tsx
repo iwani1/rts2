@@ -9,8 +9,13 @@ import {
   type RentalPortalRequestSummary,
 } from '@/modules/rental-portal/portal';
 import { RentalDraftActions, RentalEnquiryForm } from './portal-actions';
+import { QuotationActions } from './quotation-actions';
 
 export const dynamic = 'force-dynamic';
+
+function cedis(pesewas: number) {
+  return `GH₵ ${(pesewas / 100).toFixed(2)}`;
+}
 
 function formatDate(value: string | null) {
   if (!value) return '—';
@@ -136,8 +141,32 @@ export default async function RentalPortalPage() {
 
         <section className="fleet-list-panel" aria-labelledby="rental-money-title">
           <div className="fleet-list-heading"><div><h2 id="rental-money-title">Quotations and payments</h2></div></div>
-          <p className="muted">{home.quotations.message}</p>
-          <p className="muted">{home.payments.message}</p>
+          {home.quotations.state === 'NONE_ISSUED'
+            ? <p className="muted">{home.quotations.message}</p>
+            : <div className="vehicle-grid">{home.quotations.items.map((quote) => (
+              <article className="vehicle-card" key={quote.id}>
+                <div className="vehicle-card-heading">
+                  <h3>{quote.pickupLocation ?? 'Pickup'} → {quote.destination ?? 'Destination'}</h3>
+                  <span className="status-pill">{quote.displayStatus}</span>
+                </div>
+                <dl className="vehicle-specs">
+                  <div><dt>Quotation</dt><dd>{quote.reference}</dd></div>
+                  <div><dt>Total</dt><dd>{cedis(quote.totalPesewas)}</dd></div>
+                  <div><dt>Valid until</dt><dd>{formatDate(quote.expiresAt.slice(0, 10))}</dd></div>
+                  <div><dt>Trip date</dt><dd>{formatDate(quote.serviceDate)}</dd></div>
+                </dl>
+                {quote.displayStatus === 'ISSUED' && <QuotationActions companyId={company.id} quotationId={quote.id} />}
+                {quote.displayStatus === 'EXPIRED' && <p className="muted">This quotation has expired. Contact us and we will issue a fresh one.</p>}
+              </article>
+            ))}</div>}
+          {home.payments.state === 'NONE_DUE'
+            ? <p className="muted">{home.payments.message}</p>
+            : <ol className="customer-history-list">{home.payments.invoices.map((invoice) => (
+              <li key={invoice.id}>
+                <strong>{invoice.reference} · {invoice.status}</strong>
+                <span>Total {cedis(invoice.totalPesewas)} · outstanding {cedis(invoice.outstandingPesewas)}{invoice.dueDate ? ` · due ${formatDate(invoice.dueDate)}` : ''}</span>
+              </li>
+            ))}</ol>}
         </section>
       </>}
     </div>

@@ -85,10 +85,40 @@ export type RentalPortalHome = {
   };
   requests: RentalPortalRequestSummary[];
   requestsTotal: number;
-  /** D-066: no customer quotation model exists yet; stated, never invented. */
-  quotations: { state: 'NONE_ISSUED'; message: string };
-  /** D-066: rentals have no invoices yet; stated, never invented. */
-  payments: { state: 'NONE_DUE'; message: string };
+  /** D-090/5B: real quotations once issued; the empty state stays explicit (D-066). */
+  quotations:
+    | { state: 'NONE_ISSUED'; message: string; items: [] }
+    | { state: 'LIST'; message: null; items: RentalPortalQuotationSummary[] };
+  /** D-090/5A+5B: the customer's rental invoices and balances. */
+  payments:
+    | { state: 'NONE_DUE'; message: string; invoices: [] }
+    | { state: 'LIST'; message: null; invoices: RentalPortalInvoiceSummary[] };
+};
+
+export type RentalPortalQuotationSummary = {
+  id: string;
+  reference: string;
+  requestId: string;
+  status: string;
+  displayStatus: string;
+  subtotalPesewas: number;
+  taxPesewas: number;
+  totalPesewas: number;
+  taxLines: unknown;
+  expiresAt: string;
+  pickupLocation: string | null;
+  destination: string | null;
+  serviceDate: string | null;
+};
+
+export type RentalPortalInvoiceSummary = {
+  id: string;
+  reference: string;
+  requestId: string;
+  status: string;
+  totalPesewas: number;
+  outstandingPesewas: number;
+  dueDate: string | null;
 };
 
 const companyIdSchema = z.string().trim().min(1).max(128);
@@ -171,15 +201,71 @@ export async function getRentalPortalHome(input: { actorId: string; companyId: s
       createdAt: row.createdAt,
     })),
     requestsTotal,
-    quotations: {
+    quotations: { state: 'NONE_ISSUED', message: 'placeholder', items: [] },
+    payments: { state: 'NONE_DUE', message: 'placeholder', invoices: [] },
+  };
+  const now = new Date();
+  const quotationRows = await prisma.rentalQuotation.findMany({
+    where: { companyId, request: { customerId: customer.id } },
+    orderBy: { createdAt: 'desc' },
+    take: 10,
+    include: {
+      request: { select: { pickupLocation: true, destination: true, serviceDate: true } },
+    },
+  });
+  home.quotations = quotationRows.length === 0
+    ? {
       state: 'NONE_ISSUED',
       message: 'No quotation has been issued for your requests yet. When our team issues one, it will appear here for your review.',
-    },
-    payments: {
+      items: [],
+    }
+    : {
+      state: 'LIST',
+      message: null,
+      items: quotationRows.map((row) => ({
+        id: row.id,
+        reference: row.reference,
+        requestId: row.requestId,
+        status: row.status,
+        displayStatus: row.status === 'ISSUED' && row.expiresAt.getTime() <= now.getTime() ? 'EXPIRED' : row.status,
+        subtotalPesewas: Number(row.subtotalPesewas),
+        taxPesewas: Number(row.taxPesewas),
+        totalPesewas: Number(row.totalPesewas),
+        taxLines: row.taxSnapshot,
+        expiresAt: row.expiresAt.toISOString(),
+        pickupLocation: row.request.pickupLocation,
+        destination: row.request.destination,
+        serviceDate: row.request.serviceDate ? row.request.serviceDate.toISOString().slice(0, 10) : null,
+      })),
+    };
+  const invoiceRows = await prisma.rentalInvoice.findMany({
+    where: { companyId, request: { customerId: customer.id } },
+    orderBy: { createdAt: 'desc' },
+    take: 10,
+    include: { payments: { select: { amountPesewas: true } } },
+  });
+  home.payments = invoiceRows.length === 0
+    ? {
       state: 'NONE_DUE',
-      message: 'No payment is due. Rental invoices are not issued yet; this section will show amounts once invoicing is available.',
-    },
-  };
+      message: 'No payment is due. When a rental invoice is issued for one of your bookings, it will appear here.',
+      invoices: [],
+    }
+    : {
+      state: 'LIST',
+      message: null,
+      invoices: invoiceRows.map((row) => {
+        const paid = row.payments.reduce((sum, payment) => sum + payment.amountPesewas, 0);
+        return {
+          id: row.id,
+          reference: row.reference,
+          requestId: row.requestId,
+          status: row.status,
+          totalPesewas: row.totalPesewas,
+          outstandingPesewas: row.status === 'PAID' || row.status === 'VOID' ? 0 : row.totalPesewas - paid,
+          dueDate: row.dueDate ? row.dueDate.toISOString().slice(0, 10) : null,
+        };
+      }),
+    };
   return home;
 }
 
