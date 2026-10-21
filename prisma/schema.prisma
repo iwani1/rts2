@@ -52,6 +52,7 @@ model Company {
   tripStatusHistory     TripStatusHistory[]
   driverEvents          DriverEvent[]
   corporateInvoices     CorporateInvoice[]
+  rentalInvoices        RentalInvoice[]
   userClientBindings    UserClientBinding[]
   passengerFeedback     PassengerFeedback[]
 }
@@ -315,6 +316,8 @@ model User {
   maintenanceWorkOrderStatusChanges MaintenanceWorkOrderStatusHistory[]
   appliedVehicleSafetyBlocks   VehicleSafetyBlock[] @relation("SafetyBlockAppliedBy")
   releasedVehicleSafetyBlocks  VehicleSafetyBlock[] @relation("SafetyBlockReleasedBy")
+  rentalInvoicePaymentsRecorded RentalInvoicePayment[] @relation("RentalInvoicePaymentRecorder")
+  rentalInvoiceHistoryActed     RentalInvoiceStatusHistory[] @relation("RentalInvoiceHistoryActor")
 }
 
 model Role {
@@ -568,6 +571,7 @@ model RentalRequest {
   pricingWorksheets    RentalPricingWorksheet[]
   assignments          RentalAssignment[]
   completions          RentalCompletion[]
+  invoices             RentalInvoice[]
 
   @@unique([companyId, id])
   @@index([companyId, status, createdAt])
@@ -962,7 +966,84 @@ model RentalCompletion {
   submittedBy              User     @relation("RentalCompletionSubmitter", fields: [submittedById], references: [id], onDelete: Restrict)
   decidedBy                User?    @relation("RentalCompletionDecider", fields: [decidedById], references: [id], onDelete: Restrict)
 
+  @@unique([companyId, id])
   @@index([companyId, requestId, status])
+  invoices              RentalInvoice[]
+}
+
+model RentalInvoice {
+  id                      String    @id @default(cuid())
+  companyId               String
+  requestId               String
+  completionId            String
+  reference               String
+  status                  String    @default("DRAFT")
+  subtotalPesewas         Int
+  taxPesewas              Int
+  depositDeductionPesewas Int       @default(0)
+  totalPesewas            Int
+  dueDate                 DateTime? @db.Date
+  createdAt               DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt               DateTime  @updatedAt @db.Timestamptz(6)
+  company                 Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  request                 RentalRequest @relation(fields: [companyId, requestId], references: [companyId, id], onDelete: Restrict)
+  completion              RentalCompletion @relation(fields: [companyId, completionId], references: [companyId, id], onDelete: Restrict)
+  lines                   RentalInvoiceLine[]
+  payments                RentalInvoicePayment[]
+  statusHistory           RentalInvoiceStatusHistory[]
+
+  @@unique([companyId, id])
+  @@unique([companyId, reference])
+  @@index([companyId, requestId])
+  @@index([companyId, status, createdAt])
+}
+
+model RentalInvoiceLine {
+  id            String        @id @default(cuid())
+  companyId     String
+  invoiceId     String
+  description   String        @db.VarChar(300)
+  quantity      Int
+  ratePesewas   Int
+  amountPesewas Int
+  createdAt     DateTime      @default(now()) @db.Timestamptz(6)
+  invoice       RentalInvoice @relation(fields: [companyId, invoiceId], references: [companyId, id], onDelete: Restrict)
+
+  @@index([companyId, invoiceId, createdAt])
+}
+
+model RentalInvoicePayment {
+  id            String        @id @default(cuid())
+  companyId     String
+  invoiceId     String
+  amountPesewas Int
+  method        String?       @db.VarChar(64)
+  reference     String?       @db.VarChar(128)
+  receivedAt    DateTime      @db.Date
+  reason        String        @db.VarChar(500)
+  recordedById  String
+  createdAt     DateTime      @default(now()) @db.Timestamptz(6)
+  invoice       RentalInvoice @relation(fields: [companyId, invoiceId], references: [companyId, id], onDelete: Restrict)
+  recordedBy    User          @relation("RentalInvoicePaymentRecorder", fields: [recordedById], references: [id], onDelete: Restrict)
+
+  @@index([companyId, invoiceId, createdAt])
+}
+
+model RentalInvoiceStatusHistory {
+  id         String        @id @default(cuid())
+  companyId  String
+  invoiceId  String
+  sequence   Int
+  actorId    String
+  fromStatus String?
+  toStatus   String
+  reason     String        @db.VarChar(500)
+  createdAt  DateTime      @default(now()) @db.Timestamptz(6)
+  invoice    RentalInvoice @relation(fields: [companyId, invoiceId], references: [companyId, id], onDelete: Restrict)
+  actor      User          @relation("RentalInvoiceHistoryActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, invoiceId, sequence])
+  @@index([companyId, invoiceId, createdAt])
 }
 
 model DriverPayRule {
