@@ -497,7 +497,7 @@ Added the routes domain as the fourth Phase 1B vertical slice.
 - **Tests**: `route-plan.test.ts`, `route-schema.test.ts`, `routes.integration.test.ts` (locations, stop-order override, plan capacity, schedule conflicts/copy/reactivation, cross-company denial). Not yet run: sandbox has no `node_modules`/database; Fedora verification is batched with CLI-02/EMP.
 - **Limits**: No map provider, no trip generation (TRP-01), no availability/assignment checks (DSP-02), no optimisation (RTE-05, Phase 3).
 
-## Phase 1B gate — automated verification PASSED; owner decisions APPROVED (D-060); E2E pending
+## Phase 1B gate — evidence COMPLETE; owner decisions APPROVED (D-060); awaiting owner declaration of closure
 
 - **Verified at commit `3e32798`** by `./scripts/verify-phase1b.sh` on a fresh disposable database
   (`richie_tms_p1b_20261021011206_test`): Prisma generate ✅, 21/21 migrations ✅, `tsc --noEmit` ✅,
@@ -513,18 +513,18 @@ Added the routes domain as the fourth Phase 1B vertical slice.
   driver idempotent events with own-trips-only isolation, invoice duplicate-billing protection, and the
   no-map dispatch board.
 - **Re-confirmed at gate commit `d540c68` (2026-10-21):** `./scripts/verify-phase1b.sh` 7/7 green on
-  `richie_tms_p1b_20261021014258_test` with both D-060 registry rows registered. **E2E (§3): 3/4 specs
-  pass** on the fresh `richie_tms_e2e_phase1b_test` database. The remaining failure
-  (`vehicle-safety-blocks.spec.ts`, release step) is a spec defect, not a service defect: the spec fills
-  work-completed with the test host's local wall clock (~1h behind Africa/Accra, minute-truncated), so
-  the instant precedes `appliedAt` and the release is correctly refused; git history shows the spec
-  never passed (Phase 1A verified only 3 of its then-3 specs). Fix the spec helper to Africa/Accra
-  wall time (seconds precision) and re-run — no Phase 1C work until the owner declares the gate closed.
+  `richie_tms_p1b_20261021014258_test` with both D-060 registry rows registered. **E2E (§3): 4/4 specs
+  pass** on the fresh `richie_tms_e2e_phase1b_test` database — the last spec
+  (`vehicle-safety-blocks.spec.ts`) initially failed on a spec defect (test-host-local, minute-truncated
+  work-completed instant preceding `appliedAt`; release correctly refused) and passed after the helper
+  was fixed to Africa/Accra wall time with seconds precision (commit `44a7e93`). No service change.
 - **Owner decisions (APPROVED 2026-10-21, recorded as D-060):** D-059 ratified as built; settings-registry
   rows approved for `bookings.creation_cutoff` (D-056) and `finance.corporate_rates` (D-058) — both now
   registered; DRV-03/DRV-05 formally descoped for Phase 1B; DRAFT-only invoice lifecycle confirmed.
-- **Stop line honoured:** gate closure still awaits the owner-run E2E pass; no Phase 1C work begins until
-  the owner declares the gate closed after E2E.
+- **Stop line honoured:** all exit evidence is demonstrated (workflows A/B/F/G end-to-end, cross-company
+  isolation on every company-scoped route, capacity under parallel requests, full state matrices,
+  no-map dispatch board, driver own-trips isolation). Owner declaration of gate closure is the only
+  remaining formality; no Phase 1C work begins before it.
 
 ## Phase 1B — corporate dashboard (CLI-03; D-059; 2026-10-21)
 

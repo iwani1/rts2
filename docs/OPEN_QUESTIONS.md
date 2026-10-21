@@ -201,3 +201,11 @@ Until resolved, settings remain unset and dependent actions must be blocked with
 - The owner confirms the exposed E2E password is not reused elsewhere and is discarded. No production
   credentials have been shared. Keep it that way: E2E/admin passwords only ever typed into the local
   shell; paste only command output that contains no secrets.
+
+## Phase 1B gate evidence COMPLETE (Fedora, 2026-10-21)
+- Verify script 7/7 green at gate commit `d540c68` (`richie_tms_p1b_20261021014258_test`): generate,
+  21/21 migrations, typecheck, lint 0 errors, unit **373/373**, integration **105/105**.
+- E2E **4/4** on the fresh `richie_tms_e2e_phase1b_test` database (after the `44a7e93` spec fix).
+- D-060 gate decisions recorded (D-059 ratified; both settings rows registered; DRV-03/DRV-05
+  descoped; DRAFT-only invoice lifecycle confirmed). Remaining: owner's formal declaration that the
+  Phase 1B gate is closed; no Phase 1C work before it.
