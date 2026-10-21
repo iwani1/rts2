@@ -232,6 +232,10 @@ docs/PROGRESS.md and docs/PHASE_1C_VERIFICATION.md. For ratification at the Phas
   confirm a future adjustment/credit-note process is the right vehicle.
 - A dedicated editor for `finance.corporate_rates` (and `bookings.creation_cutoff`) is still
   outstanding; rates are currently written through the settings service only.
-- Remaining Phase 1C scope per richie-tms-phase-prompts.md: PAX-01, RNT-09, RPT-02, RPT-03,
-  RPT-04, FIN-07, role-specific dashboards and the hardening pass. FIN-07 is next because its
-  totals must reconcile against the new invoice/payment records (workflow F).
+- Remaining Phase 1C scope per richie-tms-phase-prompts.md: RPT-02, RPT-03, RPT-04, PAX-01,
+  RNT-09, role-specific dashboards and the hardening pass. FIN-07 (finance dashboard, D-063) is
+  built; RPT-02/RPT-03/RPT-04 are next and reuse its reconciliation proof.
+- D-063 (FIN-07) needs gate ratification: margin stays hidden until attributable cost records
+  exist (FIN-05, Phase 3) — confirm no estimated margin should ever be displayed; invoices carry
+  no due dates, so outstanding is grouped by client, not aged — confirm whether invoice due dates
+  (and ageing buckets) should be added in a later phase.

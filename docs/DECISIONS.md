@@ -363,3 +363,32 @@
   `Invoice marked PAID after full payment`). A PAID invoice accepts no further payments or transitions.
 - **Source:** D-061 companion; FIN-03 inferred scope approved under the same owner instruction,
   recorded for ratification at the next gate.
+
+## D-063 — Finance dashboard semantics (FIN-07)
+- **Decision:** `getFinanceDashboard` (`src/modules/finance/dashboard.ts`, pure aggregation in
+  `dashboard-summary.ts`) is a read-only rollup over the corporate invoice transaction records
+  (D-061/D-062) — the only invoice/payment records that exist in Phase 1. Headline figures:
+  **recognised revenue** = Σ totals of ISSUED + PAID invoices; **payments received** = Σ
+  `InvoicePayment.amountPesewas`; **outstanding** = Σ (total − Σ payments) over ISSUED invoices —
+  all derived from the records, never stored. DRAFT invoices are shown separately as pipeline and
+  VOID invoices only as a count/total; neither enters revenue or outstanding. The structural
+  identity *recognised revenue = payments received + outstanding* (payments can only sit on
+  ISSUED/PAID invoices and void-with-payments is refused) is computed on every response as
+  `reconciliation.reconciles`, so the dashboard proves its own tie-out. Per-client rows
+  (invoiced / paid / outstanding / standing invoice count) sum to the headline figures. An
+  optional date window (≤ 366 days) drives only the *activity* section — payments received by
+  `receivedAt`, invoices recognised by their append-only ISSUED history timestamp for invoices
+  still standing; balances stay point-in-time. Africa/Accra keeps UTC year-round, so UTC day
+  bounds are the local day bounds `docs/KPIS.md` requires. **Margin is never fabricated:** it is
+  returned as `INSUFFICIENT_DATA` because attributable cost records do not exist yet (FIN-05
+  expenses are Phase 3; maintenance work-order costs are not attributable to invoices or trips).
+  Rental revenue, expenses by category, cost per trip/passenger and due-date ageing are likewise
+  listed as unavailable with reasons (no rental invoice records exist; invoices carry no due
+  dates) instead of being estimated. Authorisation mirrors the invoice register:
+  `invoice:manage` with GLOBAL/COMPANY scope (Finance Officer, Super Administrator); read-only
+  and own-scope grants are denied. Data coverage (issued invoices carrying an issue timestamp,
+  payments with method/reference recorded) is reported as numerator/denominator pairs per
+  `docs/KPIS.md`.
+- **Source:** FIN-07 in `richie-tms-standing-brief.md` ("totals reconcile to transaction records;
+  margin only when cost and revenue data are sufficient"); KPI formulas in `docs/KPIS.md` (RPT-03).
+  Recorded for ratification at the Phase 1C gate.

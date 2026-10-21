@@ -52,3 +52,26 @@ No credit notes or payment adjustments (void-with-payments is refused), no verif
 reconciliation status on payments (FIN-08, Phase 3), no overdue tracking, no PDF export
 (RPT-05, Phase 3), and corporate rates are still configured through the settings service rather
 than a dedicated editor.
+
+---
+
+# Phase 1C verification — finance dashboard (FIN-07; D-063)
+
+Status: **SLICE BUILT — Fedora run required.** Same automated run as above
+(`./scripts/verify-phase1c.sh` executes the whole suite, including
+`finance-dashboard.integration.test.ts` and the `dashboard-summary` unit tests).
+
+## Manual workflow (browser)
+
+1. Sign in as a Finance Officer and open **Finance dashboard** from the home page (or from the
+   Invoices header). The green reconciliation banner must read
+   "recognised revenue = payments received + outstanding" for your data.
+2. Compare the three headline figures against the Invoices register: revenue equals the totals of
+   ISSUED + PAID invoices, outstanding equals what those invoices still owe, and the per-client
+   rows add up to the same numbers.
+3. Set an activity window covering the day you issued an invoice: "Invoices issued" and "Revenue
+   recognised" reflect it, while the balance cards do not move.
+4. Confirm the "Not shown — insufficient data" panel lists margin and the other unsupported
+   metrics with reasons, and that no margin percentage appears anywhere.
+5. Sign in as an Operations Manager: the dashboard reports that access is not permitted
+   (read-only invoice scope does not include finance totals).

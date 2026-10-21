@@ -86,9 +86,14 @@ export default async function InvoicesPage({
             outstanding balance is always derived from them.
           </p>
         </div>
-        <Link className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700" href="/">
-          Back to home
-        </Link>
+        <div className="flex gap-2">
+          <Link className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700" href="/finance">
+            Finance dashboard
+          </Link>
+          <Link className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700" href="/">
+            Back to home
+          </Link>
+        </div>
       </header>
 
       <section className="mt-6 overflow-x-auto rounded-lg border border-slate-200">

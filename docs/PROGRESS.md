@@ -694,3 +694,36 @@ ratification at the Phase 1C gate.
 - **Remaining Phase 1C scope:** PAX-01 passenger portal, RNT-09 rental customer portal,
   RPT-02/RPT-03/RPT-04 reports and exports, FIN-07 finance dashboard, role dashboards and the
   hardening pass, per `richie-tms-phase-prompts.md`. Next slice: FIN-07 finance dashboard.
+
+## Phase 1C — finance dashboard (FIN-07; D-063; 2026-10-21)
+
+Second Phase 1C slice, built under the owner's Phase 1C go-ahead. D-063 is recorded in
+`docs/DECISIONS.md` for ratification at the Phase 1C gate.
+
+- **Semantics (D-063):** `getFinanceDashboard` rolls up the corporate invoice/payment transaction
+  records only (the sole invoice/payment records in Phase 1). Recognised revenue = ISSUED + PAID
+  invoice totals; payments received = Σ `InvoicePayment`; outstanding = Σ (total − payments) over
+  ISSUED invoices, always derived. DRAFT is pipeline, VOID is count/total only. The identity
+  revenue = payments + outstanding is computed on every response (`reconciliation.reconciles`).
+  Per-client invoiced/paid/outstanding rows and payments-by-method sum back to the headlines.
+- **Window & coverage:** an optional ≤366-day window drives only the activity section (payments by
+  `receivedAt`; recognition by the append-only ISSUED history timestamp of still-standing
+  invoices); balances are point-in-time. Africa/Accra is UTC year-round, so UTC day bounds are the
+  local bounds `docs/KPIS.md` requires. Coverage is reported as numerator/denominator pairs
+  (issue-timestamp coverage, payments with method, payments with reference).
+- **Honesty rules:** margin is `INSUFFICIENT_DATA` (no attributable cost records until FIN-05,
+  Phase 3); rental revenue, expenses/cost-per-trip and due-date ageing are listed as unavailable
+  with reasons rather than estimated — per the FIN-07 rule that margin appears only when cost and
+  revenue data are sufficient.
+- **Surface:** `GET /api/companies/[companyId]/finance-dashboard`, the `/finance` page (totals,
+  status/method/client tables, activity, coverage, reconciliation banner, insufficient-data
+  panel, date-window form), home/invoices navigation links. Authorisation mirrors the invoice
+  register (`invoice:manage` GLOBAL/COMPANY: Finance Officer, Super Administrator).
+- **Tests:** unit `dashboard-summary.test.ts` (status semantics, tie-out true/false, client
+  sorting, empty ledger); integration `finance-dashboard.integration.test.ts` (6 tests: headline
+  reconciliation against a 5-invoice/2-client fixture, per-client/method breakdowns and coverage,
+  windowed activity vs point-in-time balances, insufficient-data reporting, read-only/unrelated
+  denial + empty-company isolation, window validation). Fedora run pending.
+- **Remaining Phase 1C scope:** RPT-02/RPT-03/RPT-04 next (FIN-07 supplies their reconciliation
+  proof), then PAX-01 passenger portal, RNT-09 rental customer portal, role dashboards and the
+  hardening pass, per `richie-tms-phase-prompts.md`.

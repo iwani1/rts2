@@ -27,6 +27,7 @@ All reports use the selected local-date range in `Africa/Accra`, store/query ins
 - Document expiry: count active vehicle documents whose expiry lies inside configurable lead window; lead time unset pending policy.
 
 ## RPT-03 Finance
+- Finance dashboard (FIN-07, D-063): recognised revenue = Σ totals of ISSUED + PAID corporate invoices; payments received = Σ recorded invoice payments; outstanding = Σ (total − payments) over ISSUED invoices. The identity revenue = payments + outstanding must hold on every response. Margin is insufficient-data until attributable cost records exist. No credit notes exist yet, so none are deducted.
 - Revenue by service/customer: issued invoices less posted credit notes grouped by source service/customer and invoice date.
 - Payments received: sum verified, non-reversed payments by received date and method; pending/unverified excluded.
 - Outstanding invoices: remaining balance on issued invoices as of end date, grouped by due status/customer.
