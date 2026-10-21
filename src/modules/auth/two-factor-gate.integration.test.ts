@@ -14,7 +14,7 @@ async function makeUser(name: string) {
   });
 }
 
-describe('two-factor gate for privileged roles (AUTH-06 / D-076)', () => {
+describe('two-factor gate (AUTH-06 / D-076; requirement suspended by D-080)', () => {
   beforeAll(async () => {
     const databaseUrl = process.env.DATABASE_URL;
     if (!databaseUrl) throw new Error('DATABASE_URL must point to a disposable PostgreSQL test database');
@@ -37,21 +37,21 @@ describe('two-factor gate for privileged roles (AUTH-06 / D-076)', () => {
     await prisma.$disconnect();
   });
 
-  it('requires enrolment only for global Super Administrators without 2FA', async () => {
+  it('requires enrolment from no role while the requirement is suspended', async () => {
     expect(await getTwoFactorGate(superAdminId)).toEqual({
-      required: true, enabled: false, mustEnroll: true,
+      required: false, enabled: false, mustEnroll: false,
     });
     expect(await getTwoFactorGate(opsId)).toEqual({
       required: false, enabled: false, mustEnroll: false,
     });
   });
 
-  it('clears the requirement once 2FA is enabled', async () => {
+  it('still reports enabled state honestly for enrolled users', async () => {
     await prisma.user.update({
       where: { id: superAdminId }, data: { twoFactorEnabled: true },
     });
     expect(await getTwoFactorGate(superAdminId)).toEqual({
-      required: true, enabled: true, mustEnroll: false,
+      required: false, enabled: true, mustEnroll: false,
     });
     expect(companyId).toBeTruthy();
   });

@@ -698,6 +698,8 @@ Date: 2026-10-21. Status: decided for Phase 2 construction; recorded for ratific
    the prompt is not hard-blocked. Full middleware enforcement is the follow-up
    when the framework supports database access there.
 
+## D-076 note — enforcement posture superseded by D-080 (requirement suspended; mechanism kept).
+
 ## D-077 — GPS tracking: provider interface, honest states, no fabricated positions (GPS-01)
 
 Date: 2026-10-21. Status: decided for Phase 2 construction; recorded for ratification at the Phase 2 gate.
@@ -797,3 +799,18 @@ inert today, and the hand-written semantic CSS does all styling.
 Either wire Tailwind v4 properly (an app-wide visual change needing its
 own review) or standardise on the semantic CSS; this pilot follows the
 semantic CSS.
+
+## D-080 — Two-factor requirement suspended (owner direction, 2026-10-21)
+
+The owner directed that 2FA not be required for now ("remove the 2fa
+for now, will setup later when needed"). The D-076 mechanism stays
+fully built — plugin, enrolment/removal UI at `/account/security`,
+schema, rate limits — but `getTwoFactorGate` now reports
+`required: false, mustEnroll: false` for every role, so nobody is
+routed to enrolment and sign-in never detours through the gate.
+Accounts that already enrolled keep their sign-in challenge until they
+turn 2FA off themselves on the Security page. Reinstate by restoring
+the `required` computation (global Super Administrator) in
+`src/modules/auth/two-factor-gate.ts`; all callers already honour it.
+Supersedes the enforcement posture of D-076 only; the recorded
+middleware limitation is unchanged.

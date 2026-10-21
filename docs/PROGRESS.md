@@ -1208,3 +1208,12 @@ recorded: a shell that once exported a stale `DATABASE_URL` overrides
 `.env` for every later `npm run dev` in that terminal (use a fresh
 shell); and long-lived dev servers accumulate stale `.next` state
 across pulls — `rm -rf .next` + restart before suspecting the code.
+
+## 2FA requirement suspended (2026-10-21, D-080)
+
+Owner direction: no role is required to enrol in 2FA for now. The gate
+reports `required/mustEnroll: false`; enrolment remains available at
+`/account/security`, and enrolled accounts keep their sign-in
+challenge until they switch it off there. Integration test updated to
+the suspended behaviour (Fedora re-run pending). Reinstatement is the
+one-line `required` restoration recorded in D-080.
