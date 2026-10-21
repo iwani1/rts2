@@ -77,8 +77,8 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | INC-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | INC-02 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FIN-01 | Not Started | No feature implementation; Phase 1+ approval required. |
-| FIN-02 | Tested | Corporate invoice generation per D-057/D-058 (DRAFT-only lifecycle confirmed at the Phase 1B gate, D-060); rates registry row approved (D-060). Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). Phase 1C extends FIN-02 with the governed lifecycle per D-061 (see the Phase 1C section below; sandbox-verified, Fedora verification pending). |
-| FIN-03 | In Progress | Manual invoice payments per D-062: append-only `InvoicePayment` records against ISSUED invoices, overpayment refused under the invoice row lock, outstanding derived (`total − Σ payments`), automatic PAID at full payment. Sandbox-verified 2026-10-21 (unit 375/375, lifecycle integration 6/6 on PGlite); Fedora verification pending. See the Phase 1C section below. |
+| FIN-02 | Tested | Corporate invoice generation per D-057/D-058 (DRAFT-only lifecycle confirmed at the Phase 1B gate, D-060); rates registry row approved (D-060). Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). Phase 1C extends FIN-02 with the governed lifecycle per D-061, Fedora-verified 2026-10-21 at commit 51bfbd6 (unit 375/375, integration 111/111; log verification-logs/phase1c-20261021132250.log). |
+| FIN-03 | Tested | Manual invoice payments per D-062: append-only `InvoicePayment` records against ISSUED invoices, overpayment refused under the invoice row lock, outstanding derived (`total − Σ payments`), automatic PAID at full payment. Fedora-verified 2026-10-21 at commit 51bfbd6 (unit 375/375, integration 111/111 incl. lifecycle 6/6; log verification-logs/phase1c-20261021132250.log). See the Phase 1C section below. |
 | FIN-04 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FIN-05 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FIN-06 | Not Started | No feature implementation; Phase 1+ approval required. |
@@ -680,13 +680,13 @@ ratification at the Phase 1C gate.
   APIs; list gains a `status` filter; the invoices page shows paid/outstanding everywhere and a
   lifecycle panel (issue/mark-paid/void, payment form, payments table, status history); the
   corporate (bound-HR) dashboard now shows invoice status and outstanding.
-- **Tests (sandbox-verified 2026-10-21; Fedora run still required):** unit 375/375 (incl. the new
-  4×4 invoice transition matrix); `prisma validate` OK on the extended schema; all 23 migrations
-  apply in sequence on PostgreSQL (PGlite) with DB-guard assertions (duplicate billing, payment
-  on DRAFT, void-with-payments, append-only, immutability, history pairing, void release +
-  same-period replacement); `invoice-lifecycle.integration.test.ts` 6/6 and the pre-existing
-  FIN-02 suite 4/4 on the adapter-backed sandbox client; typecheck and lint clean on touched
-  files; production build compiles (full prerender needs a reachable database, Fedora will run it).
+- **Tests (Fedora-verified 2026-10-21 at commit 51bfbd6; log
+  verification-logs/phase1c-20261021132250.log):** 23/23 migrations on real PostgreSQL, typecheck
+  clean, lint 0 errors, unit 375/375 (incl. the new 4×4 invoice transition matrix), integration
+  111/111 incl. `invoice-lifecycle.integration.test.ts` 6/6 and the pre-existing FIN-02 suite 4/4.
+  Sandbox pre-verification (PGlite + adapter-backed client) matched, including DB-guard assertions
+  for duplicate billing, payment on DRAFT, void-with-payments, append-only rows, immutability,
+  history pairing, and void release with same-period replacement.
 - **Limits:** No credit notes/adjustments (void-with-payments is refused instead), no payment
   verification/reconciliation workflow (FIN-08 is Phase 3), no overdue status/job, no PDF
   (RPT-05 is Phase 3), rental invoices/payments remain the Phase 1A rental scope, and configuring

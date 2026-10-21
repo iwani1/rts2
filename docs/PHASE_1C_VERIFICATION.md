@@ -1,16 +1,13 @@
 # Phase 1C verification — corporate invoice lifecycle and payments (FIN-02 extension, FIN-03)
 
-Status: **SLICE BUILT, SANDBOX-VERIFIED — Fedora run required.** The Phase 1B gate is closed
-(D-060, declared by the owner 2026-10-21); the owner authorized Phase 1C construction the same
-day. D-061/D-062 await ratification at the Phase 1C gate.
-
-Sandbox evidence already gathered (2026-10-21, PGlite = PostgreSQL in WASM plus a
-driver-adapter-backed Prisma client): all 23 migrations apply in sequence; DB-guard assertions
-pass; unit 375/375; `invoice-lifecycle.integration.test.ts` 6/6; pre-existing FIN-02 integration
-4/4; corporate dashboard integration 4/4; `prisma validate` OK; typecheck clean; lint clean on
-touched files; production build compiles (prerender needs a reachable database). Nine unrelated
-integration tests failed in the sandbox only (single-backend transaction timeouts and error-class
-identity through the adapter) — the full run below on real PostgreSQL is authoritative.
+Status: **FEDORA-VERIFIED 2026-10-21 at commit `51bfbd6`** (log
+`verification-logs/phase1c-20261021132250.log`): 23/23 migrations applied, typecheck clean, lint
+0 errors (2 pre-existing warnings in `customer-picker.tsx`), unit **375/375**, integration
+**111/111** including `invoice-lifecycle.integration.test.ts` 6/6 on real PostgreSQL. The nine
+sandbox-only failures did not reproduce. The Phase 1B gate is closed (D-060, declared by the
+owner 2026-10-21); the owner authorized Phase 1C construction the same day. D-061/D-062 await
+ratification at the Phase 1C gate. Manual browser checks below remain available for acceptance
+testing but are no longer a verification blocker.
 
 ## Automated run (fresh disposable database)
 
@@ -21,8 +18,8 @@ From the repo root on Fedora:
 ```
 
 Expect: 23 migrations applied; typecheck clean; lint clean; unit tests pass (375 at build time);
-integration tests pass (111 + 6 new lifecycle tests at build time). The script creates a fresh
-`richie_tms_p1c_*_test` database and never touches operational data.
+integration tests pass (111 total at verification time, including the 6 lifecycle tests). The
+script creates a fresh `richie_tms_p1c_*_test` database and never touches operational data.
 
 ## Focused checks (optional, same database)
 
