@@ -103,6 +103,23 @@ export async function notifyUserInTransaction(
   }
 }
 
+/** NTF-03 (D-070): queue the email copy to the recipient's login email. */
+async function queueEmailCopy(
+  tx: Prisma.TransactionClient, input: NotifyInput,
+): Promise<void> {
+  const user = await tx.user.findUnique({
+    where: { id: input.userId }, select: { email: true },
+  });
+  if (!user?.email) return;
+  await notifyUserInTransaction(tx, {
+    ...input,
+    channel: 'EMAIL',
+    destination: user.email,
+    dedupeKey: `${input.dedupeKey}:email`,
+    initialStatus: 'PENDING',
+  });
+}
+
 /** Resolves the linked passenger login for an employee, if any, and notifies. */
 export async function notifyLinkedEmployee(
   tx: Prisma.TransactionClient,
@@ -126,6 +143,7 @@ export async function notifyLinkedEmployee(
       initialStatus: 'PENDING',
     });
   }
+  await queueEmailCopy(tx, { ...rest, userId: employee.userId });
   return delivered;
 }
 
@@ -150,6 +168,7 @@ export async function notifyLinkedCustomer(
       initialStatus: 'PENDING',
     });
   }
+  await queueEmailCopy(tx, { ...rest, userId: customer.userId });
   return delivered;
 }
 
@@ -192,7 +211,7 @@ export async function listOwnNotifications(input: { userId: string; companyId: s
   const companyId = companyIdSchema.parse(input.companyId);
   await assertCompany(companyId);
   const prisma = getPrisma();
-  const [rows, unreadCount, totalCount, smsRows] = await Promise.all([
+  const [rows, unreadCount, totalCount, emailRows, smsRows] = await Promise.all([
     prisma.notification.findMany({
       where: { companyId, userId: input.userId, channel: 'IN_APP' },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
@@ -207,6 +226,15 @@ export async function listOwnNotifications(input: { userId: string; companyId: s
     }),
     prisma.notification.count({
       where: { companyId, userId: input.userId, channel: 'IN_APP' },
+    }),
+    prisma.notification.findMany({
+      where: { companyId, userId: input.userId, channel: 'EMAIL' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: 50,
+      select: {
+        id: true, type: true, title: true, destination: true,
+        status: true, attempts: true, createdAt: true,
+      },
     }),
     prisma.notification.findMany({
       where: { companyId, userId: input.userId, channel: 'SMS' },
@@ -228,6 +256,15 @@ export async function listOwnNotifications(input: { userId: string; companyId: s
     readAt: row.readAt,
     createdAt: row.createdAt,
   }));
+  const emailDeliveries: OwnSmsDelivery[] = emailRows.map((row) => ({
+    notificationId: row.id,
+    type: row.type,
+    title: row.title,
+    destination: row.destination,
+    status: row.status,
+    attempts: row.attempts,
+    createdAt: row.createdAt,
+  }));
   const smsDeliveries: OwnSmsDelivery[] = smsRows.map((row) => ({
     notificationId: row.id,
     type: row.type,
@@ -237,7 +274,7 @@ export async function listOwnNotifications(input: { userId: string; companyId: s
     attempts: row.attempts,
     createdAt: row.createdAt,
   }));
-  return { companyId, notifications, unreadCount, totalCount, smsDeliveries };
+  return { companyId, notifications, unreadCount, totalCount, smsDeliveries, emailDeliveries };
 }
 
 /** NTF-01: counts only, for the workspace bell. */

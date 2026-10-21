@@ -86,7 +86,7 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | FIN-08 | Not Started | No feature implementation; Phase 1+ approval required. |
 | NTF-01 | In Progress | In-app notification service per D-068: `Notification`/`NotificationPreference` (migration `20261021140000_notifications`), transactional emitter with per-event dedupe keys and channel preferences, wired to booking created/status-changed/trip-assigned (linked passenger) and rental status changes (linked customer), own-inbox page with unread bell, mark-read/read-all and preference switches. SMS/email channels stored but not yet delivered (NTF-02/03). Sandbox-verified 2026-10-21 (unit 400/400; 26/26 migrations on PGlite); Fedora verification pending. |
 | NTF-02 | In Progress | SMS channel per D-069: `SmsProvider` interface with an env-activated Arkesel-shaped adapter (feature is *Not configured* without credentials — nothing is sent or claimed sent), SMS fan-out at emit time to the linked employee/customer telephone (migration `20261021150000_sms_notifications`), explicit Super-Admin/scheduler dispatch with attempts/backoff, and DELIVERED only via the secret-checked delivery-report webhook. Sandbox-verified 2026-10-21 (unit 405/405; 27/27 migrations on PGlite); provider live-verification and Fedora run pending. |
-| NTF-03 | Not Started | No feature implementation; Phase 1+ approval required. |
+| NTF-03 | In Progress | Email channel per D-070: `EmailProvider` interface with an env-activated SMTP (nodemailer) adapter (honestly *Not configured* without `EMAIL_PROVIDER=smtp` + SMTP settings), email fan-out at emit time to the recipient's login email, explicit Super-Admin dispatch, and `SENT` (handed to the mail server) as the strongest state — never `DELIVERED`. Sandbox-verified 2026-10-21 (unit 409/409; build compiled); Fedora verification pending. |
 | RPT-01 | In Progress | D-047/D-048 provide an all-time, manager-only request status/source aggregate plus audited `Draft → Submitted` count. Draft-inclusive scope and unavailable quote, confirmed/completed, financial, utilization and cancellation metrics are explicit; this is not a date-filtered complete RPT-01 report. Focused tests pass; database and browser E2E remain unrun. |
 | RPT-02 | In Progress | Staff transport & fleet report per D-064: booking flow from status-history events, no-shows, passengers transported, pickup-delay averages with coverage (on-time rate withheld — threshold unset), route utilisation from Completed trips with capacity+manifest, fleet/document-expiry/maintenance summaries; downtime, fuel/mileage and contract performance declared insufficient-data. Sandbox-verified 2026-10-21; Fedora verification pending. |
 | RPT-03 | In Progress | Financial report per D-064: FIN-07 reconciled totals plus windowed revenue by client/service, payments by method, point-in-time outstanding-invoice list; expenses/unit costs/margin insufficient-data. Sandbox-verified 2026-10-21; Fedora verification pending. |
@@ -909,3 +909,24 @@ Second Phase 2 slice. D-069 recorded in `docs/DECISIONS.md` for gate ratificatio
   exhaustion, preference-off suppression). Fedora run pending.
 - **Next:** NTF-03 email adapter, then incidents/breakdown, boarding verification,
   driver offline queue, maintenance reminders, two-factor authentication.
+
+## Phase 2 — email adapter (NTF-03; D-070; 2026-10-21)
+
+Third Phase 2 slice. D-070 recorded in `docs/DECISIONS.md` for gate ratification.
+No new migration: the `Notification` channel CHECK already reserved `EMAIL`.
+
+- **Fan-out:** the same booking/rental events now queue a `PENDING` email copy to the
+  recipient's **login email** (own dedupe key), gated by their email preference.
+- **Provider:** `EmailProvider` interface (`src/modules/notifications/email.ts`) with one
+  SMTP adapter (nodemailer), activated only by `EMAIL_PROVIDER=smtp` with `SMTP_HOST`/
+  `SMTP_FROM` (auth via `SMTP_USER`/`SMTP_PASSWORD`, `SMTP_SECURE`); otherwise honestly
+  **Not configured** on the Notifications page and dispatch is a reporting no-op.
+- **Truthful states:** success marks `SENT` ("Sent to mail server") — email has no
+  delivery-report channel, so `DELIVERED` is never claimed. Failures use the SMS
+  attempts/backoff discipline (max 3). Dispatch: Super-Admin
+  `POST /api/notifications/email/dispatch`.
+- **Tests:** unit `email.test.ts` (configuration, adapter handover/failure) and
+  `email.integration.test.ts` (fan-out to the login address, unconfigured no-op,
+  SENT-not-DELIVERED, failure backoff, preference-off suppression). Fedora run pending.
+- **Next:** incidents and breakdown workflow (INC-01/02), boarding verification,
+  driver offline queue, preventive-maintenance reminders, two-factor authentication.

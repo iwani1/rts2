@@ -542,3 +542,18 @@ Date: 2026-10-21. Status: decided for Phase 2 construction; recorded for ratific
 4. **Explicit dispatch.** Sending is performed by `dispatchPendingSmsNotifications`, invoked
    from a Super-Admin-only endpoint (and reusable by an external scheduler); the app has no
    background worker, and the UI/docs say so rather than implying real-time sending.
+
+## D-070 — Email delivery: SMTP adapter, "sent to mail server" is the strongest claim (NTF-03)
+
+Date: 2026-10-21. Status: decided for Phase 2 construction; recorded for ratification at the Phase 2 gate.
+
+1. Email goes through an `EmailProvider` interface with one SMTP adapter (nodemailer),
+   activated only by `EMAIL_PROVIDER=smtp` with `SMTP_HOST`, `SMTP_FROM` and credentials;
+   otherwise the feature is **Not configured** and nothing is sent or claimed sent.
+2. Email has no delivery-report channel, so a successful SMTP handover marks the row
+   `SENT` ("handed to the mail server") — never `DELIVERED`. Failures retry with the same
+   attempts/backoff discipline as SMS (max 3, D-069).
+3. Fan-out mirrors SMS: at emit time, linked passengers/customers get a PENDING email row
+   addressed to their **login email** (notifications belong to the login), gated by their
+   email preference, with its own dedupe key. Dispatch is explicit via a Super-Admin
+   endpoint, exactly as for SMS.

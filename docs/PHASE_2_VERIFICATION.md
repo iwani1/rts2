@@ -60,3 +60,22 @@ tests.
    confirmation". Point the provider's delivery reports at
    `/api/notifications/sms/dlr` with header `x-webhook-secret`: only then does the
    row show "Delivered". Verify pricing/sender-id rules with the vendor first.
+
+---
+
+# Phase 2 verification — email (NTF-03; D-070)
+
+Status: **SLICE BUILT — Fedora run required.** The verification script includes
+`notifications/email.integration.test.ts`. No new migrations in this slice.
+
+## Manual workflow (browser + optional live SMTP)
+
+1. Without email env vars: trigger any booking notification for a linked passenger
+   and open **Notifications**: the Email section says *not configured* and the copy
+   waits as "Waiting to send".
+2. `POST /api/notifications/email/dispatch` as Super Admin reports
+   `configured: false`.
+3. (Optional, needs a real SMTP account) Set `EMAIL_PROVIDER=smtp`, `SMTP_HOST`,
+   `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, restart and
+   dispatch: the row moves to "Sent to mail server" — never "Delivered" — and the
+   message lands in the recipient's mailbox.

@@ -9,6 +9,7 @@ import {
   type OwnNotification,
 } from '@/modules/notifications/notifications';
 import { smsConfiguration } from '@/modules/notifications/sms';
+import { emailConfiguration } from '@/modules/notifications/email';
 import {
   MarkAllReadButton,
   MarkReadButton,
@@ -111,6 +112,28 @@ export default async function NotificationsPage() {
                   : row.status === 'SENT' ? 'Sent — awaiting delivery confirmation'
                     : row.status === 'DELIVERED' ? 'Delivered'
                       : `Delivery failed (attempts: ${row.attempts})`}</td>
+              </tr>)}</tbody>
+            </table>
+          </div>}
+      </section>
+
+      <section className="fleet-list-panel" aria-labelledby="notification-email-title">
+        <div className="fleet-list-heading"><div>
+          <h2 id="notification-email-title">Email messages</h2>
+          <p className="muted">{emailConfiguration().message}</p>
+        </div></div>
+        {inbox.emailDeliveries.length === 0
+          ? <p className="muted">No email messages yet. When journey updates are emailed to you, their progress appears here.</p>
+          : <div className="vehicle-table-wrap" role="region" aria-label="Email deliveries" tabIndex={0}>
+            <table className="vehicle-table">
+              <thead><tr><th scope="col">Message</th><th scope="col">To</th><th scope="col">Status</th></tr></thead>
+              <tbody>{inbox.emailDeliveries.map((row) => <tr key={row.notificationId}>
+                <td>{row.title}</td>
+                <td>{row.destination ?? '—'}</td>
+                <td>{row.status === 'PENDING' ? 'Waiting to send'
+                  : row.status === 'SENT' ? 'Sent to mail server'
+                    : row.status === 'DELIVERED' ? 'Delivered'
+                      : `Sending failed (attempts: ${row.attempts})`}</td>
               </tr>)}</tbody>
             </table>
           </div>}
