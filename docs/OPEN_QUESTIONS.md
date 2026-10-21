@@ -167,3 +167,16 @@ Until resolved, settings remain unset and dependent actions must be blocked with
 - Owner note (2026-10-21): an E2E-admin password was pasted into chat during the failed E2E setup.
   Treat it as exposed; rotate it anywhere it is reused. E2E admin passwords should be throwaway values
   typed only into the local shell, never shared in chat.
+
+## Registry-row completion + sandbox git incident #2 (2026-10-21)
+- The corporate_rates row was still missing after `3f18ed9`: two edit calls against the same file in
+  one batch raced, and the bookings-row write won. Fixed with a single edit verified against
+  `git diff` before commit. Rule going forward: one edit per file per batch, always diff-verified.
+- Sandbox git metadata was wiped again (HEAD reset to base `43dd4c1`, index empty, all files
+  untracked; working tree intact). Recovered per the FIN-02 procedure: fetch, `git reset
+  origin/arena/8922811c-rts2`, confirm the diff is exactly the intended one-line registry change,
+  commit, normal (non-force) push. Remote history was never at risk.
+- E2E status: bootstraps now succeed (one Super Admin + Richie Transport Services in
+  `richie_tms_e2e_phase1b_test`); all 4 specs failed at sign-in because the shell exports still
+  contained the literal `<...>` placeholder email/password. Re-running needs only the real
+  `TMS_E2E_EMAIL`/`TMS_E2E_PASSWORD` exports against the existing database — no re-bootstrap.

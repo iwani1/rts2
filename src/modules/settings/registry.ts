@@ -7,6 +7,7 @@ export const settingRegistry = [
   { key: 'rental.pricing_models', label: 'Rental pricing models', category: 'rental', blockedFeatures: ['RNT-04', 'FIN-01'] },
   { key: 'rental.distance_time_policy', label: 'Distance and time pricing policy', category: 'rental', blockedFeatures: ['RNT-04', 'FIN-01'] },
   { key: 'finance.tax_lines', label: 'Tax and levy lines', category: 'finance', blockedFeatures: ['RNT-04', 'FIN-01'] },
+  { key: 'finance.corporate_rates', label: 'Corporate contract rates', category: 'finance', blockedFeatures: ['FIN-02'] },
   { key: 'rental.deposit_policy', label: 'Rental deposit policy', category: 'finance', blockedFeatures: ['RNT-04', 'RNT-05'] },
   { key: 'rental.quote_validity', label: 'Quotation validity', category: 'rental', blockedFeatures: ['RNT-04'] },
   { key: 'rental.cancellation_windows', label: 'Cancellation windows', category: 'rental', blockedFeatures: ['RNT-08'] },
