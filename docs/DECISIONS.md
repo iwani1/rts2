@@ -1116,3 +1116,45 @@ Phase 6 recommendation on 2026-10-21.
    complete — it still has no date filter and says so).
 5. **No migration.** Recognition is computed from the existing
    ledgers; the invoice-family ageing added in 5C is unchanged.
+
+## D-092 — Phase 7: production hardening (2026-10-21, owner-approved)
+
+**Context.** Every functional phase gate (1B–6) is Fedora-verified.
+The deployment story is still the Phase 0 scaffold: bare-Node build
+commands, a compose file with only the database, two security
+headers, no executable backup procedure (BACKUP_AND_RECOVERY.md is a
+policy proposal), and no production smoke test. The owner approved
+the production-hardening track on 2026-10-21.
+
+**Decision.**
+
+1. **Containerised runtime (7A).** A multi-stage `Dockerfile` builds
+   the app (standalone output), runs as the non-root `node` user, and
+   its entrypoint applies `prisma migrate deploy` before starting.
+   Compose gains an `app` service gated on the database healthcheck
+   with its own readiness healthcheck. The existing `db` service is
+   untouched so every `verify-phase*.sh` keeps working.
+2. **Security headers (7B).** `next.config` adds a conservative CSP
+   (self + inline for Next's bootstrap), `frame-ancestors 'none'`
+   with `X-Frame-Options: DENY`, HSTS, `nosniff`,
+   `Referrer-Policy`, a restrictive `Permissions-Policy`, and
+   `X-Robots-Tag: noindex` for this internal system. Any header that
+   breaks a page is a gate defect, not a silent removal.
+3. **Fail-fast boot validation (7C).** Production startup validates
+   `DATABASE_URL`, `AUTH_SECRET` (≥32 chars) and `APP_URL` (absolute
+   URL) via Next instrumentation and refuses to boot with a named
+   error; a non-HTTPS `APP_URL` warns loudly instead of failing, so
+   internal test deployments stay possible.
+4. **Executable backups (7D).** `scripts/backup-db.sh` produces a
+   timestamped `pg_dump` custom-format backup with a checksum via
+   the compose `db` service; `scripts/restore-db.sh` restores only
+   into a newly created database (never over an existing one) with
+   an explicit `--confirm`. Retention and backup-provider choices
+   remain the owner's policy decision; the drill commands are
+   documented so a backup is only "verified" after a restore.
+5. **Gate.** `scripts/verify-phase7.sh` runs the full regression
+   suite unchanged (42 migrations) and adds a container smoke test:
+   build the image, boot app+db on a throwaway compose project,
+   require `/api/health` and `/api/health/ready`, then tear down.
+   Hosting choice, TLS termination and monitoring remain owner
+   decisions documented in SETUP_AND_DEPLOYMENT.md, not code.
