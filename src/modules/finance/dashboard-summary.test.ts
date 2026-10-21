@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { summariseCostsAndMargin, summariseFinanceDashboard, summariseInvoiceAgeing, summariseRevenueStream, combineRevenueStreams } from './dashboard-summary';
+import { summariseCostsAndMargin, summariseFinanceDashboard, summariseInvoiceAgeing, summariseRevenueStream } from './dashboard-summary';
 
 const emptyStream = { statusTotals: [], totalPaymentsPesewas: 0, outstandingPesewas: 0 };
 

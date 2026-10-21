@@ -337,6 +337,8 @@ describe('staff transport, fleet and financial reports with exports (RPT-02/03/0
     expect(report.totals).toEqual({
       recognizedRevenuePesewas: 40000, paymentsReceivedPesewas: 15000,
       outstandingPesewas: 25000, reconciles: true,
+      // D-091: totals carry the explicit stream split; none is rental here.
+      corporateRevenuePesewas: 40000, rentalRevenuePesewas: 0,
     });
     expect(report.revenueByClient).toHaveLength(1);
     expect(report.revenueByClient[0]).toMatchObject({ invoiceCount: 1, revenuePesewas: 40000 });

@@ -266,6 +266,15 @@ describe('finance dashboard reconciles to invoice and payment records (FIN-07 / 
     expect(allTime.activity).toEqual({
       paymentsReceivedPesewas: 25000, paymentCount: 2,
       invoicesIssuedCount: 3, revenueRecognizedPesewas: 60000,
+      // D-091: activity carries the per-stream split; this company has no rental invoices.
+      corporate: {
+        paymentsReceivedPesewas: 25000, paymentCount: 2,
+        invoicesIssuedCount: 3, revenueRecognizedPesewas: 60000,
+      },
+      rental: {
+        paymentsReceivedPesewas: 0, paymentCount: 0,
+        invoicesIssuedCount: 0, revenueRecognizedPesewas: 0,
+      },
     });
   });
 
