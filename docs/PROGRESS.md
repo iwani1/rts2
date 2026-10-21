@@ -20,7 +20,7 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | AUTH-03 | Not Started | Password reset not implemented; delivery/verification channel requires approval. |
 | AUTH-04 | In Progress | Owner-approved role/grant schema, company-scoped authorization resolver, audited role service, bootstrap CLIs, and Super Administrator-only role APIs exist. New searchable user/role-management UI can assign/revoke approved roles for existing accounts; it does not provision or activate users. Page-level tests cover the Super Administrator gate, name/email search, pagination query preservation, and empty-result clearing. Role UI tests and a Super Administrator self-change browser test are added. Domain repository filtering remains. A PostgreSQL-backed role-route integration test and a self-change browser test are added but not run; owner Fedora verification is outstanding. |
 | AUTH-05 | In Progress | An authenticated, self-only, read-only profile page displays the signed-in user's name, email, account status, and creation date, with a workspace and password-change path. The browser E2E flow checks profile access and the displayed email (execution remains pending). Profile editing is not implemented; login-history UI is withheld pending approved retention policy. |
-| AUTH-06 | Not Started | Phase 2. |
+| AUTH-06 | In Progress | Two-factor authentication per D-076: auth-library TOTP plugin + backup codes, required for global Super Administrators (gate at sign-in routing + workspace home), optional for all users, plugin-level rate limits. Sandbox-verified 2026-10-21 (plugin-registration test; gate integration test Fedora-pending; PGlite 31/31 migrations); Fedora verification pending. |
 | AUD-01 | In Progress | Auth session and role assignment/revocation/initial-bootstrap events are persisted; append-only trigger verified against real PostgreSQL. A Super Administrator-only paginated API and responsive read-only viewer exist; event pagination now supports validated cursor history with previous/next navigation and stale-anchor recovery. Broader event coverage and browser/PostgreSQL route verification remain. |
 | SET-01 | In Progress | No-default policy catalogue, required-setting reader, globally authorized write service and Super Administrator settings-status/update API exist; writes are audited transactionally. A new read-only admin status page displays unset/configured state, blocked features and update dates without exposing values. Per-setting role scopes and typed schemas/safe write UI remain for general policy keys; RNT-03 buffers and RNT-04 pricing models/quotation validity plus FIN-01 tax-line structures and RNT-04/RNT-05 deposit policy have dedicated typed validation and audited editors; quote, tax, deposit, and payment calculations/workflows remain inactive. Three disposable-PostgreSQL registry integration tests previously passed on Fedora; a PostgreSQL-backed route test now also checks status-only payload and role denial but is unrun here. E2E checks the response omits policy values and the page has no edit controls, but browser execution remains pending. |
 | MIG-01 | In Progress | D-024 approves all-or-nothing CSV batches after row-level preview. Customer, vehicle, and driver imports now have fixed-template parsing/preview, row-level validation, manager-only UI, and transactional audited create. Vehicle registration duplicates are blocked using the existing registration key. D-025 approves warning-only same-name matching within the CSV and existing company records; valid rows remain importable and are always created separately, with no automatic skip/merge/update/deduplication. The warning policy does not alter D-024 all-or-nothing handling of invalid rows. All three success summaries list created records and clear the native file picker after success, avoiding a stale selection that could prompt accidental re-import; component and browser E2E specs assert the reset (browser E2E remains unrun here). The combined unit/route/UI suite passes (45 files, 157 tests); lint passes; Playwright discovers three E2E specs covering role/settings, rental submission, and the combined import, profile, customer, and fleet flow (including the dashboard and document-filter paths); browser execution remains outstanding. Next.js optimized compilation succeeds in the sandbox, but its stale generated Prisma Client prevents a complete local typecheck. Owner Fedora generation surfaced a `RentalRequestDbShape` mismatch (`customerName` is projected from the joined customer relation); the type was corrected in commit `a4158b6`, and owner Fedora `npm run typecheck` now passes after `npm run db:generate`. Browser and PostgreSQL integration verification remain outstanding. |
@@ -1055,3 +1055,23 @@ Eighth Phase 2 slice. Migration 30 (`20261021180000_service_plans`).
   422/422, PGlite 30/30. Fedora run pending.
 - **Next:** two-factor authentication (AUTH-06), GPS provider state (GPS-01),
   then the Phase 2 gate.
+
+## Phase 2 — two-factor authentication (AUTH-06; D-076; 2026-10-21)
+
+Ninth Phase 2 slice. Migration 31 (`20261021190000_two_factor`).
+
+- **Mechanism:** the auth library's two-factor plugin — TOTP authenticator
+  apps plus one-time backup codes, secrets encrypted under `AUTH_SECRET`,
+  verification rate-limited (plugin + explicit rate-limit rules). Any user
+  may enrol at `/account/security`; sign-in with 2FA on detours through
+  `/login/verify` before any session exists.
+- **Privileged requirement:** global Super Administrators must enrol —
+  enforced by routing after sign-in and at the workspace home
+  (`getTwoFactorGate`). D-076 records the known limitation: without
+  database-capable middleware on this Next.js version, deliberate deep-link
+  bypass is not hard-blocked; framework upgrade is the follow-up.
+- **Tests:** `server/auth.test.ts` (plugin registered + verify endpoints
+  rate-limited), `auth/two-factor-gate.integration.test.ts` (only global
+  Super Admins gated; gate clears once enabled). Sandbox: unit 422 + 1 new,
+  PGlite 31/31, build compiled. Fedora run pending.
+- **Next:** GPS-01 provider state, then the Phase 2 verification checkpoint.

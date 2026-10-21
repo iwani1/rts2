@@ -281,6 +281,8 @@ model User {
   customerAccount   Customer?              @relation("CustomerAccount")
   notifications     Notification[]
   notificationPreferences NotificationPreference[]
+  twoFactorEnabled  Boolean              @default(false)
+  twoFactor         TwoFactor?
   incidentsReported  Incident[]            @relation("IncidentReporter")
   boardingAttempts   BoardingVerificationAttempt[]
   incidentsAssigned  Incident[]            @relation("IncidentResponder")
@@ -1051,4 +1053,18 @@ model VehicleServicePlan {
 
   @@unique([companyId, vehicleId])
   @@index([companyId, vehicleId])
+}
+
+model TwoFactor {
+  id                      String    @id @default(cuid())
+  userId                  String    @unique
+  secret                  String
+  backupCodes             String
+  verified                Boolean   @default(true)
+  failedVerificationCount Int       @default(0)
+  lockedUntil             DateTime? @db.Timestamptz(6)
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([secret])
+  @@index([userId])
 }

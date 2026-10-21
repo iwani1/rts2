@@ -677,3 +677,23 @@ Date: 2026-10-21. Status: decided for Phase 2 construction; recorded for ratific
    `maintenance:manage` (GLOBAL/COMPANY) about overdue/due-soon vehicles;
    dedupe per vehicle + due date + severity keeps repeat presses quiet, and
    nothing pretends a scheduler exists.
+
+## D-076 — Two-factor authentication for privileged roles (AUTH-06)
+
+Date: 2026-10-21. Status: decided for Phase 2 construction; recorded for ratification at the Phase 2 gate.
+
+1. **Mechanism.** The auth library's two-factor plugin (TOTP authenticator
+   apps + one-time backup codes). Secrets and backup codes are stored by the
+   plugin encrypted under `AUTH_SECRET`; codes are single-use and verification
+   is rate-limited by the plugin. Any user may enrol; enrolment is **required
+   for global Super Administrators** (the privileged role), optional for
+   everyone else.
+2. **Enforcement.** After password sign-in, a privileged user who has not
+   enrolled is routed to the security page, and the workspace home redirects
+   them there until enrolment completes. A user with 2FA on gets the plugin's
+   second-factor challenge at sign-in before any session exists.
+3. **Known limitation (recorded honestly).** Enforcement lives at sign-in and
+   the workspace entry because the app has no database-capable middleware on
+   this Next.js version; a privileged user who deliberately deep-links around
+   the prompt is not hard-blocked. Full middleware enforcement is the follow-up
+   when the framework supports database access there.

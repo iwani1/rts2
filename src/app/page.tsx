@@ -6,6 +6,7 @@ import { mayStartSession } from '@/modules/auth/policy';
 import { getAuth } from '@/server/auth';
 import { getPrisma } from '@/server/prisma';
 import { LogoutButton } from './logout-button';
+import { getTwoFactorGate } from '@/modules/auth/two-factor-gate';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +16,9 @@ export default async function Home() {
   const prisma = getPrisma();
   const currentUser = await prisma.user.findUnique({ where: { id: session.user.id }, select: { status: true } });
   if (!mayStartSession(currentUser?.status)) redirect('/login');
+  // AUTH-06 (D-076): privileged accounts must enrol in 2FA.
+  const twoFactorGate = await getTwoFactorGate(session.user.id);
+  if (twoFactorGate.mustEnroll) redirect('/account/security?required=1');
   const auditAccess = await resolvePermission({ userId: session.user.id, permission: 'audit:read' });
   const canManageUserRoles = await isActiveSuperAdmin(session.user.id);
   const companies = await prisma.company.findMany({ where: { status: 'ACTIVE' }, orderBy: { createdAt: 'asc' }, take: 2, select: { id: true } });
@@ -78,6 +82,7 @@ export default async function Home() {
         {canManageTrips && <Link className="header-link" href="/operations">Operations dashboard</Link>}
         {canManageTrips && <Link className="header-link" href="/dispatch">Dispatch</Link>}
         {canManageTrips && <Link className="header-link" href="/incidents">Incidents</Link>}
+        <Link className="header-link" href="/account/security">Security</Link>
         {canManageInvoices && <Link className="header-link" href="/invoices">Invoices</Link>}
         {canManageInvoices && <Link className="header-link" href="/finance">Finance dashboard</Link>}
         {reportAccess.allowed && <Link className="header-link" href="/reports">Reports</Link>}

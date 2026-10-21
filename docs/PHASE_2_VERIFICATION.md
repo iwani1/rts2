@@ -164,3 +164,19 @@ Status: **SLICE BUILT — Fedora run required.** Migration 30
    team** alerts other maintenance managers once per due cycle.
 3. Record a completed service: the baseline (and next due date) moves. Note
    that waiting past a due date changes nothing by itself.
+
+# Phase 2 verification — two-factor authentication (AUTH-06; D-076)
+
+Status: **SLICE BUILT — Fedora run required.** Migration 31
+(`20261021190000_two_factor`); the verification script includes
+`auth/two-factor-gate.integration.test.ts` and `server/auth.test.ts`.
+
+## Manual workflow (browser)
+
+1. As the Super Admin, sign in: you are routed to **Security** and asked to
+   set up 2FA (authenticator app). Until then, the workspace home keeps
+   returning you there.
+2. Complete setup (password → secret → code), saving the backup codes shown once.
+3. Sign out and back in: after the password you get the code challenge
+   (`/login/verify`); a backup code also works, once.
+4. Any non-privileged user may enrol voluntarily from **Security**.

@@ -1,4 +1,5 @@
 import { betterAuth } from 'better-auth';
+import { twoFactor } from 'better-auth/plugins/two-factor';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { mayStartSession } from '@/modules/auth/policy';
 import { getPrisma } from '@/server/prisma';
@@ -40,6 +41,8 @@ function createAuth() {
         '/sign-up/email': false,
         '/request-password-reset': { window: 60, max: 3 },
         '/reset-password': { window: 60, max: 5 },
+        '/two-factor/verify-totp': { window: 60, max: 5 },
+        '/two-factor/verify-backup-code': { window: 60, max: 5 },
       },
     },
     databaseHooks: {
@@ -77,6 +80,9 @@ function createAuth() {
       },
     },
     advanced: { useSecureCookies: process.env.NODE_ENV === 'production' },
+    // AUTH-06 (D-076): TOTP + backup codes. Required for global Super
+    // Administrators, optional for everyone else.
+    plugins: [twoFactor({ issuer: 'Richie TMS' })],
   });
 }
 

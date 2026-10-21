@@ -22,6 +22,12 @@ export function LoginForm() {
       });
       if (result.error) {
         setError('Sign-in failed. Check your details or contact your administrator.');
+      } else if (
+        typeof result.data === 'object' && result.data !== null
+        && (result.data as { twoFactorRedirect?: unknown }).twoFactorRedirect === true
+      ) {
+        // AUTH-06 (D-076): second factor required before any session exists.
+        router.replace('/login/verify');
       } else {
         router.replace('/');
         router.refresh();
