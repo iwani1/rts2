@@ -27,12 +27,16 @@ Expected:
   `rental-invoices` (dashboard streams + RPT-03 Rentals line) and
   `finance-dashboard` (no unavailable metrics remain)
 
-> Status: built in the sandbox (unit 491/491; sandbox typecheck ran
-> under a stub-Prisma override because the engine binaries cannot be
-> downloaded there — the Fedora run below performs the real
-> `prisma generate` + `tsc`, which is the authoritative check).
-> Fedora automated verification is **outstanding**; the manual
-> walkthrough below also remains outstanding.
+> Status: **automated verification PASSED on Fedora 2026-10-21 at
+> `fcfad47`** (database `richie_tms_p6_20261021225603_test`): 42/42
+> migrations, typecheck + lint clean (0 errors), unit 491/491 (134
+> files), integration 202/202 (48 suites) — including the D-091
+> rental-stream assertions in `rental-invoices` (recognised 18,900 =
+> payments 9,100 + outstanding 9,800) and the RPT-03 Rentals line.
+> One fix round (`fcfad47`: two exact-shape test assertions now
+> expect the new stream fields; values were already correct, and
+> the real Fedora `tsc` passed first try). The manual walkthrough
+> below remains outstanding.
 
 ## Manual walkthrough
 

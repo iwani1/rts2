@@ -1301,3 +1301,11 @@ unit 491/491; typecheck under a stub-Prisma override (engine binaries
 unreachable from the sandbox) — the Fedora run's real generate + tsc is
 authoritative. Fedora gate: `scripts/verify-phase6.sh` — see
 `docs/PHASE_6_VERIFICATION.md`.
+
+**Phase 6 automated Fedora verification PASSED 2026-10-21 at `fcfad47`:**
+42/42 migrations (no schema change), unit 491/491 (134 files),
+integration 202/202 (48 suites). Rental revenue is recognised on issue
+across the finance dashboard (combined headline, per-stream tie-out,
+combined-basis margin), RPT-03 (Rentals service line) and
+`/rentals/reports`. One fix round (`fcfad47`) updated two exact-shape
+assertions for the new stream fields.
