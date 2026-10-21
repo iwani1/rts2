@@ -100,3 +100,8 @@ Until resolved, settings remain unset and dependent actions must be blocked with
 - Refinement: `.strict()` belongs on the underlying `ZodObject` *before* `superRefine`; `ZodEffects`
   has no `.strict()` (TS2339 on Fedora run 6). Final shape: object `.strict().superRefine(...)` fields
   schema, `.and(z.object({ reason }).strict())` for the request schema.
+- Final Zod composition: Zod intersections (`.and()`) cannot carry `.strict()` per side — each side
+  validates the whole input, so strict rejects the other side's keys (Fedora run at `4820983`). The
+  convention now: one strict object for the fields, a shared `superRefine` function, and
+  `.extend({ reason }).strict().superRefine(refine)` for the audited request schema
+  (contracts, locations, routes).

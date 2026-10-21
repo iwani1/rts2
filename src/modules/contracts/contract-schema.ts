@@ -4,7 +4,13 @@ import { CONTRACT_STATUSES } from './contract-transitions';
 const optionalText = (max: number) => z.string().trim().max(max).nullable();
 const optionalDate = z.string().date().nullable();
 
-const contractFieldsSchema = z.object({
+function refineContractDates(data: { startDate: string | null; endDate: string | null }, context: z.RefinementCtx) {
+  if (data.startDate && data.endDate && data.endDate < data.startDate) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['endDate'], message: 'The end date must be on or after the start date.' });
+  }
+}
+
+const contractFieldsObject = z.object({
   clientId: z.string().trim().min(1).max(128),
   serviceType: optionalText(120),
   startDate: optionalDate,
@@ -18,16 +24,12 @@ const contractFieldsSchema = z.object({
   paymentTerms: optionalText(2000),
   serviceLevelTargets: optionalText(2000),
   notes: optionalText(2000),
-}).strict().superRefine((data, context) => {
-  if (data.startDate && data.endDate && data.endDate < data.startDate) {
-    context.addIssue({ code: z.ZodIssueCode.custom, path: ['endDate'], message: 'The end date must be on or after the start date.' });
-  }
-});
+}).strict();
 
-export const contractInputSchema = contractFieldsSchema;
-export const contractRequestSchema = contractFieldsSchema.and(z.object({
+export const contractInputSchema = contractFieldsObject.superRefine(refineContractDates);
+export const contractRequestSchema = contractFieldsObject.extend({
   reason: z.string().trim().min(8).max(500),
-}).strict());
+}).strict().superRefine(refineContractDates);
 export const contractListQuerySchema = z.object({
   search: z.string().trim().max(100).optional(),
   status: z.enum(CONTRACT_STATUSES).optional(),

@@ -5,7 +5,13 @@ const dayCodeSchema = z.enum(DAY_CODES);
 const timeSchema = z.string().regex(/^([01][0-9]|2[0-3]):[0-5][0-9]$/, 'Enter a 24-hour time as HH:MM.');
 const optionalText = (max: number) => z.string().trim().max(max).nullable();
 
-const routeFieldsSchema = z.object({
+function refineOperatingDays(data: { operatingDays: string[] }, context: z.RefinementCtx) {
+  if (new Set(data.operatingDays).size !== data.operatingDays.length) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['operatingDays'], message: 'Operating days must not repeat.' });
+  }
+}
+
+const routeFieldsObject = z.object({
   clientId: z.string().trim().min(1).max(128),
   name: z.string().trim().min(1).max(160),
   serviceType: optionalText(120),
@@ -18,16 +24,12 @@ const routeFieldsSchema = z.object({
   shift: optionalText(120),
   active: z.boolean(),
   notes: optionalText(2000),
-}).strict().superRefine((data, context) => {
-  if (new Set(data.operatingDays).size !== data.operatingDays.length) {
-    context.addIssue({ code: z.ZodIssueCode.custom, path: ['operatingDays'], message: 'Operating days must not repeat.' });
-  }
-});
+}).strict();
 
-export const routeInputSchema = routeFieldsSchema;
-export const routeRequestSchema = routeFieldsSchema.and(z.object({
+export const routeInputSchema = routeFieldsObject.superRefine(refineOperatingDays);
+export const routeRequestSchema = routeFieldsObject.extend({
   reason: z.string().trim().min(8).max(500),
-}).strict());
+}).strict().superRefine(refineOperatingDays);
 export const routeListQuerySchema = z.object({
   search: z.string().trim().max(100).optional(),
   clientId: z.string().trim().min(1).max(128).optional(),
