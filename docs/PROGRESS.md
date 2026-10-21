@@ -1268,3 +1268,16 @@ DB-enforced state machine), unit 480/480 (130 files), integration
 rejection via PostgreSQL exclusion constraints and retire-before-replace
 ledger updates. Fixes along the way: `5381267` (deposit-policy key),
 `8c7af1c` (trigger widened), `1245e02` (driver-assignment ordering).
+
+**Phase 5 built 2026-10-21 at `4bfa1d2` (behind owner-run Fedora verification):**
+D-090 — 5A rental invoices from approved completions (separate
+`RentalInvoice` ledger, idempotent create, deposit-deduction arithmetic,
+payment-driven PAID); 5B customer quotations (`RentalQuotation` snapshot
+of the latest worksheet, portal accept/decline receipts, supersede on
+reissue, derived expiry); 5C riders — `finance.corporate_rates` and
+`bookings.creation_cutoff` admin editors, `CorporateInvoice.dueDate`
+required at issue, finance-dashboard ageing by days past due with
+undated invoices counted separately. Sandbox: PGlite 42/42, unit
+489/489, production build clean, tsc clean. Fedora gate:
+`scripts/verify-phase5.sh` (42 migrations) — see
+`docs/PHASE_5_VERIFICATION.md`.
