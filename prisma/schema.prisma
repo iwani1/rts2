@@ -27,6 +27,10 @@ model Company {
   clients               Client[]
   contracts             Contract[]
   employees             Employee[]
+  locations             Location[]
+  routes                Route[]
+  routeStops            RouteStop[]
+  routeSchedules        RouteSchedule[]
 }
 
 model Client {
@@ -46,9 +50,101 @@ model Client {
   company          Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
   contracts        Contract[]
   employees        Employee[]
+  routes           Route[]
 
   @@unique([companyId, id])
   @@index([companyId, archivedAt, name])
+}
+
+model Location {
+  id                  String    @id @default(cuid())
+  companyId           String
+  name                String
+  latitude            Decimal?  @db.Decimal(9, 6)
+  longitude           Decimal?  @db.Decimal(9, 6)
+  landmarkDescription String?
+  ghanaDigitalAddress String?
+  notes               String?
+  archivedAt          DateTime? @db.Timestamptz(6)
+  createdAt           DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime  @updatedAt @db.Timestamptz(6)
+  company             Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  originRoutes        Route[]   @relation("RouteOrigin")
+  destinationRoutes   Route[]   @relation("RouteDestination")
+  routeStops          RouteStop[]
+
+  @@unique([companyId, id])
+  @@index([companyId, archivedAt, name])
+}
+
+model Route {
+  id                      String    @id @default(cuid())
+  companyId               String
+  clientId                String
+  reference               String
+  name                    String
+  serviceType             String?
+  originLocationId        String
+  destinationLocationId   String
+  plannedStartTime        String?
+  expectedDurationMinutes Int?
+  capacityRequirement     Int?
+  operatingDays           String[]
+  shift                   String?
+  active                  Boolean
+  notes                   String?
+  archivedAt              DateTime? @db.Timestamptz(6)
+  createdAt               DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt               DateTime  @updatedAt @db.Timestamptz(6)
+  company                 Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  client                  Client    @relation(fields: [companyId, clientId], references: [companyId, id], onDelete: Restrict)
+  originLocation          Location  @relation("RouteOrigin", fields: [companyId, originLocationId], references: [companyId, id], onDelete: Restrict)
+  destinationLocation     Location  @relation("RouteDestination", fields: [companyId, destinationLocationId], references: [companyId, id], onDelete: Restrict)
+  stops                   RouteStop[]
+  schedules               RouteSchedule[]
+
+  @@unique([companyId, id])
+  @@unique([companyId, reference])
+  @@index([companyId, archivedAt, name])
+  @@index([companyId, clientId, archivedAt])
+}
+
+model RouteStop {
+  id                   String   @id @default(cuid())
+  companyId            String
+  routeId              String
+  locationId           String
+  sequence             Int
+  stopKind             String
+  plannedOffsetMinutes Int?
+  createdAt            DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime @updatedAt @db.Timestamptz(6)
+  company              Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  route                Route    @relation(fields: [companyId, routeId], references: [companyId, id], onDelete: Restrict)
+  location             Location @relation(fields: [companyId, locationId], references: [companyId, id], onDelete: Restrict)
+
+  @@unique([companyId, routeId, sequence])
+  @@index([companyId, routeId])
+  @@index([companyId, locationId])
+}
+
+model RouteSchedule {
+  id               String    @id @default(cuid())
+  companyId        String
+  routeId          String
+  kind             String
+  daysOfWeek       String[]
+  scheduleDate     DateTime? @db.Date
+  shift            String?
+  plannedStartTime String?
+  active           Boolean
+  notes            String?
+  createdAt        DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @db.Timestamptz(6)
+  company          Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  route            Route     @relation(fields: [companyId, routeId], references: [companyId, id], onDelete: Restrict)
+
+  @@index([companyId, routeId, active])
 }
 
 model Employee {

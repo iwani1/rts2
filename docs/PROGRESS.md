@@ -50,10 +50,10 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | EMP-01 | In Progress | Employee register implemented per D-050 (schema, migration, service, API, pages) with restricted-field handling; Fedora verification pending. |
 | EMP-02 | In Progress | CSV import implemented per D-050/D-024: fixed template, per-client preview with row errors and warning-only likely duplicates, all-or-nothing audited import; Fedora verification pending. |
 | EMP-03 | In Progress | Eligibility toggle via audited update, shift/location text as supplied, audited export without restricted fields; Fedora verification pending. Structured shifts/locations await RTE. |
-| RTE-01 | Not Started | No feature implementation; Phase 1+ approval required. |
-| RTE-02 | Not Started | No feature implementation; Phase 1+ approval required. |
-| RTE-03 | Not Started | No feature implementation; Phase 1+ approval required. |
-| RTE-04 | Not Started | No feature implementation; Phase 1+ approval required. |
+| RTE-01 | In Progress | Location register implemented per D-051 (optional coordinate pairs, landmark, Ghana digital address); Fedora verification pending. |
+| RTE-02 | In Progress | Route register with ordered stops and audited stop-order overrides implemented per D-051; Fedora verification pending. |
+| RTE-03 | In Progress | Recurring/one-time schedules with conflict detection, copy, and activation toggles implemented per D-051; trip generation awaits TRP-01. Fedora verification pending. |
+| RTE-04 | In Progress | Manual planning aid implemented per D-051 (recorded offsets only, unmapped-stop flags, seat-count capacity check, never labelled optimal); Fedora verification pending. |
 | RTE-05 | Not Started | No feature implementation; Phase 1+ approval required. |
 | BKG-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | BKG-02 | Not Started | No feature implementation; Phase 1+ approval required. |
@@ -483,5 +483,18 @@ Added the employee register as the third Phase 1B vertical slice, following the 
 - **Pages** (`src/app/employees/page.tsx` + `employee-manager.tsx`): searchable/filterable register, create/edit/archive forms, CSV template download, preview table with per-row errors/warnings, and confirm-import flow. Workspace navigation links Employees for `employee:manage` users.
 - **Tests**: `employee-schema.test.ts`, `employee-import.test.ts` (parsing, eligibility, duplicate references, likely-duplicate warnings, header/email errors), `employees.integration.test.ts` (PostgreSQL CRUD, eligibility toggle, unique reference, cross-company and dispatcher-scope denial, preview/all-or-nothing import, export exclusion). Not yet run: sandbox has no `node_modules`/database; Fedora verification is batched with CLI-02.
 - **Limits**: No HR self-service or dispatcher roster projection (fail closed), no structured locations/shifts yet (RTE), no booking enforcement (BKG-02), archive only.
+
+## Phase 1B — locations, routes, schedules, planning aid (RTE-01..04; D-051; 2026-10-20)
+
+Added the routes domain as the fourth Phase 1B vertical slice.
+
+- **Prisma schema**: Added `Location` (optional Decimal coordinate pair, landmarkDescription, ghanaDigitalAddress), `Route` (client FK, `RTE-…` reference, origin/destination location FKs, planned start/duration/capacity, operating-day codes, shift text, active flag), `RouteStop` (ordered, kind, planned offset), and `RouteSchedule` (RECURRING/ONE_TIME shapes) with company-scoped indexes and relations on `Company`/`Client`.
+- **Migration**: `prisma/migrations/20261020150000_routes_locations/migration.sql` with coordinate pair/range CHECKs, time-format CHECKs, stop-kind and schedule-shape CHECKs, and unique stop-sequence and reference constraints.
+- **Service layer** (`src/modules/routes/`): locations CRUD; routes CRUD plus `setRouteStops` (audited whole-order replacement = dispatcher override) and `getRoutePlan`; schedules with overlap conflict detection across recurring/one-time shapes, template copy, and audited activation toggles — all behind `route:manage` (GLOBAL/COMPANY).
+- **Planning aid** (`route-plan.ts`): pure, unit-tested; recorded offsets only, unmapped-stop flags, largest-seat capacity assessment, always labelled manual/approximate with the no-map-provider disclosure.
+- **API routes**: locations, routes, route stops, route schedules, schedule copy/activation, and route plan endpoints with typed error mapping (conflicts return 409 with the conflicting schedule descriptions).
+- **Pages** (`src/app/routes/`): location register + manager, route register, route editor with stop-order editor, manual plan panel, and schedule panel (add/copy/activate with audited reasons). Workspace navigation links Routes and schedules.
+- **Tests**: `route-plan.test.ts`, `route-schema.test.ts`, `routes.integration.test.ts` (locations, stop-order override, plan capacity, schedule conflicts/copy/reactivation, cross-company denial). Not yet run: sandbox has no `node_modules`/database; Fedora verification is batched with CLI-02/EMP.
+- **Limits**: No map provider, no trip generation (TRP-01), no availability/assignment checks (DSP-02), no optimisation (RTE-05, Phase 3).
 
 Phase 1A remains complete: all 4 E2E specs pass against the cleaned test DB (1 company: Richie Transport Services), unit tests 337/337 pass, integration tests 51/51 pass, typecheck and build pass.
