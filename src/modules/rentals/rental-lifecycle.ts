@@ -467,13 +467,17 @@ export async function assignRentalDriver(actorId: string, companyId: string, req
       throw new RentalLifecyclePolicyError('RNT_DRIVER_NOT_ACTIVE', 'The selected driver is not active and cannot be assigned.');
     }
     const window: RentalConflictWindow = { startAt: current.startsAt, endAt: current.endsAt };
-    const replacement = await createAssignment(tx, {
-      companyId, requestId, vehicleId: current.vehicleId, driverId: input.driverId,
-      window, actorId, buffers, excludeAssignmentId: current.id,
-    });
+    // Retire the current row BEFORE inserting its replacement: the database
+    // exclusion constraints evaluate against ACTIVE rows, so the old row
+    // would otherwise conflict with its own replacement in the same window.
+    // The transaction rolls this update back if the replacement fails.
     await tx.rentalAssignment.update({
       where: { id: current.id },
       data: { status: 'REPLACED', releasedAt: new Date(), releaseKind: 'REASSIGNMENT' },
+    });
+    const replacement = await createAssignment(tx, {
+      companyId, requestId, vehicleId: current.vehicleId, driverId: input.driverId,
+      window, actorId, buffers, excludeAssignmentId: current.id,
     });
     if (request.status === 'Confirmed') {
       await transitionStatus(tx, {
