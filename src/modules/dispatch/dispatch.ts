@@ -238,15 +238,26 @@ export async function assignTripResources(
       { id: tripId, vehicleId: nextVehicleId, driverId: nextDriverId, capacityLimit: trip.capacityLimit },
       trip.tripDate, passengerCount,
     );
-    const hard = conflicts.filter((conflict) => !conflict.overridable);
+    // A resource change must not be re-gated by conflicts it does not cause:
+    // conflicts already present on the untouched assignment surface on the
+    // dispatch board as warnings, but only conflicts touching the resource
+    // being changed here can block this call.
+    const previous = await evaluateConflicts(
+      tx, companyId,
+      { id: tripId, vehicleId: trip.vehicleId, driverId: trip.driverId, capacityLimit: trip.capacityLimit },
+      trip.tripDate, passengerCount,
+    );
+    const previousTypes = new Set(previous.map((conflict) => conflict.type));
+    const introduced = conflicts.filter((conflict) => !previousTypes.has(conflict.type));
+    const hard = introduced.filter((conflict) => !conflict.overridable);
     if (hard.length > 0) {
       throw new DispatchAssignmentNotAllowedError(
         `This assignment is blocked: ${hard.map((conflict) => conflict.type).join(', ')}. Resolve the block before assigning.`,
       );
     }
-    if (conflicts.length > 0 && !data.override) {
+    if (introduced.length > 0 && !data.override) {
       throw new DispatchAssignmentNotAllowedError(
-        `This assignment has conflicts (${conflicts.map((conflict) => conflict.type).join(', ')}). Confirm the override with a reason to proceed.`,
+        `This assignment has conflicts (${introduced.map((conflict) => conflict.type).join(', ')}). Confirm the override with a reason to proceed.`,
       );
     }
     await tx.trip.updateMany({

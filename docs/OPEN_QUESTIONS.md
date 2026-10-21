@@ -115,3 +115,15 @@ Until resolved, settings remain unset and dependent actions must be blocked with
 - First green milestones in that run: generate, 21/21 migrations, typecheck, lint (0 errors),
   **unit suite 373/373**, and 88 integration tests passing; remaining failures were the two fixture
   issues above.
+
+## Permission/conflict semantics fixed (Fedora run at `3cd0c32`, 2026-10-21)
+- `resolvePermission` only grants assigned-limited scopes (`OWN_TRIP_EVENTS`, `ASSIGNED_*`, ...)
+  when `assignedUserId` equals the actor. No production caller passed it, so the driver interface
+  denied every driver. `driverContext` now passes `assignedUserId: actorId` — drivers act only on
+  trips assigned to themselves, and the service additionally constrains every query by the linked
+  `Driver.id`, so self-assignment stays least-privilege. Verified pattern matches
+  `authorization.integration.test.ts`.
+- Dispatch assignment gating: `assignTripResources` evaluated conflicts over the trip's *resulting*
+  resources, so changing only the vehicle was blocked by a pre-existing same-day driver conflict.
+  The call now diffs against the conflicts of the untouched assignment and only blocks on conflicts
+  the change introduces; pre-existing conflicts still surface as board warnings.

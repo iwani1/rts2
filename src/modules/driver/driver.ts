@@ -63,7 +63,7 @@ export type DriverTripDetail = DriverTripSummary & {
  * anything else fails closed.
  */
 async function driverContext(actorId: string, companyId: string) {
-  const permission = await resolvePermission({ userId: actorId, companyId, permission: 'trip:dispatch' });
+  const permission = await resolvePermission({ userId: actorId, companyId, permission: 'trip:dispatch', assignedUserId: actorId });
   if (!permission.allowed) throw new PermissionDeniedError();
   const company = await getPrisma().company.findUnique({ where: { id: companyId }, select: { status: true } });
   if (company?.status !== 'ACTIVE') throw new DriverCompanyNotFoundError();
