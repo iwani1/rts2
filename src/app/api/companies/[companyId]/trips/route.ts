@@ -7,7 +7,6 @@ import {
   TripCompanyNotFoundError,
   TripValidationError,
   createTrip,
-  generateTripsFromSchedules,
   listTrips,
 } from '@/modules/trips/trips';
 

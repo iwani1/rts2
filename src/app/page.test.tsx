@@ -2,13 +2,13 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ getSession: vi.fn(), findUser: vi.fn(), findCompanies: vi.fn(), resolvePermission: vi.fn(), isActiveSuperAdmin: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getSession: vi.fn(), findUser: vi.fn(), findCompanies: vi.fn(), findUserRoleAssignment: vi.fn(), resolvePermission: vi.fn(), isActiveSuperAdmin: vi.fn() }));
 
 vi.mock('next/headers', () => ({ headers: async () => new Headers() }));
 vi.mock('next/navigation', () => ({ redirect: (path: string) => { throw new Error(`NEXT_REDIRECT:${path}`); } }));
 vi.mock('next/link', () => ({ default: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) => <a href={href} {...props}>{children}</a> }));
 vi.mock('@/server/auth', () => ({ getAuth: () => ({ api: { getSession: mocks.getSession } }) }));
-vi.mock('@/server/prisma', () => ({ getPrisma: () => ({ user: { findUnique: mocks.findUser }, company: { findMany: mocks.findCompanies } }) }));
+vi.mock('@/server/prisma', () => ({ getPrisma: () => ({ user: { findUnique: mocks.findUser }, company: { findMany: mocks.findCompanies }, userRoleAssignment: { findFirst: mocks.findUserRoleAssignment } }) }));
 vi.mock('@/modules/auth/permissions', () => ({ resolvePermission: mocks.resolvePermission, isActiveSuperAdmin: mocks.isActiveSuperAdmin }));
 vi.mock('./logout-button', () => ({ LogoutButton: () => <button type="button">Sign out</button> }));
 
@@ -22,6 +22,7 @@ beforeEach(() => {
   mocks.findCompanies.mockResolvedValue([{ id: 'company-1' }]);
   mocks.resolvePermission.mockResolvedValue({ allowed: true, scopes: ['COMPANY'] });
   mocks.isActiveSuperAdmin.mockResolvedValue(false);
+  mocks.findUserRoleAssignment.mockResolvedValue(null);
 });
 
 describe('workspace company selection', () => {

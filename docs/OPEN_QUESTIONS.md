@@ -91,3 +91,8 @@ Until resolved, settings remain unset and dependent actions must be blocked with
   `SortOrder` literal. The working convention (used by pre-existing modules) keeps shared include objects
   un-`as const` and adds per-property `'asc' as const` only where Prisma needs the literal union — applied
   to `CorporateInvoiceInclude.lines.orderBy` in `src/modules/finance/invoices.ts`.
+
+## Typecheck fixed patterns (continued, Fedora run 5, 2026-10-21)
+- Zod: refined field schemas composed with `.and(z.object({ reason }))` must not carry `.strict()`
+  (strict rejects the other side's keys); strictness lives on the `InputSchema` and the reason side instead.
+- Tests must mirror service-level queries added to pages (home page HR-binding probe added `findUserRoleAssignment` mock).

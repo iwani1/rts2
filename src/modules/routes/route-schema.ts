@@ -18,16 +18,16 @@ const routeFieldsSchema = z.object({
   shift: optionalText(120),
   active: z.boolean(),
   notes: optionalText(2000),
-}).strict().superRefine((data, context) => {
+}).superRefine((data, context) => {
   if (new Set(data.operatingDays).size !== data.operatingDays.length) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['operatingDays'], message: 'Operating days must not repeat.' });
   }
 });
 
-export const routeInputSchema = routeFieldsSchema;
+export const routeInputSchema = routeFieldsSchema.strict();
 export const routeRequestSchema = routeFieldsSchema.and(z.object({
   reason: z.string().trim().min(8).max(500),
-}));
+}).strict());
 export const routeListQuerySchema = z.object({
   search: z.string().trim().max(100).optional(),
   clientId: z.string().trim().min(1).max(128).optional(),
@@ -52,7 +52,7 @@ export const routeScheduleRequestSchema = z.object({
   plannedStartTime: timeSchema.nullable(),
   notes: optionalText(2000),
   reason: z.string().trim().min(8).max(500),
-}).strict().superRefine((data, context) => {
+}).superRefine((data, context) => {
   if (data.kind === 'RECURRING') {
     if (data.daysOfWeek.length === 0) {
       context.addIssue({ code: z.ZodIssueCode.custom, path: ['daysOfWeek'], message: 'A recurring schedule needs at least one operating day.' });

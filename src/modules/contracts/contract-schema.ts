@@ -18,16 +18,16 @@ const contractFieldsSchema = z.object({
   paymentTerms: optionalText(2000),
   serviceLevelTargets: optionalText(2000),
   notes: optionalText(2000),
-}).strict().superRefine((data, context) => {
+}).superRefine((data, context) => {
   if (data.startDate && data.endDate && data.endDate < data.startDate) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['endDate'], message: 'The end date must be on or after the start date.' });
   }
 });
 
-export const contractInputSchema = contractFieldsSchema;
+export const contractInputSchema = contractFieldsSchema.strict();
 export const contractRequestSchema = contractFieldsSchema.and(z.object({
   reason: z.string().trim().min(8).max(500),
-}));
+}).strict());
 export const contractListQuerySchema = z.object({
   search: z.string().trim().max(100).optional(),
   status: z.enum(CONTRACT_STATUSES).optional(),
@@ -40,7 +40,7 @@ export const contractTransitionSchema = z.object({
   reason: z.string().trim().min(8).max(500),
   renewalStartDate: z.string().date().nullable().optional(),
   renewalEndDate: z.string().date().nullable().optional(),
-}).strict().superRefine((data, context) => {
+}).superRefine((data, context) => {
   if (data.toStatus !== 'Active' && (data.renewalStartDate || data.renewalEndDate)) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['renewalEndDate'], message: 'Renewal dates may only be supplied when renewing a contract to Active.' });
   }
