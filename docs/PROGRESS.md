@@ -1289,3 +1289,15 @@ refusal, void-with-payments refusal), `rental-quotations` 4/4,
 finance-dashboard ageing 8/8. One fix round (`ef29773`) added the
 D-090 due date to corporate-issue fixtures in three older suites and
 pinned the no-due-date refusal in `invoice-lifecycle`.
+
+**Phase 6 built 2026-10-21 at `9bbbb88` (behind owner-run Fedora verification):**
+D-091 rental revenue recognition — 6A finance dashboard recognises the
+rental stream on issue with a combined headline, per-stream tie-out and
+the margin on the combined basis; 6B RPT-03 gains the Rentals service
+line and explicit corporate/rental totals in UI, CSV and PDF; 6C
+`/rentals/reports` reports real invoiced revenue/outstanding and drops
+stale pre-Phase-4 unavailable claims. No migration (still 42). Sandbox:
+unit 491/491; typecheck under a stub-Prisma override (engine binaries
+unreachable from the sandbox) — the Fedora run's real generate + tsc is
+authoritative. Fedora gate: `scripts/verify-phase6.sh` — see
+`docs/PHASE_6_VERIFICATION.md`.
