@@ -40,6 +40,10 @@ export default async function Home() {
   const canManageTrips = tripAccess.allowed && tripAccess.scopes.some((scope) => ['GLOBAL', 'COMPANY'].includes(scope));
   const invoiceAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'invoice:manage' }) : { allowed: false, scopes: [] };
   const canManageInvoices = invoiceAccess.allowed && invoiceAccess.scopes.some((scope) => ['GLOBAL', 'COMPANY'].includes(scope));
+  const isCorporateHr = company ? Boolean(await prisma.userRoleAssignment.findFirst({
+    where: { userId: session.user.id, companyId: company.id, roleCode: 'CORP_HR_ADMIN', revokedAt: null },
+    select: { id: true },
+  })) : false;
   return <main className="app-shell">
     <header className="app-header">
       <Link className="wordmark" href="/" aria-label="Richie TMS home">R<span>.</span>TS</Link>
@@ -59,6 +63,7 @@ export default async function Home() {
         {canManageTrips && <Link className="header-link" href="/trips">Trips</Link>}
         {canManageTrips && <Link className="header-link" href="/dispatch">Dispatch</Link>}
         {canManageInvoices && <Link className="header-link" href="/invoices">Invoices</Link>}
+        {isCorporateHr && <Link className="header-link" href="/corporate">Corporate dashboard</Link>}
         {canManageRentalRequests && <Link className="header-link" href="/rentals/requests">Rental requests</Link>}
         {canManageRentalRequests && <Link className="header-link" href="/rentals/reports">Rental reports</Link>}
         <Link className="header-link" href="/account/profile">My profile</Link>

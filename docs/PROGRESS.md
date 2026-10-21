@@ -46,7 +46,7 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | MNT-04 | Not Started | No feature implementation; Phase 1+ approval required. |
 | CLI-01 | Tested | Corporate client register implemented (schema, migration, service, API, pages). PostgreSQL integration tests pass 7/7 within the 14-suite/58-test integration run on a disposable `*_test` database (2026-10-20). |
 | CLI-02 | In Progress | Contract register implemented per D-049: `Contract`/`ContractStatusHistory` schema and migration with database transition guards, service with row-locked reason-audited transitions, API routes, contract register pages, unit tests for schemas and the full from-to matrix, and PostgreSQL integration tests. Verification run on Fedora is pending; see the Phase 1B CLI-02 section below. |
-| CLI-03 | Not Started | No feature implementation; Phase 1+ approval required. |
+| CLI-03 | In Progress | Implemented locally (D-059, commit pending); awaiting Fedora verification and owner ratification of the binding rule. |
 | EMP-01 | In Progress | Employee register implemented per D-050 (schema, migration, service, API, pages) with restricted-field handling; Fedora verification pending. |
 | EMP-02 | In Progress | CSV import implemented per D-050/D-024: fixed template, per-client preview with row errors and warning-only likely duplicates, all-or-nothing audited import; Fedora verification pending. |
 | EMP-03 | In Progress | Eligibility toggle via audited update, shift/location text as supplied, audited export without restricted fields; Fedora verification pending. Structured shifts/locations await RTE. |
@@ -428,7 +428,7 @@ Added corporate client records as the first Phase 1B vertical slice, following t
 |---|---|---|
 | CLI-01 | Tested | Corporate client register: schema, migration, service, API routes, pages, unit + integration tests. Integration suite green on Fedora (14 files / 58 tests, including 7 client tests) against `richie_tms_cli_test`. |
 | CLI-02 | In Progress | Contracts implemented per D-049 (see CLI-02 section below); Fedora verification pending. |
-| CLI-03 | Not Started | Corporate dashboard limited to the client's own records. |
+| CLI-03 | In Progress | Corporate dashboard with audited client binding implemented locally (D-059, commit pending); awaiting Fedora verification and owner ratification. |
 | EMP-01 | Not Started | Employee register. |
 | EMP-02 | Not Started | CSV import with preview and row-level errors. |
 | EMP-03 | Not Started | Employee management: shifts, locations, eligibility. |
@@ -496,6 +496,23 @@ Added the routes domain as the fourth Phase 1B vertical slice.
 - **Pages** (`src/app/routes/`): location register + manager, route register, route editor with stop-order editor, manual plan panel, and schedule panel (add/copy/activate with audited reasons). Workspace navigation links Routes and schedules.
 - **Tests**: `route-plan.test.ts`, `route-schema.test.ts`, `routes.integration.test.ts` (locations, stop-order override, plan capacity, schedule conflicts/copy/reactivation, cross-company denial). Not yet run: sandbox has no `node_modules`/database; Fedora verification is batched with CLI-02/EMP.
 - **Limits**: No map provider, no trip generation (TRP-01), no availability/assignment checks (DSP-02), no optimisation (RTE-05, Phase 3).
+
+## Phase 1B — corporate dashboard (CLI-03; D-059; 2026-10-21)
+
+- **Decision recorded (D-059, owner ratification requested).** The HR-to-client binding is resolved with the
+  driver-link pattern: an audited `UserClientBinding` (one active binding per user per company, revoke-only
+  mutation guard) binding a Corporate HR Admin login to one client. Without a binding the dashboard denies
+  explicitly; the role alone never widens access.
+- **Implemented locally (unverified until Fedora runs).** Migration `20261020200000_client_bindings`,
+  binding/revoke services behind `client:manage` GLOBAL/COMPANY, the CLI-03 read model (client profile,
+  booking counts and recent bookings, employees without restricted fields, contracts, invoices, upcoming
+  trips — every query filtered by the bound client), a `/corporate` page, binding APIs and home navigation.
+- **Tests written (not yet run in sandbox).** PostgreSQL integration: bound HR sees only its client's
+  bookings/employees with exact projected keys; unbound HR is denied; double-binding is refused; revoke ends
+  access and re-binding works; a binding never leaks into another company.
+- **Batch verification.** CLI-02, EMP, RTE, BKG, TRP, DSP, DRV, FIN-02 and CLI-03 remain Fedora-unverified;
+  batched commands are recorded for the Phase 1B gate per the owner's standing instruction. D-059 must be
+  ratified (or reshaped) by the owner at the gate.
 
 ## Phase 1B — corporate invoices (FIN-02; D-057/D-058; 2026-10-21)
 

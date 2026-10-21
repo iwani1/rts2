@@ -37,7 +37,9 @@ model Company {
   tripStatusHistory     TripStatusHistory[]
   driverEvents          DriverEvent[]
   corporateInvoices     CorporateInvoice[]
+  userClientBindings    UserClientBinding[]
   corporateInvoiceLines CorporateInvoiceLine[]
+  userClientBindings    UserClientBinding[]
 }
 
 model Client {
@@ -56,6 +58,7 @@ model Client {
   updatedAt        DateTime @updatedAt @db.Timestamptz(6)
   company          Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
   contracts        Contract[]
+  userBindings     UserClientBinding[]
   employees        Employee[]
   routes           Route[]
   bookings         Booking[]
@@ -263,6 +266,8 @@ model User {
   tripStatusChanges TripStatusHistory[]
   driverAccount     Driver?                @relation("DriverAccount")
   driverEvents      DriverEvent[]
+  clientBindings    UserClientBinding[]    @relation("BindingUser")
+  bindingsMade      UserClientBinding[]    @relation("BindingActor")
   createdPricingWorksheets RentalPricingWorksheet[]
   createdMaintenanceWorkOrders MaintenanceWorkOrder[] @relation("WorkOrderCreator")
   maintenanceWorkOrderStatusChanges MaintenanceWorkOrderStatusHistory[]
@@ -734,6 +739,24 @@ model CorporateInvoiceLine {
   trip            Trip?    @relation(fields: [companyId, tripId], references: [companyId, id], onDelete: Restrict)
 
   @@index([companyId, invoiceId])
+}
+
+model UserClientBinding {
+  id        String    @id @default(cuid())
+  companyId String
+  userId    String
+  clientId  String
+  reason    String
+  boundById String
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  revokedAt DateTime? @db.Timestamptz(6)
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  user      User      @relation("BindingUser", fields: [userId], references: [id], onDelete: Restrict)
+  client    Client    @relation(fields: [companyId, clientId], references: [companyId, id], onDelete: Restrict)
+  boundBy   User      @relation("BindingActor", fields: [boundById], references: [id], onDelete: Restrict)
+
+  @@index([companyId, userId, revokedAt])
+  @@index([companyId, clientId, revokedAt])
 }
 
 model Trip {
