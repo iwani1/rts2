@@ -67,10 +67,10 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | DSP-02 | In Progress | Implemented locally (D-054, commit pending); awaiting Fedora verification. |
 | DSP-03 | In Progress | Implemented locally (D-054, commit pending); awaiting Fedora verification. |
 | DSP-04 | In Progress | Implemented locally (D-054, commit pending); awaiting Fedora verification. |
-| DRV-01 | Not Started | No feature implementation; Phase 1+ approval required. |
-| DRV-02 | Not Started | No feature implementation; Phase 1+ approval required. |
+| DRV-01 | In Progress | Implemented locally (D-055, commit pending); awaiting Fedora verification. |
+| DRV-02 | In Progress | Implemented locally (D-055, commit pending); awaiting Fedora verification. |
 | DRV-03 | Not Started | No feature implementation; Phase 1+ approval required. |
-| DRV-04 | Not Started | No feature implementation; Phase 1+ approval required. |
+| DRV-04 | In Progress | Implemented locally (D-055, commit pending); awaiting Fedora verification. |
 | DRV-05 | Not Started | No feature implementation; Phase 1+ approval required. |
 | PAX-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | PAX-02 | Not Started | No feature implementation; Phase 1+ approval required. |
@@ -448,9 +448,9 @@ Added corporate client records as the first Phase 1B vertical slice, following t
 | DSP-02 | In Progress | Vehicle/driver assignment with hard blocks and override-and-reason implemented locally (D-054, commit pending); awaiting Fedora verification. |
 | DSP-03 | In Progress | Emergency trips via the audited manual trip creation path (D-054, commit pending); awaiting Fedora verification. |
 | DSP-04 | In Progress | No-show recording and lifecycle delays implemented locally (D-054, commit pending); awaiting Fedora verification. |
-| DRV-01 | Not Started | Mobile-first driver home. |
-| DRV-02 | Not Started | Driver actions (open trip, manifest, navigation, events). |
-| DRV-04 | Not Started | Vehicle defect and breakdown/incident report. |
+| DRV-01 | In Progress | Mobile-first driver home implemented locally (D-055, commit pending); awaiting Fedora verification. |
+| DRV-02 | In Progress | Driver actions with idempotent event APIs implemented locally (D-055, commit pending); navigation stays text-only (names/locations) without a map provider. |
+| DRV-04 | In Progress | Driver defect/interruption reporting implemented locally (D-055, commit pending); awaiting Fedora verification. |
 | FIN-01 (contract pricing) | Not Started | Contract pricing models. |
 | FIN-02 (corporate invoice) | Not Started | Corporate invoice generation from billable trips. |
 
@@ -496,6 +496,25 @@ Added the routes domain as the fourth Phase 1B vertical slice.
 - **Pages** (`src/app/routes/`): location register + manager, route register, route editor with stop-order editor, manual plan panel, and schedule panel (add/copy/activate with audited reasons). Workspace navigation links Routes and schedules.
 - **Tests**: `route-plan.test.ts`, `route-schema.test.ts`, `routes.integration.test.ts` (locations, stop-order override, plan capacity, schedule conflicts/copy/reactivation, cross-company denial). Not yet run: sandbox has no `node_modules`/database; Fedora verification is batched with CLI-02/EMP.
 - **Limits**: No map provider, no trip generation (TRP-01), no availability/assignment checks (DSP-02), no optimisation (RTE-05, Phase 3).
+
+## Phase 1B — driver interface and idempotent events (DRV-01/02/04; D-055; 2026-10-21)
+
+- **Implemented locally (unverified until Fedora runs).** Migration `20261020180000_driver_events` adds the
+  optional `Driver.userId` login link (unique) and the `DriverEvent` table (unique on
+  company+trip+idempotency key) with event-type CHECKs. `src/modules/driver/` provides link-driver-account
+  (driver:manage GLOBAL/COMPANY, audited), own-trip reads (DRIVER role `OWN_TRIP_EVENTS` scope plus the link;
+  unlinked accounts are explicitly denied), and `postDriverEvent` applying START/DELAY/RESUME/INTERRUPT/
+  COMPLETE/BOARD/NO_SHOW/REPORT_DEFECT exactly once per key: replays return the stored result marked duplicate,
+  the same key with another event conflicts, and trip/booking changes reuse the D-052/D-053 guards (completion
+  finishes Boarded bookings). Manifest projection stays name/type/pickup/drop-off only. APIs under
+  `/api/companies/[companyId]/driver/trips` and a mobile-first `/driver` page with large touch targets.
+- **Tests written (not yet run in sandbox).** PostgreSQL integration: a driver sees only their own trip;
+  unlinked driver accounts are denied; START replayed with the same key is a duplicate and writes no second
+  history row; key reuse for another event conflicts; DELAY → BOARD → COMPLETE finishes the booking; a second
+  linked driver sees an empty list and cannot read or post events on the first driver's trip.
+- **Noted.** DRV-03 and DRV-05 have no definition in the approved documents and await the owner; defects do not
+  auto-block the vehicle (dispatcher/fleet action). Batch Fedora verification of CLI-02, EMP, RTE, BKG, TRP,
+  DSP and DRV remains at the next phase transition per the owner's standing instruction.
 
 ## Phase 1B — dispatch board, assignment, no-shows (DSP-01..04; D-054; 2026-10-21)
 

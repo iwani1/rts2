@@ -35,6 +35,7 @@ model Company {
   bookingStatusHistory  BookingStatusHistory[]
   trips                 Trip[]
   tripStatusHistory     TripStatusHistory[]
+  driverEvents          DriverEvent[]
 }
 
 model Client {
@@ -257,6 +258,8 @@ model User {
   contractStatusChanges ContractStatusHistory[]
   bookingStatusChanges BookingStatusHistory[]
   tripStatusChanges TripStatusHistory[]
+  driverAccount     Driver?                @relation("DriverAccount")
+  driverEvents      DriverEvent[]
   createdPricingWorksheets RentalPricingWorksheet[]
   createdMaintenanceWorkOrders MaintenanceWorkOrder[] @relation("WorkOrderCreator")
   maintenanceWorkOrderStatusChanges MaintenanceWorkOrderStatusHistory[]
@@ -412,6 +415,7 @@ model Vehicle {
   maintenanceWorkOrders     MaintenanceWorkOrder[]
   safetyBlocks              VehicleSafetyBlock[]
   trips                     Trip[]
+  driverEvents              DriverEvent[]
 
   @@unique([companyId, registrationNumber])
   @@unique([companyId, id])
@@ -423,6 +427,8 @@ model Vehicle {
 model Driver {
   id                String    @id @default(cuid())
   companyId         String
+  userId            String?   @unique
+  linkedUser        User?     @relation("DriverAccount", fields: [userId], references: [id], onDelete: Restrict)
   fullName          String
   licenceClass      String?
   licenceExpiresAt  DateTime? @db.Date
@@ -433,8 +439,9 @@ model Driver {
   createdAt         DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt         DateTime  @updatedAt @db.Timestamptz(6)
   company           Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  usualVehicles     Vehicle[] @relation("VehicleUsualDriver")
+  usualVehicles     Vehicle[]  @relation("VehicleUsualDriver")
   trips             Trip[]
+  events            DriverEvent[]
 
   @@unique([companyId, id])
   @@index([companyId, archivedAt, fullName])
@@ -662,6 +669,25 @@ model BookingStatusHistory {
 
   @@unique([companyId, bookingId, sequence])
   @@index([companyId, bookingId, createdAt])
+}
+
+model DriverEvent {
+  id             String   @id @default(cuid())
+  companyId      String
+  tripId         String
+  driverId       String
+  actorId        String
+  idempotencyKey String
+  eventType      String
+  summary        Json?
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  trip           Trip     @relation(fields: [companyId, tripId], references: [companyId, id], onDelete: Restrict)
+  driver         Driver   @relation(fields: [companyId, driverId], references: [companyId, id], onDelete: Restrict)
+  actor          User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, tripId, idempotencyKey])
+  @@index([companyId, driverId, createdAt])
 }
 
 model Trip {
