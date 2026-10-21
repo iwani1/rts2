@@ -910,3 +910,23 @@ phase prompt allows it only once confirmed required.
    is never involved; metadata invoice references are hints only.
 4. Events applied/ignored keep their raw payload for reconciliation
    (FIN-08) and audit.
+
+## D-085 — FIN-08: stored reconciliation runs over provider events vs recorded payments
+
+1. A **reconciliation run** covers a date period and is stored as a record
+   (reference `REC-…`, period, creator, snapshot summary) with an
+   `OPEN → CLOSED` lifecycle through one transition function + sequenced
+   append-only history (same guard shape as FIN-05).
+2. The matcher compares, for the period (provider `paidDate`, payment
+   `receivedAt`): APPLIED provider events against the invoice payments
+   they produced (must match in reference and amount), provider money
+   still `RECEIVED` (unapplied = discrepancy), and local payments tagged
+   with the provider method whose reference no provider event knows
+   (discrepancy). A run "reconciles" only with zero discrepancies —
+   asserted by tests (Phase 3 exit criterion).
+3. Discrepancies are recomputed at creation and again at close; the close
+   stores the final snapshot so the closed record states what was true
+   when it was signed off. The closer must differ from the creator
+   (independent sign-off, mirroring D-081). Permission
+   `payment:reconcile`: SUPER_ADMIN GLOBAL, FINANCE_OFFICER COMPANY,
+   OPS_MANAGER READ_ONLY.

@@ -16,6 +16,7 @@ model Company {
   settings        Setting[]
   expenses        Expense[]
   paymentProviderEvents PaymentProviderEvent[]
+  paymentReconciliations PaymentReconciliation[]
   auditEvents     AuditEvent[]
   roleAssignments UserRoleAssignment[]
   vehicles        Vehicle[]
@@ -276,6 +277,8 @@ model User {
   rentalRequestStatusChanges RentalRequestStatusHistory[]
   expensesRecorded             Expense[]                    @relation("ExpenseRecorder")
   providerEventsApplied        PaymentProviderEvent[]         @relation("ProviderEventApplier")
+  reconciliationsCreated       PaymentReconciliation[]      @relation("ReconciliationCreator")
+  reconciliationStatusChanges  PaymentReconciliationStatusHistory[] @relation("ReconciliationStatusActor")
   expenseStatusChanges         ExpenseStatusHistory[]
   contractStatusChanges ContractStatusHistory[]
   corporateInvoiceStatusChanges CorporateInvoiceStatusHistory[]
@@ -846,6 +849,43 @@ model PaymentProviderEvent {
 
   @@unique([companyId, provider, providerReference])
   @@index([companyId, status, createdAt])
+}
+
+model PaymentReconciliation {
+  id          String   @id @default(cuid())
+  companyId   String
+  reference   String
+  periodStart DateTime @db.Date
+  periodEnd   DateTime @db.Date
+  status      String   @default("OPEN")
+  summary     Json
+  createdById String
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  createdBy   User     @relation("ReconciliationCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  statusHistory PaymentReconciliationStatusHistory[]
+
+  @@unique([companyId, id])
+  @@unique([companyId, reference])
+  @@index([companyId, status, createdAt])
+}
+
+model PaymentReconciliationStatusHistory {
+  id               String   @id @default(cuid())
+  companyId        String
+  reconciliationId String
+  sequence         Int
+  actorId          String
+  fromStatus       String?
+  toStatus         String
+  reason           String
+  createdAt        DateTime @default(now()) @db.Timestamptz(6)
+  reconciliation   PaymentReconciliation @relation(fields: [companyId, reconciliationId], references: [companyId, id], onDelete: Restrict)
+  actor            User     @relation("ReconciliationStatusActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, reconciliationId, sequence])
+  @@index([companyId, reconciliationId, createdAt])
 }
 
 model Expense {
