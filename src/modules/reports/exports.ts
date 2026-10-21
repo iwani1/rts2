@@ -35,7 +35,9 @@ export function transportReportCsv(report: TransportReport): string {
       'No-shows are cancellations recorded as passenger no-shows. Passengers transported = bookings reaching Completed.',
       'Route utilisation = boarded/completed passengers over capacityLimit for Completed trips with capacity and a manifest; excluded trips are counted in the coverage note.',
       `Utilisation coverage: ${report.routeUtilisation.excludedCompletedTrips} completed trip(s) excluded for missing capacity or manifest.`,
-      `Pickup coverage: ${report.pickups.pickupsWithPlannedAndActual} of ${report.pickups.eligibleBoardedPickups} boarded pickups have both planned and actual times; the on-time rate is not published until the owner sets the threshold.`,
+      report.pickups.onTimeRate !== null
+        ? `Pickup coverage: ${report.pickups.pickupsWithPlannedAndActual} of ${report.pickups.eligibleBoardedPickups} boarded pickups have both planned and actual times; the on-time rate counts boardings within ${report.pickups.thresholdMinutes} minutes of the planned start as on time.`
+        : `Pickup coverage: ${report.pickups.pickupsWithPlannedAndActual} of ${report.pickups.eligibleBoardedPickups} boarded pickups have both planned and actual times; the on-time rate is not published until the owner sets the threshold.`,
       'Maintenance costs are recorded work-order costs only (labour + parts + other where present); fuel, downtime and margin are insufficient-data and never estimated.',
     ],
     sections: [
@@ -63,7 +65,11 @@ export function transportReportCsv(report: TransportReport): string {
           ['On-time or early pickups', report.pickups.onTimeOrEarlyPickups],
           ['Average delay, all samples (minutes)', report.pickups.averageDelayAllMinutes],
           ['Average delay, late pickups only (minutes)', report.pickups.averageDelayLateOnlyMinutes],
-          ['On-time pickup rate', 'INSUFFICIENT_DATA - threshold unset'],
+          ['On-time pickup rate', report.pickups.onTimeRate !== null
+            ? report.pickups.onTimeRate
+            : report.pickups.thresholdMinutes === null
+              ? 'INSUFFICIENT_DATA - threshold unset'
+              : 'INSUFFICIENT_DATA - no pickup samples'],
         ],
       },
       {

@@ -49,6 +49,9 @@ export const boardingCodePolicySchema = z.object({
   mode: z.enum(['DISABLED', 'REQUIRED']),
 }).strict();
 export type BoardingCodePolicy = z.infer<typeof boardingCodePolicySchema>;
+const onTimeThresholdKey: SettingKey = 'reports.on_time_threshold';
+export const onTimeThresholdMinutesSchema = z.number().int().min(1).max(120).safe();
+export type OnTimeThresholdMinutes = z.infer<typeof onTimeThresholdMinutesSchema>;
 const corporateRatesKey: SettingKey = 'finance.corporate_rates'; // registry row approved by owner at the Phase 1B gate (2026-10-21)
 const corporateRateSchema = z.object({
   contractId: z.string().trim().min(1).max(128),
@@ -116,6 +119,7 @@ function validateRegisteredValue(key: SettingKey, value: SettingJsonValue): Sett
   if (key === 'contracts.inactive_booking_policy') return inactiveContractBookingPolicySchema.parse(value);
   if (key === bookingCreationCutoffKey) return bookingCreationCutoffSchema.parse(value) as SettingJsonValue;
   if (key === boardingCodePolicyKey) return boardingCodePolicySchema.parse(value) as SettingJsonValue;
+  if (key === onTimeThresholdKey) return onTimeThresholdMinutesSchema.parse(value);
   if (key === corporateRatesKey) return corporateRatesSchema.parse(value) as SettingJsonValue;
   if (resourceBufferKeys.has(key)) return resourceBufferMinutesSchema.parse(value);
   if (key === quoteValidityKey) return quoteValidityDaysSchema.parse(value);
@@ -199,6 +203,7 @@ export async function requireCompanySetting(companyIdInput: string, keyInput: st
   if (key === inactiveContractPolicyKey) return inactiveContractBookingPolicySchema.parse(row.value);
   if (key === bookingCreationCutoffKey) return bookingCreationCutoffSchema.parse(row.value);
   if (key === boardingCodePolicyKey) return boardingCodePolicySchema.parse(row.value);
+  if (key === onTimeThresholdKey) return onTimeThresholdMinutesSchema.parse(row.value);
   if (key === corporateRatesKey) return corporateRatesSchema.parse(row.value);
   return row.value;
 }
@@ -411,4 +416,24 @@ export async function getBoardingCodePolicy(
   if (!row?.configured || row.value === null) return 'DISABLED';
   const parsed = boardingCodePolicySchema.safeParse(row.value);
   return parsed.success ? parsed.data.mode : 'DISABLED';
+}
+
+/**
+ * RPT-02 (D-064, ratified D-078): the owner-approved on-time pickup
+ * threshold in minutes. Unset, unconfigured or invalid values return null
+ * and the report publishes no on-time rate (average delay and coverage
+ * only) rather than inventing a threshold.
+ */
+export async function getOnTimeThresholdMinutes(
+  companyIdInput: string,
+): Promise<number | null> {
+  const companyId = companyIdSchema.parse(companyIdInput);
+  const prisma = getPrisma();
+  const row = await prisma.setting.findUnique({
+    where: { companyId_key: { companyId, key: onTimeThresholdKey } },
+    select: { value: true, configured: true },
+  });
+  if (!row?.configured || row.value === null) return null;
+  const parsed = onTimeThresholdMinutesSchema.safeParse(row.value);
+  return parsed.success ? parsed.data : null;
 }

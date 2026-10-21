@@ -16,8 +16,15 @@ function round2(value: number) {
  * "late pickups only" and "all pickups" to management, so the report shows
  * each labelled figure instead of silently picking one.
  */
-export function summarisePickupDelays(delayMinutes: number[]): PickupDelaySummary {
-  const late = delayMinutes.filter((minutes) => minutes > 0);
+export function summarisePickupDelays(
+  delayMinutes: number[],
+  thresholdMinutes?: number | null,
+): PickupDelaySummary {
+  // With an owner threshold (D-078: 10 minutes) a pickup is late only when
+  // it boards more than the threshold after the planned start; without one
+  // the historical split (any positive delay) is kept and no rate is shown.
+  const lateBound = thresholdMinutes ?? 0;
+  const late = delayMinutes.filter((minutes) => minutes > lateBound);
   const mean = (values: number[]) => (values.length === 0
     ? null
     : round2(values.reduce((sum, value) => sum + value, 0) / values.length));

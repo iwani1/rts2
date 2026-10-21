@@ -286,6 +286,26 @@ describe('staff transport, fleet and financial reports with exports (RPT-02/03/0
     expect(report.pickups.onTimeStatus).toBe('INSUFFICIENT_DATA');
   });
 
+  it('publishes the on-time rate once the owner threshold is set (D-078)', async () => {
+    await prisma.setting.upsert({
+      where: { companyId_key: { companyId, key: 'reports.on_time_threshold' } },
+      create: { companyId, key: 'reports.on_time_threshold', configured: true, value: 10 },
+      update: { configured: true, value: 10 },
+    });
+    try {
+      const report = await getTransportReport({ actorId: opsId, companyId });
+      expect(report.pickups.thresholdMinutes).toBe(10);
+      expect(report.pickups.pickupsWithPlannedAndActual).toBe(2);
+      // Both sampled boardings happened long before their 2028 planned
+      // starts, so every sample is inside the 10-minute threshold.
+      expect(report.pickups.onTimeRate).toBe(1);
+      expect(report.pickups.onTimeStatus).toBe('OK');
+      expect(report.unavailableMetrics.map((item) => item.metric)).not.toContain('On-time pickup rate');
+    } finally {
+      await prisma.setting.deleteMany({ where: { companyId, key: 'reports.on_time_threshold' } });
+    }
+  });
+
   it('summarises fleet, document expiry and recorded maintenance costs', async () => {
     const report = await getTransportReport({ actorId: opsId, companyId });
     expect(report.fleet.totalVehicles).toBe(2);

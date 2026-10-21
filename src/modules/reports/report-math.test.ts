@@ -20,6 +20,18 @@ describe('summarisePickupDelays (RPT-02)', () => {
     expect(summary.averageDelayLateOnlyMinutes).toBeNull();
   });
 
+  it('applies the owner threshold when one is set (D-078)', () => {
+    // 10-minute threshold: +10 still counts as on time, +20 is late.
+    const summary = summarisePickupDelays([-5, 0, 10, 20], 10);
+    expect(summary).toEqual({
+      sampleSize: 4,
+      latePickups: 1,
+      onTimeOrEarlyPickups: 3,
+      averageDelayAllMinutes: 6.25,
+      averageDelayLateOnlyMinutes: 20,
+    });
+  });
+
   it('treats exactly-on-time pickups as not late', () => {
     const summary = summarisePickupDelays([0, 0]);
     expect(summary.latePickups).toBe(0);

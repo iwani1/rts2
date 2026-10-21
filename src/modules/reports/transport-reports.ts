@@ -4,6 +4,7 @@ import { PermissionDeniedError, resolvePermission } from '@/modules/auth/permiss
 import { getPrisma } from '@/server/prisma';
 import { reportQuerySchema, reportWindow, type ReportQuery } from './report-schema';
 import { seatUtilisation, summarisePickupDelays } from './report-math';
+import { getOnTimeThresholdMinutes } from '@/modules/settings/registry';
 
 const companyIdSchema = z.string().trim().min(1).max(128);
 
@@ -38,9 +39,10 @@ export type TransportReport = {
     cancelled: number; rejected: number; noShows: number; passengersTransported: number;
   };
   pickups: {
-    onTimeRate: null;
-    onTimeStatus: 'INSUFFICIENT_DATA';
+    onTimeRate: number | null;
+    onTimeStatus: 'OK' | 'INSUFFICIENT_DATA';
     onTimeReason: string;
+    thresholdMinutes: number | null;
     eligibleBoardedPickups: number;
     pickupsWithPlannedAndActual: number;
     latePickups: number;
@@ -79,11 +81,7 @@ export type TransportReport = {
   unavailableMetrics: Array<{ metric: string; reason: string }>;
 };
 
-const UNAVAILABLE = [
-  {
-    metric: 'On-time pickup rate',
-    reason: 'The on-time threshold in minutes is still an unset owner policy (docs/KPIS.md), so no rate is published. Average delay and pickup coverage are reported instead.',
-  },
+const UNAVAILABLE: Array<{ metric: string; reason: string }> = [
   {
     metric: 'Vehicle downtime',
     reason: 'Vehicles have no persisted operational status history, so downtime durations cannot be derived without inventing status periods.',
@@ -271,7 +269,11 @@ export async function getTransportReport(input: {
     planned.setUTCMinutes(plannedMinutes);
     delays.push((row.createdAt.getTime() - planned.getTime()) / 60_000);
   }
-  const delaySummary = summarisePickupDelays(delays);
+  const thresholdMinutes = await getOnTimeThresholdMinutes(companyId);
+  const delaySummary = summarisePickupDelays(delays, thresholdMinutes);
+  const onTimeRate = thresholdMinutes !== null && delaySummary.sampleSize > 0
+    ? Math.round((delaySummary.onTimeOrEarlyPickups / delaySummary.sampleSize) * 10_000) / 10_000
+    : null;
 
   // --- Document expiry (vehicle date fields + driver licences). ---
   const asOfDate = query.toDate ?? new Date().toISOString().slice(0, 10);
@@ -334,9 +336,14 @@ export async function getTransportReport(input: {
       passengersTransported: completed,
     },
     pickups: {
-      onTimeRate: null,
-      onTimeStatus: 'INSUFFICIENT_DATA',
-      onTimeReason: 'The on-time threshold in minutes is still an unset owner policy; no rate is published until it is set.',
+      onTimeRate,
+      onTimeStatus: onTimeRate !== null ? 'OK' : 'INSUFFICIENT_DATA',
+      onTimeReason: thresholdMinutes === null
+        ? 'The on-time threshold in minutes is still an unset owner policy; no rate is published until it is set.'
+        : onTimeRate === null
+          ? `The on-time threshold is set to ${thresholdMinutes} minutes, but no boarded pickups in scope have both planned and actual times.`
+          : `Boarded within ${thresholdMinutes} minutes of the planned start counts as on time (owner policy, D-078).`,
+      thresholdMinutes,
       eligibleBoardedPickups,
       pickupsWithPlannedAndActual: delaySummary.sampleSize,
       latePickups: delaySummary.latePickups,
@@ -382,6 +389,16 @@ export async function getTransportReport(input: {
       withAnyCostData,
       recordedCostPesewas,
     },
-    unavailableMetrics: UNAVAILABLE,
+    unavailableMetrics: onTimeRate !== null
+      ? UNAVAILABLE
+      : [
+          {
+            metric: 'On-time pickup rate',
+            reason: thresholdMinutes === null
+              ? 'The on-time threshold in minutes is still an unset owner policy (docs/KPIS.md), so no rate is published. Average delay and pickup coverage are reported instead.'
+              : 'The on-time threshold is set, but no boarded pickups in scope have both planned and actual times, so no rate can be computed.',
+          },
+          ...UNAVAILABLE,
+        ],
   };
 }
