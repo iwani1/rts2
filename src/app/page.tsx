@@ -25,6 +25,7 @@ export default async function Home() {
   const clientAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'client:manage' }) : { allowed: false, scopes: [] };
   const employeeAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'employee:manage' }) : { allowed: false, scopes: [] };
   const routeAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'route:manage' }) : { allowed: false, scopes: [] };
+  const bookingAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'booking:manage' }) : { allowed: false, scopes: [] };
   const rentalAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'rental:manage' }) : { allowed: false, scopes: [] };
   const maintenanceAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'maintenance:manage' }) : { allowed: false, scopes: [] };
   const canManageMaintenance = maintenanceAccess.allowed && maintenanceAccess.scopes.some((scope) => ['GLOBAL', 'COMPANY', 'APPROVE_RELEASE'].includes(scope));
@@ -34,6 +35,7 @@ export default async function Home() {
   const canManageClients = clientAccess.allowed && clientAccess.scopes.some((scope) => ['GLOBAL', 'COMPANY'].includes(scope));
   const canManageEmployees = employeeAccess.allowed && employeeAccess.scopes.some((scope) => ['GLOBAL', 'COMPANY'].includes(scope));
   const canManageRoutes = routeAccess.allowed && routeAccess.scopes.some((scope) => ['GLOBAL', 'COMPANY'].includes(scope));
+  const canManageBookings = bookingAccess.allowed && bookingAccess.scopes.some((scope) => ['GLOBAL', 'COMPANY'].includes(scope));
   return <main className="app-shell">
     <header className="app-header">
       <Link className="wordmark" href="/" aria-label="Richie TMS home">R<span>.</span>TS</Link>
@@ -49,6 +51,7 @@ export default async function Home() {
         {canManageClients && <Link className="header-link" href="/contracts">Contracts</Link>}
         {canManageEmployees && <Link className="header-link" href="/employees">Employees</Link>}
         {canManageRoutes && <Link className="header-link" href="/routes">Routes and schedules</Link>}
+        {canManageBookings && <Link className="header-link" href="/bookings">Bookings</Link>}
         {canManageRentalRequests && <Link className="header-link" href="/rentals/requests">Rental requests</Link>}
         {canManageRentalRequests && <Link className="header-link" href="/rentals/reports">Rental reports</Link>}
         <Link className="header-link" href="/account/profile">My profile</Link>

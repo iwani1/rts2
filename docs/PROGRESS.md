@@ -55,9 +55,9 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | RTE-03 | In Progress | Recurring/one-time schedules with conflict detection, copy, and activation toggles implemented per D-051; trip generation awaits TRP-01. Fedora verification pending. |
 | RTE-04 | In Progress | Manual planning aid implemented per D-051 (recorded offsets only, unmapped-stop flags, seat-count capacity check, never labelled optimal); Fedora verification pending. |
 | RTE-05 | Not Started | No feature implementation; Phase 1+ approval required. |
-| BKG-01 | Not Started | No feature implementation; Phase 1+ approval required. |
-| BKG-02 | Not Started | No feature implementation; Phase 1+ approval required. |
-| BKG-03 | Not Started | No feature implementation; Phase 1+ approval required. |
+| BKG-01 | In Progress | Booking types and dated-journey booking records implemented per D-052; Fedora verification pending. |
+| BKG-02 | In Progress | Creation validation implemented per D-052 (eligibility, contract status with typed inactive-contract policy, route/client match, past dates, DB-enforced duplicate journeys incl. parallel requests); Fedora verification pending. |
+| BKG-03 | In Progress | Pending → Accepted/Rejected/Cancelled staff workflow with sequenced history implemented per D-052; assignment/boarding/completion paths land with TRP/DRV. Fedora verification pending. |
 | BKG-04 | Not Started | No feature implementation; Phase 1+ approval required. |
 | BKG-05 | Not Started | No feature implementation; Phase 1+ approval required. |
 | BKG-06 | Not Started | No feature implementation; Phase 1+ approval required. |
@@ -496,5 +496,18 @@ Added the routes domain as the fourth Phase 1B vertical slice.
 - **Pages** (`src/app/routes/`): location register + manager, route register, route editor with stop-order editor, manual plan panel, and schedule panel (add/copy/activate with audited reasons). Workspace navigation links Routes and schedules.
 - **Tests**: `route-plan.test.ts`, `route-schema.test.ts`, `routes.integration.test.ts` (locations, stop-order override, plan capacity, schedule conflicts/copy/reactivation, cross-company denial). Not yet run: sandbox has no `node_modules`/database; Fedora verification is batched with CLI-02/EMP.
 - **Limits**: No map provider, no trip generation (TRP-01), no availability/assignment checks (DSP-02), no optimisation (RTE-05, Phase 3).
+
+## Phase 1B — bookings (BKG-01..03; D-052; 2026-10-21)
+
+Added bookings as the fifth Phase 1B vertical slice.
+
+- **Prisma schema**: Added `Booking` (employee/client/contract/route/pickup/drop-off relations, `BKG-…` reference, type, journey date, status) and sequenced append-only `BookingStatusHistory`, with relations across `Company`, `Client`, `Employee`, `Contract`, `Route`, `Location`, and `User`.
+- **Migration**: `prisma/migrations/20261020160000_bookings/migration.sql` with status/type CHECKs, a partial unique index preventing duplicate live journeys, and the full guard-trigger set (created-as-Pending, transition table, append-only history, history-required/matches).
+- **Settings**: `contracts.inactive_booking_policy` is now a typed ALLOW/BLOCK setting with a `getInactiveContractBookingPolicy` reader; unset or invalid values read as unconfigured so dependent bookings block with an explanation.
+- **Service layer** (`src/modules/bookings/`): `createBooking` with the BKG-02 validation chain, `listBookings`, `getBooking` with sequenced history, and `transitionBooking` restricted to staff decisions (accept/reject/cancel) — all behind `booking:manage` (GLOBAL/COMPANY).
+- **API routes**: `GET/POST /api/companies/[companyId]/bookings`, `GET /api/companies/[companyId]/bookings/[bookingId]`, `POST .../bookings/[bookingId]/transition` with 400/403/404/409 mapping.
+- **Pages** (`src/app/bookings/`): searchable/filterable booking register, validated create form, and accept/reject/cancel panel with history. Workspace navigation links Bookings.
+- **Tests**: `booking-transitions.test.ts` (full 7×7 matrix), `bookings.integration.test.ts` (validation chain, suspended-contract policy ALLOW/BLOCK/unset, duplicate prevention including parallel requests and rebooking after cancellation, manual-assignment refusal, cross-company denial). Not yet run: sandbox has no `node_modules`/database; Fedora verification is batched with CLI-02/EMP/RTE.
+- **Limits**: No trip assignment/capacity (TRP-01/BKG-04 next), no waiting list or cancellation deadlines (BKG-05), no cut-off enforcement (unconfigured), staff-side creation only.
 
 Phase 1A remains complete: all 4 E2E specs pass against the cleaned test DB (1 company: Richie Transport Services), unit tests 337/337 pass, integration tests 51/51 pass, typecheck and build pass.

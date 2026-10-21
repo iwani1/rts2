@@ -21,6 +21,8 @@ Approval is tracked per entity: the vehicle status vocabulary and safety/derivat
 | Booking | Draft → Pending → Accepted/Rejected | employee/HR/service | eligibility, contract policy, capacity and duplicate checks |
 | | Accepted → Assigned → Boarded → Completed | dispatcher/driver | trip assignment/capacity; event idempotency |
 | | Pending/Accepted/Assigned → Cancelled | employee/HR/authorized staff | cancellation rules and reason; release capacity |
+
+**D-052 implemented booking lifecycle:** staff/HR bookings enter directly at Pending (Draft is reserved for the future passenger portal); Pending → Accepted/Rejected/Cancelled, Accepted → Assigned/Cancelled, Assigned → Boarded/Cancelled/Accepted, and Boarded → Completed are enforced in `booking-transitions.ts`, the service (row lock, permission, history + audit), and database guards. This slice exposes only accept/reject/cancel to staff; assignment (BKG-04), boarding/completion (DRV-02) and cancellation deadlines/waiting list (BKG-05) arrive in their slices.
 | Trip | Planned → Ready for Dispatch → Dispatched → In Progress → Completed | dispatcher/driver | assignment and readiness checks; actuals on completion |
 | | Planned/Ready → Cancelled | dispatcher/manager | reason; no forbidden started state |
 | | Dispatched/In Progress → Delayed/Interrupted → In Progress/Completed | dispatcher/driver/manager | reason; incident as needed |

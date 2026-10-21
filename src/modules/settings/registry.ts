@@ -40,6 +40,9 @@ const quoteValidityKey: SettingKey = 'rental.quote_validity';
 const pricingModelsKey: SettingKey = 'rental.pricing_models';
 const taxLinesKey: SettingKey = 'finance.tax_lines';
 const depositPolicyKey: SettingKey = 'rental.deposit_policy';
+const inactiveContractPolicyKey: SettingKey = 'contracts.inactive_booking_policy';
+export const inactiveContractBookingPolicySchema = z.enum(['ALLOW', 'BLOCK']);
+export type InactiveContractBookingPolicy = z.infer<typeof inactiveContractBookingPolicySchema>;
 const depositStageSchema = z.enum(['BEFORE_CONFIRMATION', 'BEFORE_DEPARTURE']);
 const depositPolicySchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('NOT_REQUIRED') }).strict(),
@@ -81,6 +84,7 @@ const resourceBufferKeys = new Set<SettingKey>([
 const registryByKey = new Map(settingRegistry.map((definition) => [definition.key, definition]));
 
 function validateRegisteredValue(key: SettingKey, value: SettingJsonValue): SettingJsonValue {
+  if (key === 'contracts.inactive_booking_policy') return inactiveContractBookingPolicySchema.parse(value);
   if (resourceBufferKeys.has(key)) return resourceBufferMinutesSchema.parse(value);
   if (key === quoteValidityKey) return quoteValidityDaysSchema.parse(value);
   if (key === pricingModelsKey) return rentalPricingModelsSchema.parse(value) as SettingJsonValue;
@@ -122,6 +126,7 @@ export async function listCompanySettingStatus(companyIdInput: string) {
         if (definition.key === pricingModelsKey && rentalPricingModelsSchema.parse(row.value).length === 0) configured = false;
         if (definition.key === taxLinesKey && taxLinesSchema.parse(row.value).length === 0) configured = false;
         if (definition.key === depositPolicyKey) depositPolicySchema.parse(row.value);
+        if (definition.key === inactiveContractPolicyKey) inactiveContractBookingPolicySchema.parse(row.value);
       } catch { configured = false; }
     }
     return {
@@ -157,7 +162,23 @@ export async function requireCompanySetting(companyIdInput: string, keyInput: st
     return lines;
   }
   if (key === depositPolicyKey) return depositPolicySchema.parse(row.value);
+  if (key === inactiveContractPolicyKey) return inactiveContractBookingPolicySchema.parse(row.value);
   return row.value;
+}
+
+/** Returns the configured booking policy for expired/suspended contracts, or null when unset (dependent actions must block). */
+export async function getInactiveContractBookingPolicy(companyIdInput: string): Promise<InactiveContractBookingPolicy | null> {
+  const companyId = companyIdSchema.parse(companyIdInput);
+  const prisma = getPrisma();
+  const company = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true } });
+  if (!company) throw new CompanyNotFoundError();
+  const row = await prisma.setting.findUnique({
+    where: { companyId_key: { companyId, key: inactiveContractPolicyKey } },
+    select: { value: true, configured: true },
+  });
+  if (!row?.configured || row.value === null) return null;
+  const parsed = inactiveContractBookingPolicySchema.safeParse(row.value);
+  return parsed.success ? parsed.data : null;
 }
 
 /** Returns the explicitly configured quote-validity duration, or null when unset. */

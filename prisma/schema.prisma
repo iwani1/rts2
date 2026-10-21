@@ -31,6 +31,8 @@ model Company {
   routes                Route[]
   routeStops            RouteStop[]
   routeSchedules        RouteSchedule[]
+  bookings              Booking[]
+  bookingStatusHistory  BookingStatusHistory[]
 }
 
 model Client {
@@ -51,6 +53,7 @@ model Client {
   contracts        Contract[]
   employees        Employee[]
   routes           Route[]
+  bookings         Booking[]
 
   @@unique([companyId, id])
   @@index([companyId, archivedAt, name])
@@ -72,6 +75,8 @@ model Location {
   originRoutes        Route[]   @relation("RouteOrigin")
   destinationRoutes   Route[]   @relation("RouteDestination")
   routeStops          RouteStop[]
+  bookingPickups      Booking[] @relation("BookingPickup")
+  bookingDropoffs     Booking[] @relation("BookingDropoff")
 
   @@unique([companyId, id])
   @@index([companyId, archivedAt, name])
@@ -102,6 +107,7 @@ model Route {
   destinationLocation     Location  @relation("RouteDestination", fields: [companyId, destinationLocationId], references: [companyId, id], onDelete: Restrict)
   stops                   RouteStop[]
   schedules               RouteSchedule[]
+  bookings                Booking[]
 
   @@unique([companyId, id])
   @@unique([companyId, reference])
@@ -170,6 +176,7 @@ model Employee {
   updatedAt               DateTime  @updatedAt @db.Timestamptz(6)
   company                 Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
   client                  Client    @relation(fields: [companyId, clientId], references: [companyId, id], onDelete: Restrict)
+  bookings                Booking[]
 
   @@unique([companyId, id])
   @@unique([companyId, reference])
@@ -200,6 +207,7 @@ model Contract {
   company              Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
   client               Client    @relation(fields: [companyId, clientId], references: [companyId, id], onDelete: Restrict)
   statusHistory        ContractStatusHistory[]
+  bookings             Booking[]
 
   @@unique([companyId, id])
   @@unique([companyId, reference])
@@ -241,6 +249,7 @@ model User {
   assignedRoleChanges UserRoleAssignment[] @relation("RoleAssignmentActor")
   rentalRequestStatusChanges RentalRequestStatusHistory[]
   contractStatusChanges ContractStatusHistory[]
+  bookingStatusChanges BookingStatusHistory[]
   createdPricingWorksheets RentalPricingWorksheet[]
   createdMaintenanceWorkOrders MaintenanceWorkOrder[] @relation("WorkOrderCreator")
   maintenanceWorkOrderStatusChanges MaintenanceWorkOrderStatusHistory[]
@@ -591,4 +600,54 @@ model MaintenanceWorkOrder {
   @@unique([companyId, reference])
   @@index([companyId, status, dateReported])
   @@index([companyId, vehicleId, dateReported])
+}
+
+model Booking {
+  id               String    @id @default(cuid())
+  companyId        String
+  clientId         String
+  employeeId       String
+  contractId       String?
+  routeId          String?
+  reference        String
+  bookingType      String
+  journeyDate      DateTime  @db.Date
+  pickupLocationId String?
+  dropoffLocationId String?
+  notes            String?
+  status           String
+  createdAt        DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @db.Timestamptz(6)
+  company          Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  client           Client    @relation(fields: [companyId, clientId], references: [companyId, id], onDelete: Restrict)
+  employee         Employee  @relation(fields: [companyId, employeeId], references: [companyId, id], onDelete: Restrict)
+  contract         Contract? @relation(fields: [companyId, contractId], references: [companyId, id], onDelete: Restrict)
+  route            Route?    @relation(fields: [companyId, routeId], references: [companyId, id], onDelete: Restrict)
+  pickupLocation   Location? @relation("BookingPickup", fields: [companyId, pickupLocationId], references: [companyId, id], onDelete: Restrict)
+  dropoffLocation  Location? @relation("BookingDropoff", fields: [companyId, dropoffLocationId], references: [companyId, id], onDelete: Restrict)
+  statusHistory    BookingStatusHistory[]
+
+  @@unique([companyId, id])
+  @@unique([companyId, reference])
+  @@index([companyId, status, journeyDate])
+  @@index([companyId, employeeId, journeyDate])
+  @@index([companyId, clientId, journeyDate])
+}
+
+model BookingStatusHistory {
+  id         String   @id @default(cuid())
+  companyId  String
+  bookingId  String
+  sequence   Int
+  actorId    String
+  fromStatus String?
+  toStatus   String
+  reason     String
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  booking    Booking  @relation(fields: [companyId, bookingId], references: [companyId, id], onDelete: Restrict)
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, bookingId, sequence])
+  @@index([companyId, bookingId, createdAt])
 }
