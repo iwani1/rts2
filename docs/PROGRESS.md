@@ -1249,3 +1249,14 @@ Remaining Phase 3 gate items: the manual walkthrough in
 `docs/PHASE_3_VERIFICATION.md`, and the Paystack sandbox (test-mode)
 transaction whenever credentials are available — the provider is
 implemented and test-verified, not yet live-verified (D-084).
+
+**Phase 4 built 2026-10-21 at `f4c433e` (behind owner-run Fedora verification):**
+D-089 rental lifecycle — RNT-05 confirmation (acceptance record, deposit
+policy fail-closed, vehicle reservation), RNT-06 driver assign/reassign,
+RNT-07 two-step completion (separate approver, approved charges,
+outstanding = quoted + charges − deposit), RNT-08 pre-trip cancellation.
+Authoritative `RentalAssignment` ledger with PostgreSQL exclusion
+constraints; buffers fail closed when unconfigured. Sandbox: tsc clean,
+unit 480/480, build green, PGlite 38/38. Fedora gate:
+`scripts/verify-phase4.sh` (38 migrations) — see
+`docs/PHASE_4_VERIFICATION.md`.
