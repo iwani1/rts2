@@ -180,3 +180,21 @@ Status: **SLICE BUILT — Fedora run required.** Migration 31
 3. Sign out and back in: after the password you get the code challenge
    (`/login/verify`); a backup code also works, once.
 4. Any non-privileged user may enrol voluntarily from **Security**.
+
+# Phase 2 verification — GPS provider state (GPS-01; D-077)
+
+Status: **SLICE BUILT — Fedora run required.** Migration 32
+(`20261021200000_vehicle_locations`); the verification script includes
+`locations/gps.integration.test.ts`.
+
+## Manual workflow (browser + optional test device)
+
+1. Without GPS env vars, open **Vehicle locations**: it says **Not configured**
+   and invents nothing.
+2. Set `GPS_PROVIDER=generic` and `GPS_WEBHOOK_SECRET` (16+ characters), restart,
+   and dispatch a trip for a vehicle. POST a report to `/api/locations/webhook`
+   with the `x-webhook-secret` header, e.g.
+   `{"registrationNumber":"GR-0000-27","latitude":5.6037,"longitude":-0.1870,"recordedAt":"<now ISO>"}`.
+   The vehicle shows **Live**; the same POST for a vehicle not on a trip is
+   refused; a `SIMULATED` source is labelled simulated.
+3. History and the 90-day purge are on the same page.

@@ -69,7 +69,8 @@ export default async function DriverPage({
         <h1 className="mt-1 text-3xl font-semibold text-slate-950">My trips{driverName ? ` — ${driverName}` : ''}</h1>
         <p className="mt-2 text-sm leading-6 text-slate-600">
           Only trips assigned to you are shown. Events are sent with a one-time key, so retrying after a network
-          problem never applies an event twice.
+          problem never applies an event twice. If GPS tracking is switched on, your vehicle position may be
+          reported to dispatch only while you are on an active trip.
         </p>
       </header>
 

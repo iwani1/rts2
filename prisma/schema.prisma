@@ -26,6 +26,7 @@ model Company {
   boardingCodes             BookingBoardingCode[]
   boardingAttempts          BoardingVerificationAttempt[]
   vehicleServicePlans       VehicleServicePlan[]
+  vehicleLocationReports    VehicleLocationReport[]
   rentalRequests  RentalRequest[]
   pricingWorksheets RentalPricingWorksheet[]
   maintenanceWorkOrders MaintenanceWorkOrder[]
@@ -444,6 +445,7 @@ model Vehicle {
   usualDriver               Driver?   @relation("VehicleUsualDriver", fields: [usualDriverCompanyId, usualDriverId], references: [companyId, id], onDelete: Restrict)
   maintenanceWorkOrders     MaintenanceWorkOrder[]
   servicePlan               VehicleServicePlan?
+  locationReports           VehicleLocationReport[]
   safetyBlocks              VehicleSafetyBlock[]
   incidents                 Incident[]
   trips                     Trip[]
@@ -878,6 +880,7 @@ model Trip {
   incidents              Incident[]
   boardingCodes          BookingBoardingCode[]
   boardingAttempts       BoardingVerificationAttempt[]
+  locationReports        VehicleLocationReport[]
 
   @@unique([companyId, id])
   @@unique([companyId, reference])
@@ -1067,4 +1070,23 @@ model TwoFactor {
 
   @@index([secret])
   @@index([userId])
+}
+
+model VehicleLocationReport {
+  id             String   @id @default(cuid())
+  companyId      String
+  vehicleId      String
+  tripId         String?
+  latitude       Decimal  @db.Decimal(9, 6)
+  longitude      Decimal  @db.Decimal(9, 6)
+  accuracyMeters Int?
+  source         String   @db.VarChar(16)
+  recordedAt     DateTime @db.Timestamptz(6)
+  receivedAt     DateTime @default(now()) @db.Timestamptz(6)
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  vehicle        Vehicle  @relation(fields: [companyId, vehicleId], references: [companyId, id], onDelete: Restrict)
+  trip           Trip?    @relation(fields: [companyId, tripId], references: [companyId, id], onDelete: Restrict)
+
+  @@index([companyId, vehicleId, recordedAt])
+  @@index([companyId, recordedAt])
 }

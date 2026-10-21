@@ -70,6 +70,7 @@ export default async function Home() {
         {canManageUserRoles && <Link className="header-link" href="/admin/settings">Policy settings</Link>}
         {auditAccess.scopes.includes('GLOBAL') && <Link className="header-link" href="/admin/audit">Audit activity</Link>}
         {fleetAccess.allowed && <Link className="header-link" href="/fleet/vehicles">Vehicle register</Link>}
+        {fleetAccess.allowed && <Link className="header-link" href="/fleet/locations">Vehicle locations</Link>}
         {canReadDriverRegister && <Link className="header-link" href="/fleet/drivers">Driver register</Link>}
         {canManageMaintenance && <Link className="header-link" href="/fleet/maintenance">Maintenance</Link>}
         {canManageCustomers && <Link className="header-link" href="/customers">Customer register</Link>}

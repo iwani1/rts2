@@ -697,3 +697,26 @@ Date: 2026-10-21. Status: decided for Phase 2 construction; recorded for ratific
    this Next.js version; a privileged user who deliberately deep-links around
    the prompt is not hard-blocked. Full middleware enforcement is the follow-up
    when the framework supports database access there.
+
+## D-077 — GPS tracking: provider interface, honest states, no fabricated positions (GPS-01)
+
+Date: 2026-10-21. Status: decided for Phase 2 construction; recorded for ratification at the Phase 2 gate.
+
+1. **Not configured until configured.** No GPS hardware, phone-permission
+   grant or provider credentials exist yet, so the Locations screen says
+   **Not configured** until `GPS_PROVIDER` + `GPS_WEBHOOK_SECRET` are set.
+   Nothing anywhere invents coordinates or movement.
+2. **Interface before vendor.** A `GpsProvider` parses inbound reports into
+   one normalised shape. The first adapter accepts a documented generic JSON
+   payload authenticated by a shared webhook secret (the pattern any device
+   vendor or the future driver phone app can post to).
+3. **Authorised periods only.** A report is accepted only while the vehicle
+   is on an active trip (Dispatched, In Progress, Delayed, Interrupted);
+   otherwise it is refused. Reports carry their source (`GPS_DEVICE`,
+   `DRIVER_PHONE`, `SIMULATED`) and the UI always distinguishes live
+   (≤ 5 minutes old), stale, and simulated positions.
+4. **Restricted history + retention.** Location history is restricted to
+   fleet/trip managers, append-only, and retained for 90 days; a purge
+   service removes older rows (invoked explicitly — no scheduler is
+   pretended). Drivers see a consent notice: tracking happens only while on
+   an active trip.

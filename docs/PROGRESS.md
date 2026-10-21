@@ -92,7 +92,7 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | RPT-03 | In Progress | Financial report per D-064: FIN-07 reconciled totals plus windowed revenue by client/service, payments by method, point-in-time outstanding-invoice list; expenses/unit costs/margin insufficient-data. Sandbox-verified 2026-10-21; Fedora verification pending. |
 | RPT-04 | In Progress | Shared filters (window ≤366 days, client/route/driver/vehicle/service/status) applied inside permission-scoped report queries; CSV exports serialized from the same scoped results with period/timezone/formula/coverage metadata. `report:export` scope mapping per D-064 (transport: operational scopes; finance: finance scope). Sandbox-verified 2026-10-21; Fedora verification pending. |
 | RPT-05 | Not Started | No feature implementation; Phase 1+ approval required. |
-| GPS-01 | Not Started | No feature implementation; Phase 1+ approval required. |
+| GPS-01 | In Progress | Provider interface + honest Not-configured state per D-077 (no hardware/credentials exist): generic webhook adapter behind a shared secret, authorised-period-only intake, live/stale/simulated classification, restricted append-only history with audited 90-day purge. Sandbox-verified 2026-10-21 (unit 427/427; PGlite 32/32 + trigger checks); Fedora verification pending. |
 
 ## Phase 0 evidence (2026-10-18)
 - Repository initially contained only the standing brief and phase prompts; no application, DB, or deployment config.
@@ -1075,3 +1075,27 @@ Ninth Phase 2 slice. Migration 31 (`20261021190000_two_factor`).
   Super Admins gated; gate clears once enabled). Sandbox: unit 422 + 1 new,
   PGlite 31/31, build compiled. Fedora run pending.
 - **Next:** GPS-01 provider state, then the Phase 2 verification checkpoint.
+
+## Phase 2 — GPS provider interface (GPS-01; D-077; 2026-10-21)
+
+Tenth and final Phase 2 construction slice. Migration 32
+(`20261021200000_vehicle_locations`).
+
+- **Honest default:** with no `GPS_PROVIDER`/`GPS_WEBHOOK_SECRET` configured,
+  **Vehicle locations** says *Not configured* and shows nothing invented. The
+  first adapter is a documented generic JSON webhook (shared-secret header),
+  behind the `GpsProvider` interface any vendor/phone app can target.
+- **Rules from the brief:** reports are accepted **only while the vehicle is
+  on an active trip** (authorised operational periods) and are stamped with
+  that trip; every position carries its source and is classified **live
+  (≤5 min) / stale / simulated**; history is restricted to fleet/trip
+  managers, append-only (DB trigger), retained 90 days via an explicit
+  audited purge; drivers see a consent notice in the driver view.
+- **Tests:** `gps.test.ts` (adapter normalisation, coordinate refusal,
+  configuration detection, freshness) and `gps.integration.test.ts`
+  (unconfigured/wrong-secret refusals, off-trip refusal, live + simulated
+  intake, append-only history vs purge). Sandbox: unit 427/427, PGlite 32/32
+  migrations with trigger/purge checks, build compiled. Fedora run pending.
+- **Phase 2 construction is complete.** Remaining before the gate: the Fedora
+  run (`./scripts/verify-phase2.sh` + the manual workflows in
+  `docs/PHASE_2_VERIFICATION.md`), then ratification of D-068–D-077.
