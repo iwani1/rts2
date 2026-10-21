@@ -1024,3 +1024,52 @@ a reason (matching D-032).
    releasing the ledger (`RELEASED`/CANCELLATION). Enquiry-stage refusal
    stays the existing `Declined`; customers cancel their own portal
    requests as before.
+
+## D-090 — Phase 5: rental invoicing, customer quotations, settings & ageing riders
+
+Owner approved the Phase 5 build 2026-10-21 in the order 5A → 5B → 5C.
+
+1. **Rental invoices (5A), replacing "no rental invoice is implied".** A
+   `RentalInvoice` ledger mirrors the corporate-invoice lifecycle
+   (its own transition table: DRAFT→ISSUED/VOID, ISSUED→PAID/VOID, PAID
+   reached automatically when payments cover the total) rather than
+   retrofitting `CorporateInvoice`, whose contract/period/trip
+   invariants do not fit rentals. Finance creates it from the APPROVED
+   `RentalCompletion`; creation is idempotent — one non-VOID invoice per
+   rental request (creating again returns the existing invoice, flagged
+   a duplicate, exactly like corporate generation). Amounts come only
+   from the completion snapshot: gross = quoted subtotal + approved
+   charges; configured `finance.tax_lines` apply to the gross (unset →
+   tax 0); the recorded deposit is a post-tax deduction, so total =
+   gross + tax − deposit. Where the deposit exceeds gross + tax the
+   invoice is refused with the figures named (the system does not model
+   refunds — they are handled outside the system). Payments are
+   append-only `RentalInvoicePayment` rows recorded by finance; a
+   payment larger than the outstanding balance is refused (422).
+   Permissions reuse `invoice:manage`. References are `RINV-<16 hex>`
+   (corporate `INV-` convention). Portal visibility comes through 5B.
+2. **Customer quotations (5B), replacing the D-066 NONE_ISSUED state.**
+   A `RentalQuotation` is issued from the latest pricing worksheet
+   while the request is `Under Review`. It snapshots the worksheet
+   version, its pre-tax subtotal, the configured tax lines (unset →
+   tax 0, stated on the quote) and the total; validity comes from
+   `rental.quote_validity` — unset blocks issuance (fail closed), and
+   `expiresAt` is stored. Reissuing supersedes the previous live quote;
+   only one live quote exists per request. The linked customer sees
+   the quote in the rental portal and accepts or declines it (with a
+   reason); decisions are final (expiry is derived from `expiresAt`,
+   never silently backdated). Portal acceptance is evidence for
+   confirmation: RNT-05 still records staff confirmation, citing the
+   quotation reference as the acceptance evidence. The portal home
+   also lists the customer's rental invoices and balances (replacing
+   NONE_DUE).
+3. **Riders (5C).** `finance.corporate_rates` and
+   `bookings.creation_cutoff` already validate and are consumed
+   (FIN-02, BKG-05) but lack settings-UI editors; both gain typed,
+   reason-audited editors and admin routes matching the existing
+   editors. Invoice **due dates**: `CorporateInvoice.dueDate` and
+   `RentalInvoice.dueDate` are recorded explicitly when an invoice is
+   issued (never a silent default); the finance dashboard gains an
+   ageing section bucketing ISSUED invoices by days past due
+   (current, 1–30, 31–60, 61–90, over 90). Invoices without a recorded
+   due date are counted separately and never folded into the buckets.
