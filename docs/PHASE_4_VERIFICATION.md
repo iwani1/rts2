@@ -28,8 +28,14 @@ Expected:
   replacement, started-trip cancellation refusal, two-step completion
   with separation of duties)
 
-> Status: **built; awaiting the Fedora run.** Do not treat as verified
-> until the scripted run passes and this banner is updated.
+> Status: **automated verification PASSED on Fedora 2026-10-21 at
+> `1245e02`** (database `richie_tms_p4_20261021215930_test`): 39/39
+> migrations, typecheck + lint clean (0 errors), unit 480/480 (130
+> files), integration 191/191 (46 suites) including `rental-lifecycle`
+> 8/8. The three fix rounds (deposit-policy key, DB-transition trigger
+> widening, retire-before-replace ordering) are exactly the
+> PostgreSQL-only behaviour the gate exists to catch. The manual
+> walkthrough below remains outstanding.
 
 ## Manual walkthrough
 

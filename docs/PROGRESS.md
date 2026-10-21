@@ -1260,3 +1260,11 @@ constraints; buffers fail closed when unconfigured. Sandbox: tsc clean,
 unit 480/480, build green, PGlite 38/38. Fedora gate:
 `scripts/verify-phase4.sh` (38 migrations) — see
 `docs/PHASE_4_VERIFICATION.md`.
+
+**Phase 4 automated Fedora verification PASSED 2026-10-21 at `1245e02`:**
+39/39 migrations (incl. `rental_lifecycle_transitions` widening the
+DB-enforced state machine), unit 480/480 (130 files), integration
+191/191 (46 suites) — `rental-lifecycle` 8/8 incl. double-booking
+rejection via PostgreSQL exclusion constraints and retire-before-replace
+ledger updates. Fixes along the way: `5381267` (deposit-policy key),
+`8c7af1c` (trigger widened), `1245e02` (driver-assignment ordering).
