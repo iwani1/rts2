@@ -59,8 +59,8 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | BKG-02 | In Progress | Creation validation implemented per D-052 (eligibility, contract status with typed inactive-contract policy, route/client match, past dates, DB-enforced duplicate journeys incl. parallel requests); Fedora verification pending. |
 | BKG-03 | In Progress | Pending → Accepted/Rejected/Cancelled staff workflow with sequenced history implemented per D-052; assignment/boarding/completion paths land with TRP/DRV. Fedora verification pending. |
 | BKG-04 | Not Started | No feature implementation; Phase 1+ approval required. |
-| BKG-05 | Not Started | No feature implementation; Phase 1+ approval required. |
-| BKG-06 | Not Started | No feature implementation; Phase 1+ approval required. |
+| BKG-05 | In Progress | Implemented locally (D-056, commit pending); awaiting Fedora verification. |
+| BKG-06 | In Progress | Implemented locally (D-056, commit pending); awaiting Fedora verification. |
 | TRP-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | TRP-02 | Not Started | No feature implementation; Phase 1+ approval required. |
 | DSP-01 | In Progress | Implemented locally (D-054, commit pending); awaiting Fedora verification. |
@@ -440,8 +440,8 @@ Added corporate client records as the first Phase 1B vertical slice, following t
 | BKG-02 | Not Started | Booking validation. |
 | BKG-03 | Not Started | Booking workflow. |
 | BKG-04 | In Progress | Trip assignment with transactional capacity check implemented locally (D-053, commit pending); awaiting Fedora verification. |
-| BKG-05 | Not Started | Cancellation deadlines and waiting list. |
-| BKG-06 | Not Started | Booking change history. |
+| BKG-05 | In Progress | Creation cut-off via typed setting, waiting-list queue view implemented locally (D-056, commit pending); cancellation deadlines remain unconfigured/unapproved. |
+| BKG-06 | In Progress | Booking change history implemented in D-052 (append-only history + API/UI); Fedora verification pending. |
 | TRP-01 | In Progress | Trip records, lifecycle state machine and schedule generation implemented locally (D-053, commit pending); awaiting Fedora verification. |
 | TRP-02 | In Progress | Passenger manifests implemented locally (D-053, commit pending); awaiting Fedora verification. |
 | DSP-01 | In Progress | Daily dispatch board implemented locally (D-054, commit pending); awaiting Fedora verification. |
@@ -496,6 +496,22 @@ Added the routes domain as the fourth Phase 1B vertical slice.
 - **Pages** (`src/app/routes/`): location register + manager, route register, route editor with stop-order editor, manual plan panel, and schedule panel (add/copy/activate with audited reasons). Workspace navigation links Routes and schedules.
 - **Tests**: `route-plan.test.ts`, `route-schema.test.ts`, `routes.integration.test.ts` (locations, stop-order override, plan capacity, schedule conflicts/copy/reactivation, cross-company denial). Not yet run: sandbox has no `node_modules`/database; Fedora verification is batched with CLI-02/EMP.
 - **Limits**: No map provider, no trip generation (TRP-01), no availability/assignment checks (DSP-02), no optimisation (RTE-05, Phase 3).
+
+## Phase 1B — booking cut-off and waiting list (BKG-05a/05b, BKG-06; D-056; 2026-10-21)
+
+- **Implemented locally (unverified until Fedora runs).** `bookings.creation_cutoff` is a typed settings-registry
+  value (`NONE` or `HOURS_BEFORE_JOURNEY` with 0–720 hours); unconfigured stays NONE so existing behaviour never
+  changes silently, and `createBooking` blocks journeys inside the window with an explanatory error. The waiting
+  list is a read model over Accepted bookings for a trip's date/client/route in request order with explicit
+  seat-availability status (null when no capacity basis exists); promotion stays manual through the
+  transactional assignment path. BKG-06 (booking change history) was delivered with D-052 (append-only history
+  served by the booking detail API/UI). Cancellation deadline rules are not invented — they remain an open
+  business choice and are unenforced until approved.
+- **Tests written (not yet run in sandbox).** PostgreSQL integration: waiting list ordering, promotion shrinking
+  the queue, `seatsAvailable` flipping to false at capacity; cut-off blocks a tomorrow journey at 720 hours and
+  allows it again under NONE.
+- **Batch verification.** CLI-02, EMP, RTE, BKG, TRP, DSP, DRV and this slice remain Fedora-unverified; batched
+  commands are recorded for the Phase 1B gate per the owner's standing instruction.
 
 ## Phase 1B — driver interface and idempotent events (DRV-01/02/04; D-055; 2026-10-21)
 

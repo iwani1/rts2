@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { PermissionDeniedError, resolvePermission } from '@/modules/auth/permissions';
-import { getInactiveContractBookingPolicy } from '@/modules/settings/registry';
+import { getBookingCreationCutoff, getInactiveContractBookingPolicy } from '@/modules/settings/registry';
 import { getPrisma } from '@/server/prisma';
 import { bookingListQuerySchema, bookingRequestSchema, bookingTransitionSchema } from './booking-schema';
 import { isAllowedBookingTransition } from './booking-transitions';
@@ -222,6 +222,17 @@ export async function createBooking(input: unknown, actorId: string, companyIdIn
   const today = accraDate.format(new Date());
   if (data.journeyDate < today) {
     throw new BookingValidationError('The journey date is in the past. Bookings can only be created for today or a future date.');
+  }
+  // BKG-05a (D-056): per-company creation cut-off. Unconfigured means NONE.
+  const cutoff = await getBookingCreationCutoff(companyId);
+  if (cutoff?.mode === 'HOURS_BEFORE_JOURNEY') {
+    const journeyStart = new Date(`${data.journeyDate}T00:00:00.000Z`).getTime();
+    const cutoffAt = journeyStart - cutoff.hours * 3_600_000;
+    if (Date.now() > cutoffAt) {
+      throw new BookingPolicyError(
+        `Booking creation is closed for ${data.journeyDate}: the company cut-off is ${cutoff.hours} hour(s) before the journey starts.`,
+      );
+    }
   }
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const reference = `BKG-${randomUUID().replaceAll('-', '').slice(0, 16).toUpperCase()}`;

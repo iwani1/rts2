@@ -5,6 +5,7 @@ import { resolvePermission } from '@/modules/auth/permissions';
 import { getPrisma } from '@/server/prisma';
 import { getDispatchBoard, type DispatchBoardTrip } from '@/modules/dispatch/dispatch';
 import { getTripManifest } from '@/modules/trips/trips';
+import { getTripWaitingList } from '@/modules/dispatch/waiting-list';
 import { DispatchManager } from './dispatch-manager';
 
 function firstParam(value: string | string[] | undefined) {
@@ -63,6 +64,9 @@ export default async function DispatchPage({
   const selected = board.trips.find((trip) => trip.id === selectedId) ?? board.trips[0] ?? null;
   const selectedManifest = selected
     ? await getTripManifest({ actorId: session.user.id, companyId: company.id, tripId: selected.id })
+    : null;
+  const waitingList = selected
+    ? await getTripWaitingList({ actorId: session.user.id, companyId: company.id, tripId: selected.id })
     : null;
   const [vehicles, drivers] = await Promise.all([
     prisma.vehicle.findMany({
@@ -165,6 +169,31 @@ export default async function DispatchPage({
           <p className="mt-2 text-sm text-slate-600">Every accepted booking for this date is on a trip.</p>
         )}
       </section>
+
+      {waitingList ? (
+        <section className="mt-6 rounded-lg border border-slate-200 bg-white p-5">
+          <h2 className="text-base font-semibold text-slate-950">
+            Waiting list — {waitingList.tripReference} ({waitingList.entries.length})
+          </h2>
+          <p className="mt-1 text-sm text-slate-600">
+            {waitingList.capacityNote} Seats available: {waitingList.seatsAvailable === null
+              ? 'unknown (no capacity basis)'
+              : waitingList.seatsAvailable ? 'yes' : 'no — promotions need a bigger vehicle or another trip'}.
+            Promotion is manual: assign from the Trips page; capacity is rechecked transactionally.
+          </p>
+          {waitingList.entries.length ? (
+            <ol className="mt-3 grid gap-1 text-sm text-slate-700">
+              {waitingList.entries.map((entry) => (
+                <li key={entry.bookingId}>
+                  {entry.position}. {entry.employeeName} — {entry.bookingReference} ({entry.bookingType})
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="mt-2 text-sm text-slate-600">Nobody is waiting for this trip.</p>
+          )}
+        </section>
+      ) : null}
 
       <DispatchManager
         companyId={company.id}
