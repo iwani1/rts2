@@ -121,3 +121,22 @@ tests.
    and cancelling is refused once assigned. After completion, record feedback with a rating;
    a second feedback attempt is refused.
 5. Back in Employees, unlink the login: the passenger portal returns to the "not linked" notice.
+
+---
+
+# Phase 1C verification — rental customer portal (RNT-09; D-066)
+
+Status: **SLICE BUILT — Fedora run required.** `./scripts/verify-phase1c.sh` now applies
+**25 migrations** and includes `rental-portal/portal.integration.test.ts`.
+
+## Manual workflow (browser)
+
+1. Create a login, assign the **Rental Customer** role, then open **Customers**, edit the
+   customer, and link the login in the new **Rental customer portal login** section.
+2. Sign in as the customer: the home page shows **My rentals**. Confirm the profile appears
+   (without internal notes), then save a Draft enquiry, complete its fields, and submit it.
+3. As Operations, move it to **Under Review** in Rental requests: the customer can no longer
+   edit or withdraw it online. Create a second enquiry and withdraw it while it is a Draft:
+   it shows as **Cancelled**.
+4. Confirm the Quotations and payments section honestly states that none are issued/due yet.
+5. Unlink the login in Customers: the portal returns to the "not linked" notice.

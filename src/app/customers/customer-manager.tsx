@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CustomerRecord } from '@/modules/customers/customers';
 
-type CustomerFormValues = Omit<CustomerRecord, 'id' | 'createdAt' | 'updatedAt'>;
+type CustomerFormValues = Omit<CustomerRecord, 'id' | 'createdAt' | 'updatedAt' | 'linkedUserId'>;
 const emptyCustomer: CustomerFormValues = {
   reference: null, displayName: '', contactPerson: null, telephone: null, email: null,
   billingDetails: null, customerType: null, status: null, notes: null,
@@ -15,7 +15,11 @@ function value(form: FormData, name: string) {
   return typeof entry === 'string' ? entry.trim() : '';
 }
 
-export function CustomerManager({ companyId, customer }: { companyId: string; customer?: CustomerRecord }) {
+type RentalUserOption = { id: string; label: string };
+
+export function CustomerManager({ companyId, customer, rentalUsers = [] }: {
+  companyId: string; customer?: CustomerRecord; rentalUsers?: RentalUserOption[];
+}) {
   const router = useRouter();
   const [interactive, setInteractive] = useState(false);
   useEffect(() => setInteractive(true), []);
@@ -74,6 +78,55 @@ export function CustomerManager({ companyId, customer }: { companyId: string; cu
     }
   }
 
+  const [linkUserId, setLinkUserId] = useState('');
+  const [linkReason, setLinkReason] = useState('');
+
+  async function linkCustomer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!customer) return;
+    setPending(true);
+    setError('');
+    setNotice('');
+    try {
+      const response = await fetch(`/api/companies/${encodeURIComponent(companyId)}/customers/${encodeURIComponent(customer.id)}/customer-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: linkUserId, reason: linkReason }),
+      });
+      const body = await response.json() as { error?: string; message?: string };
+      if (!response.ok) throw new Error(body.message || body.error || 'Unable to link this customer login.');
+      setNotice('Customer login linked. The user can now open My rentals.');
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Unable to link this customer login.');
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function unlinkCustomer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!customer) return;
+    setPending(true);
+    setError('');
+    setNotice('');
+    try {
+      const response = await fetch(`/api/companies/${encodeURIComponent(companyId)}/customers/${encodeURIComponent(customer.id)}/customer-unlink`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: linkReason }),
+      });
+      const body = await response.json() as { error?: string; message?: string };
+      if (!response.ok) throw new Error(body.message || body.error || 'Unable to unlink this customer login.');
+      setNotice('Customer login unlinked.');
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Unable to unlink this customer login.');
+    } finally {
+      setPending(false);
+    }
+  }
+
   async function archive(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!customer) return;
@@ -122,6 +175,29 @@ export function CustomerManager({ companyId, customer }: { companyId: string; cu
       {error && <p className="form-error" role="alert">{error}</p>}
       {notice && <p className="form-success" role="status">{notice}</p>}
     </form>
+    {customer && <details className="vehicle-archive" open>
+      <summary>Rental customer portal login</summary>
+      {customer.linkedUserId ? <>
+        <p className="form-help">This record is linked to a customer login (My rentals). Unlink before linking a different login.</p>
+        <form onSubmit={unlinkCustomer}>
+          <label>Reason for unlinking<input value={linkReason} onChange={(event) => setLinkReason(event.target.value)} required minLength={8} maxLength={500} /></label>
+          <button type="submit" className="button-danger" disabled={!interactive || pending}>{pending ? 'Working…' : 'Unlink customer login'}</button>
+        </form>
+      </> : <>
+        <p className="form-help">Link this record to a login that holds the Rental Customer role so the customer can send enquiries and track requests in My rentals.</p>
+        <form onSubmit={linkCustomer}>
+          <label>Rental customer login
+            <select required value={linkUserId} onChange={(event) => setLinkUserId(event.target.value)}>
+              <option value="" disabled>Select a customer login</option>
+              {rentalUsers.map((user) => <option key={user.id} value={user.id}>{user.label}</option>)}
+            </select>
+          </label>
+          <label>Reason for linking<input value={linkReason} onChange={(event) => setLinkReason(event.target.value)} required minLength={8} maxLength={500} /></label>
+          <button type="submit" className="button-primary" disabled={!interactive || pending || rentalUsers.length === 0}>{pending ? 'Working…' : 'Link customer login'}</button>
+          {rentalUsers.length === 0 && <p className="form-help">No unlinked Rental Customer logins exist yet. Create the login and assign the Rental Customer role first.</p>}
+        </form>
+      </>}
+    </details>}
     {customer && <details className="vehicle-archive">
       <summary>Archive this customer</summary>
       <p className="form-help">Archiving hides the record from the active customer register without deleting its retained history.</p>

@@ -49,6 +49,10 @@ export default async function Home() {
     where: { userId: session.user.id, companyId: company.id, roleCode: 'PASSENGER', revokedAt: null },
     select: { id: true },
   })) : false;
+  const isRentalCustomer = company ? Boolean(await prisma.userRoleAssignment.findFirst({
+    where: { userId: session.user.id, companyId: company.id, roleCode: 'RENTAL_CUSTOMER', revokedAt: null },
+    select: { id: true },
+  })) : false;
   return <main className="app-shell">
     <header className="app-header">
       <Link className="wordmark" href="/" aria-label="Richie TMS home">R<span>.</span>TS</Link>
@@ -72,6 +76,7 @@ export default async function Home() {
         {reportAccess.allowed && <Link className="header-link" href="/reports">Reports</Link>}
         {isCorporateHr && <Link className="header-link" href="/corporate">Corporate dashboard</Link>}
         {isPassenger && <Link className="header-link" href="/passenger">My transport</Link>}
+        {isRentalCustomer && <Link className="header-link" href="/rentals/portal">My rentals</Link>}
         {canManageRentalRequests && <Link className="header-link" href="/rentals/requests">Rental requests</Link>}
         {canManageRentalRequests && <Link className="header-link" href="/rentals/reports">Rental reports</Link>}
         <Link className="header-link" href="/account/profile">My profile</Link>

@@ -232,12 +232,13 @@ docs/PROGRESS.md and docs/PHASE_1C_VERIFICATION.md. For ratification at the Phas
   confirm a future adjustment/credit-note process is the right vehicle.
 - A dedicated editor for `finance.corporate_rates` (and `bookings.creation_cutoff`) is still
   outstanding; rates are currently written through the settings service only.
-- Remaining Phase 1C scope per richie-tms-phase-prompts.md: RNT-09, role-specific dashboards
-  and the hardening pass. FIN-07 (D-063), RPT-02/RPT-03/RPT-04 (D-064) and PAX-01 (D-065) are
-  built.
-- D-065 needs gate ratification: passengers may self-cancel only before trip assignment, and
-  feedback is one immutable record per completed journey. Confirm both, or ask for
-  assigned-journey cancellation requests / editable feedback.
+- Remaining Phase 1C scope per richie-tms-phase-prompts.md: role-specific dashboards and the
+  hardening pass. FIN-07 (D-063), RPT-02/RPT-03/RPT-04 (D-064), PAX-01 (D-065) and RNT-09
+  (D-066) are built.
+- D-065/D-066 need gate ratification: passengers self-cancel only before trip assignment with
+  one immutable feedback record per completed journey; rental customers may withdraw only
+  Draft/Submitted requests, and no quotation acceptance exists until formal issuance lands.
+  Confirm, or ask for changes.
 - D-064 needs gate ratification and two policy inputs: the on-time pickup threshold in minutes
   (until set, RPT-02 publishes delay averages and coverage but no on-time rate), and whether the
   RPT-03 "revenue by service" grouping by contract service type matches management's service

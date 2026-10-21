@@ -211,10 +211,9 @@ export async function getRentalRequest(input: { actorId: string; companyId: stri
   };
 }
 
-export async function createRentalRequest(input: unknown, actorId: string, companyIdInput: string) {
-  const data = rentalRequestDraftSchema.parse(input);
-  const companyId = companyIdSchema.parse(companyIdInput);
-  await accessFor(actorId, companyId);
+type RentalDraftData = z.infer<typeof rentalRequestDraftSchema>;
+
+async function executeRentalRequestCreation(data: RentalDraftData, actorId: string, companyId: string) {
   const prisma = getPrisma();
   return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const customer = await tx.customer.findFirst({ where: { id: data.customerId, companyId, archivedAt: null }, select: { id: true } });
@@ -233,17 +232,64 @@ export async function createRentalRequest(input: unknown, actorId: string, compa
   });
 }
 
+export async function createRentalRequest(input: unknown, actorId: string, companyIdInput: string) {
+  const data = rentalRequestDraftSchema.parse(input);
+  const companyId = companyIdSchema.parse(companyIdInput);
+  await accessFor(actorId, companyId);
+  return executeRentalRequestCreation(data, actorId, companyId);
+}
+
+/**
+ * RNT-09/D-066: portal creation for a verified customer login link. The
+ * customer is always the linked record and the source is always the portal;
+ * neither is accepted from the client.
+ */
+export async function createRentalRequestForLinkedCustomer(
+  input: unknown, actorId: string, companyIdInput: string, customerId: string,
+) {
+  const data = rentalRequestDraftSchema.parse({
+    ...(input as Record<string, unknown>), customerId, requestSource: 'APP',
+  });
+  const companyId = companyIdSchema.parse(companyIdInput);
+  return executeRentalRequestCreation(data, actorId, companyId);
+}
+
 export async function updateRentalRequestDraft(input: unknown, actorId: string, companyIdInput: string, requestIdInput: string) {
   const data = rentalRequestDraftSchema.parse(input);
   const companyId = companyIdSchema.parse(companyIdInput);
   const requestId = requestIdSchema.parse(requestIdInput);
   await accessFor(actorId, companyId);
+  return executeRentalDraftUpdate(data, actorId, companyId, requestId, null);
+}
+
+/**
+ * RNT-09/D-066: a linked customer may edit only their own Draft. Another
+ * customer's request is reported as not found, and the customer id is forced
+ * to the linked record.
+ */
+export async function updateOwnRentalRequestDraft(
+  input: unknown, actorId: string, companyIdInput: string, requestIdInput: string, customerId: string,
+) {
+  const data = rentalRequestDraftSchema.parse({
+    ...(input as Record<string, unknown>), customerId, requestSource: 'APP',
+  });
+  const companyId = companyIdSchema.parse(companyIdInput);
+  const requestId = requestIdSchema.parse(requestIdInput);
+  return executeRentalDraftUpdate(data, actorId, companyId, requestId, customerId);
+}
+
+async function executeRentalDraftUpdate(
+  data: RentalDraftData, actorId: string, companyId: string, requestId: string,
+  ownedCustomerId: string | null,
+) {
   const prisma = getPrisma();
   return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const current = await tx.rentalRequest.findFirst({
       where: { id: requestId, companyId }, select: { status: true, customerId: true },
     });
-    if (!current) throw new RentalRequestNotFoundError();
+    if (!current || (ownedCustomerId !== null && current.customerId !== ownedCustomerId)) {
+      throw new RentalRequestNotFoundError();
+    }
     if (current.status !== 'Draft') throw new RentalRequestNotDraftError();
     if (data.customerId !== current.customerId) {
       const customer = await tx.customer.findFirst({ where: { id: data.customerId, companyId, archivedAt: null }, select: { id: true } });
@@ -273,10 +319,31 @@ export async function submitRentalRequest(input: unknown, actorId: string, compa
   const companyId = companyIdSchema.parse(companyIdInput);
   const requestId = requestIdSchema.parse(requestIdInput);
   await accessFor(actorId, companyId);
+  return executeRentalRequestSubmission(data, actorId, companyId, requestId, null);
+}
+
+/**
+ * RNT-09/D-066: a linked customer submits only their own Draft, through the
+ * identical prerequisite checks as staff submission.
+ */
+export async function submitOwnRentalRequest(
+  input: unknown, actorId: string, companyIdInput: string, requestIdInput: string, customerId: string,
+) {
+  const data = rentalRequestSubmitSchema.parse(input);
+  const companyId = companyIdSchema.parse(companyIdInput);
+  const requestId = requestIdSchema.parse(requestIdInput);
+  return executeRentalRequestSubmission(data, actorId, companyId, requestId, customerId);
+}
+
+async function executeRentalRequestSubmission(
+  data: z.infer<typeof rentalRequestSubmitSchema>, actorId: string, companyId: string,
+  requestId: string, ownedCustomerId: string | null,
+) {
   const prisma = getPrisma();
   return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const rows = await tx.$queryRaw<Array<{
       status: string;
+      customerId: string;
       serviceDate: Date | null;
       departureTime: string | null;
       returnTime: string | null;
@@ -286,9 +353,11 @@ export async function submitRentalRequest(input: unknown, actorId: string, compa
       destination: string | null;
       passengerCount: number | null;
       requestSource: string | null;
-    }>>`SELECT "status", "serviceDate", "departureTime", "returnTime", "returnDate", "durationMinutes", "pickupLocation", "destination", "passengerCount", "requestSource" FROM "RentalRequest" WHERE "id" = ${requestId} AND "companyId" = ${companyId} FOR UPDATE`;
+    }>>`SELECT "status", "customerId", "serviceDate", "departureTime", "returnTime", "returnDate", "durationMinutes", "pickupLocation", "destination", "passengerCount", "requestSource" FROM "RentalRequest" WHERE "id" = ${requestId} AND "companyId" = ${companyId} FOR UPDATE`;
     const current = rows[0];
-    if (!current) throw new RentalRequestNotFoundError();
+    if (!current || (ownedCustomerId !== null && current.customerId !== ownedCustomerId)) {
+      throw new RentalRequestNotFoundError();
+    }
     if (current.status !== 'Draft') throw new RentalRequestNotDraftError();
 
     const missingFields = missingRentalRequestSubmissionFields(current);

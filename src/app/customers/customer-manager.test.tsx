@@ -21,7 +21,7 @@ beforeEach(() => {
 const existingCustomer: CustomerRecord = {
   id: 'customer-1', reference: 'GH-REF-01', displayName: 'Accra Shuttle Services', contactPerson: 'Ama Owusu',
   telephone: '+233 20 000 0000', email: 'ama@example.invalid', billingDetails: 'Accounts office',
-  customerType: 'Organisation', status: 'Active', notes: 'Verified record',
+  customerType: 'Organisation', status: 'Active', notes: 'Verified record', linkedUserId: null,
   createdAt: new Date('2026-10-19T08:00:00.000Z'), updatedAt: new Date('2026-10-19T08:00:00.000Z'),
 };
 

@@ -459,3 +459,26 @@
   eligible journeys, references/status, pickup time and location, history, cancel eligible
   bookings, feedback, company transport policy; the eight named journey states). Recorded for
   ratification at the Phase 1C gate.
+
+## D-066 — Rental customer portal: audited customer link, own-request self-service, honest quotation/payment state (RNT-09; Phase 1C)
+
+Date: 2026-10-21. Status: decided for Phase 1C construction; recorded for ratification at the Phase 1C gate.
+
+1. **Customer login identity.** `Customer.userId` is a unique nullable link to a login (the PAX-01 pattern);
+   `linkCustomerAccount`/`unlinkCustomerAccount` require `customer:manage` at GLOBAL or COMPANY scope, an
+   ACTIVE login holding a `RENTAL_CUSTOMER` assignment in the company, and enforce one login to one customer;
+   actions are audited. The portal resolves every request only through the link and never accepts a customer id
+   from the client.
+2. **Self-service over the existing request workflow.** Customers create Draft enquiries through the same
+   rental-request creation core (source forced to `APP`; the customer is always the linked record), edit only
+   their own Draft, and submit through the identical submission core so the governed prerequisites
+   (service date/time, pickup, destination, passengers, return time or duration) apply unchanged. Withdrawal
+   is the one new transition: own `Draft` or `Submitted` requests may move to `Cancelled` with a reason
+   (history + audit); `Under Review` and later states remain operations-controlled. The database transition
+   guard and history CHECK are extended with exactly `Draft → Cancelled` and `Submitted → Cancelled`; the
+   staff transition table is unchanged, so staff cannot cancel through their path.
+3. **Quotations and payments are stated, never fabricated.** No customer quotation model exists yet (internal
+   pricing worksheets are explicitly not quotations and are never shown to customers), and rentals have no
+   invoices. The portal shows explicit "no quotation issued" and "no payment due" states; accepting a quotation
+   becomes possible only when formal quotation issuance (RNT-04/05) lands.
+4. The profile projection shows the customer's own contact and billing details, never internal notes.

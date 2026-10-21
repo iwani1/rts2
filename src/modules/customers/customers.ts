@@ -39,11 +39,12 @@ export type CustomerRecord = {
   customerType: string | null;
   status: string | null;
   notes: string | null;
+  linkedUserId: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
 
-type CustomerDbShape = CustomerRecord;
+type CustomerDbShape = Omit<CustomerRecord, 'linkedUserId'> & { userId: string | null };
 function presentCustomer(row: CustomerDbShape): CustomerRecord {
   return {
     id: row.id,
@@ -56,6 +57,7 @@ function presentCustomer(row: CustomerDbShape): CustomerRecord {
     customerType: row.customerType,
     status: row.status,
     notes: row.notes,
+    linkedUserId: row.userId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

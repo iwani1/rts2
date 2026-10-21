@@ -271,6 +271,7 @@ model User {
   tripStatusChanges TripStatusHistory[]
   driverAccount     Driver?                @relation("DriverAccount")
   employeeAccount   Employee?              @relation("PassengerAccount")
+  customerAccount   Customer?              @relation("CustomerAccount")
   driverEvents      DriverEvent[]
   clientBindings    UserClientBinding[]    @relation("BindingUser")
   bindingsMade      UserClientBinding[]    @relation("BindingActor")
@@ -473,10 +474,12 @@ model Customer {
   customerType   String?
   status         String?
   notes          String?
+  userId         String?   @unique
   archivedAt     DateTime? @db.Timestamptz(6)
   createdAt      DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt      DateTime  @updatedAt @db.Timestamptz(6)
   company        Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  linkedUser     User?     @relation("CustomerAccount", fields: [userId], references: [id], onDelete: Restrict)
   rentalRequests RentalRequest[]
 
   @@unique([companyId, id])

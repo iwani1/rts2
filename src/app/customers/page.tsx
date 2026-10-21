@@ -68,6 +68,25 @@ export default async function CustomersPage({ searchParams }: PageProps) {
   const previousToken = cursorHistory[cursorHistory.length - 1];
   const previousHref = customerPageHref({ search: params.q, cursor: previousToken && previousToken !== 'ROOT' ? previousToken : undefined, history: cursorHistory.slice(0, -1) });
   const nextHistory = params.cursor ? [...cursorHistory.slice(-49), params.cursor] : ['ROOT'];
+  const rentalUsers = editing && result.canManage ? await (async () => {
+    const [assignments, linked] = await Promise.all([
+      prisma.userRoleAssignment.findMany({
+        where: { companyId: company.id, roleCode: 'RENTAL_CUSTOMER', revokedAt: null },
+        select: { user: { select: { id: true, name: true, email: true, status: true } } },
+        take: 200,
+      }),
+      prisma.customer.findMany({
+        where: { companyId: company.id, userId: { not: null } },
+        select: { userId: true },
+      }),
+    ]);
+    const linkedIds = new Set(linked.map((row) => row.userId));
+    const seen = new Set<string>();
+    return assignments
+      .map((row) => row.user)
+      .filter((user) => user.status === 'ACTIVE' && !linkedIds.has(user.id) && !seen.has(user.id) && seen.add(user.id))
+      .map((user) => ({ id: user.id, label: `${user.name} (${user.email})` }));
+  })() : [];
   return <main className="fleet-page">
     <header className="fleet-page-header">
       <Link className="wordmark fleet-wordmark" href="/" aria-label="Richie TMS home">R<span>.</span>TS</Link>
@@ -107,7 +126,7 @@ export default async function CustomersPage({ searchParams }: PageProps) {
           {result.nextCursor && <Link className="button-link" href={customerPageHref({ search: params.q, cursor: result.nextCursor, history: nextHistory })}>Next page</Link>}
         </nav>}
       </section>
-      {result.canManage && <CustomerManager companyId={company.id} customer={editing} />}
+      {result.canManage && <CustomerManager companyId={company.id} customer={editing} rentalUsers={rentalUsers} />}
       {editing && <section className="fleet-list-panel" aria-labelledby="customer-history-title">
         <div className="fleet-list-heading"><div><h2 id="customer-history-title">Customer history</h2><p className="muted">Audit events for this record; personal details are not copied into the event summaries.</p></div></div>
         {history.length === 0 ? <p className="fleet-empty">No history recorded.</p> : <ol className="customer-history-list">{history.map((event, index) => <li key={`${event.createdAt.toISOString()}-${event.action}-${index}`}><strong>{event.action.replaceAll('_', ' ')}</strong><span>{accraDateTime.format(event.createdAt)} · {event.actorName}</span>{event.reason && <p>{event.reason}</p>}</li>)}</ol>}

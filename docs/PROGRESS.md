@@ -33,7 +33,7 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | RNT-06 | Not Started | No feature implementation; Phase 1+ approval required. |
 | RNT-07 | Not Started | No feature implementation; Phase 1+ approval required. |
 | RNT-08 | Not Started | No feature implementation; Phase 1+ approval required. |
-| RNT-09 | Not Started | No feature implementation; Phase 1+ approval required. |
+| RNT-09 | In Progress | Rental customer portal per D-066: audited customer↔login link (`Customer.userId`, link/unlink in the customer editor), own-profile projection, enquiry creation/Draft editing/submission through the shared rental-request cores, customer withdrawal of Draft/Submitted requests (new governed `Cancelled` transitions), explicit no-quotation/no-payment states (migration `20261021130000_rental_customer_portal`). Sandbox-verified 2026-10-21 (unit 390/390; 25/25 migrations on PGlite with guard checks); Fedora verification pending. |
 | WEB-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FLT-01 | In Progress | Vehicle register schema/API/UI supports core factual fields, stable cursor pagination with previous/next navigation, search/page context preservation, clear-search and stale-cursor recovery, a manager-only usual-driver link to an active same-company driver, and a fixed-template all-or-nothing CSV import for new records. Playwright now covers linking an imported active same-company driver to an imported vehicle and verifying it after logout/login; these and broader register/import browser checks remain unrun. Photo storage and document records/files are deferred pending hosting/storage selection. |
 | FLT-04 | In Progress | Driver register schema/API/UI supports company-scoped searchable records with only brief-listed details, stable cursor pagination with previous/next navigation, search/page context preservation, clear-search and stale-cursor recovery, full fleet-manager create/edit/archive, and a fixed-template audited CSV import; active drivers can be linked as vehicles' usual drivers by managers with both grants. Playwright now covers linking an imported driver as a vehicle's usual driver; browser verification, dispatcher field-level scope decision, account-to-driver linking, and policy-defined status/availability workflows remain. Dispatcher and Driver OWN_PROFILE listing fail closed until field projection and verified account-link behavior are implemented. D-025 resolves the driver import duplicate warning policy: possible name matches are advisory only; no stable identifier or identity verification is inferred. |
@@ -791,5 +791,29 @@ Fourth Phase 1C slice, built under the owner's Phase 1C go-ahead. D-065 is recor
   incl. duplicate/past-date/eligibility, cancel ownership and assignment guard, full
   dispatch-to-completion status progression with one-time feedback). Sandbox PGlite proof: 24/24
   migrations, unique link index, append-only trigger and rating CHECK verified. Fedora run pending.
-- **Remaining Phase 1C scope:** RNT-09 rental customer portal, role-specific dashboards and the
-  hardening pass, per `richie-tms-phase-prompts.md`.
+- **Remaining Phase 1C scope:** role-specific dashboards and the hardening pass, per
+  `richie-tms-phase-prompts.md`.
+
+## Phase 1C — rental customer portal (RNT-09; D-066; 2026-10-21)
+
+Fifth Phase 1C slice. D-066 recorded in `docs/DECISIONS.md` for gate ratification.
+
+- **Identity (migration `20261021130000_rental_customer_portal`, 25 total):** `Customer.userId`
+  unique link, governed exactly like the passenger link (`customer:manage` GLOBAL/COMPANY, ACTIVE
+  login with a `RENTAL_CUSTOMER` assignment, one-to-one, audited); the customer editor gained a
+  "Rental customer portal login" section listing unlinked rental-customer logins.
+- **Portal (`/rentals/portal`, `src/modules/rental-portal/`):** profile projection (own contact and
+  billing details; internal notes never shown), own requests with actions, and explicit
+  no-quotation-issued / no-payment-due states — internal pricing worksheets are not quotations and
+  are never exposed.
+- **Actions:** enquiry creation, Draft editing and submission run through the rental-request
+  service cores (customer forced to the linked record, source forced `APP`, submission
+  prerequisites identical to staff); withdrawal is new (own Draft/Submitted → `Cancelled`, with
+  the DB status CHECK, history CHECK and transition guard extended by exactly those two pairs;
+  the staff transition table is unchanged, so staff still cannot cancel).
+- **Tests:** integration `portal.integration.test.ts` (4 tests: link rules, unlinked/cross-company
+  denial, lifecycle incl. incomplete-submission refusal and withdrawal, review-state protection
+  and cross-customer isolation). Sandbox PGlite proof: 25/25 migrations, unique link index,
+  Draft→Cancelled allowed with history, unapproved transitions still refused. Fedora run pending.
+- **Remaining Phase 1C scope:** role-specific dashboards and the hardening pass, per
+  `richie-tms-phase-prompts.md`.
