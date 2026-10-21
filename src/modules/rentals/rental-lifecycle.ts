@@ -384,7 +384,7 @@ export async function confirmRentalRequest(actorId: string, companyId: string, r
       throw new RentalLifecyclePolicyError('RNT_NO_WORKSHEET', 'A pricing worksheet is required before this rental can be confirmed.');
     }
     if (!depositPolicy) {
-      throw new RentalLifecyclePolicyError('RNT_DEPOSIT_POLICY_NOT_CONFIGURED', 'The rental deposit policy is not configured under Settings. Configure finance.deposit_policy and retry.');
+      throw new RentalLifecyclePolicyError('RNT_DEPOSIT_POLICY_NOT_CONFIGURED', 'The rental deposit policy is not configured under Settings. Configure rental.deposit_policy and retry.');
     }
     const subtotal = worksheet.preTaxSubtotalPesewas;
     let depositDue = 0;

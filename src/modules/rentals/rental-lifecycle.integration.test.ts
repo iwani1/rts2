@@ -101,7 +101,7 @@ describe('Phase 4 rental lifecycle with PostgreSQL (D-089)', () => {
   });
 
   it('fails closed when resource buffers are not configured', async () => {
-    await setSetting('finance.deposit_policy', { kind: 'NOT_REQUIRED' });
+    await setSetting('rental.deposit_policy', { kind: 'NOT_REQUIRED' });
     const requestId = await reviewedRequest();
     await expect(confirmRentalRequest(managerId, companyId, requestId, confirmArgs(vehicleId)))
       .rejects.toMatchObject({ code: 'RNT_BUFFER_NOT_CONFIGURED' });
@@ -110,7 +110,7 @@ describe('Phase 4 rental lifecycle with PostgreSQL (D-089)', () => {
   it('confirms with acceptance facts and an ACTIVE vehicle reservation from the latest worksheet', async () => {
     await setSetting('fleet.vehicle_between_job_buffer_minutes', 30);
     await setSetting('fleet.driver_between_job_buffer_minutes', 15);
-    await setSetting('finance.deposit_policy', { kind: 'FIXED_AMOUNT', amountPesewas: 5000, collectionStage: 'BEFORE_CONFIRMATION' });
+    await setSetting('rental.deposit_policy', { kind: 'FIXED_AMOUNT', amountPesewas: 5000, collectionStage: 'BEFORE_CONFIRMATION' });
     const requestId = await reviewedRequest();
     await expect(confirmRentalRequest(managerId, companyId, requestId, confirmArgs(vehicleId)))
       .rejects.toMatchObject({ code: 'RNT_DEPOSIT_NOT_RECEIVED' });
