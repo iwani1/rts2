@@ -36,7 +36,7 @@ export function RentalRequestTransitionManager({ companyId, request }: { company
   return <section className="vehicle-editor" aria-labelledby="request-transition-title">
     <div className="vehicle-editor-heading"><div><p className="eyebrow">Request status</p><h2 id="request-transition-title">{target === 'Declined' ? 'Decline request' : 'Begin review'}</h2></div></div>
     {target === 'Declined' && <p className="form-help">Declining is terminal in this workflow. No quotation, vehicle/driver reservation, or customer notification is performed.</p>}
-    {target === 'Under Review' && <p className="form-help">Starting review does not quote, confirm, assign, or reserve any resource. Further quotation steps remain unavailable pending policy configuration.</p>}
+    {target === 'Under Review' && <p className="form-help">Starting review lets staff prepare pricing and then confirm the booking from the lifecycle panel below.</p>}
     <form className="vehicle-form" onSubmit={(event) => void transition(event)}>
       <label htmlFor="rental-transition-reason">Reason for this status change<input id="rental-transition-reason" required minLength={8} maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} /></label>
       <button className={target === 'Declined' ? 'button-danger' : 'button-primary'} type="submit" disabled={pending || reason.trim().length < 8}>

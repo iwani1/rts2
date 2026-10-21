@@ -12,6 +12,7 @@ import { getPrisma } from '@/server/prisma';
 import { listCompanySettingStatus } from '@/modules/settings/registry';
 import { RequestManager } from './request-manager';
 import { RentalRequestTransitionManager } from './rental-request-transition-manager';
+import { RentalLifecycleManager } from './rental-lifecycle-manager';
 import { RentalRequestDetails } from './rental-request-details';
 import { QuotationReadiness } from './quotation-readiness';
 import { RentalPricingPreview } from './pricing-preview';
@@ -126,12 +127,13 @@ export default async function RentalRequestsPage({ searchParams }: PageProps) {
       {result.canManage && editing && editing.status !== 'Draft' && <RentalRequestDetails request={editing} />}
       {result.canManage && editing?.status === 'Under Review' && <><QuotationReadiness settings={quotationPolicyStatus} canEditPolicies={canEditPolicies} /><RentalPricingPreview companyId={company.id} requestId={editing.id} /></>}
       {result.canManage && editing && editing.status !== 'Draft' && <RentalRequestTransitionManager companyId={company.id} request={editing} />}
-      {editing && editing.status !== 'Draft' && <p className="fleet-limits">This request has been submitted. Only the explicitly approved review and decline transitions are currently available; quotation, confirmation, assignment, cancellation and dispatch are not enabled.</p>}
+      {result.canManage && editing && editing.status !== 'Draft' && <RentalLifecycleManager companyId={company.id} requestId={editing.id} status={editing.status} />}
+      {editing && editing.status !== 'Draft' && <p className="fleet-limits">Submitted requests follow the governed lifecycle: review, decline, confirmation with vehicle reservation, driver assignment, two-step completion, and pre-trip cancellation. Dispatch remains a separate workflow.</p>}
       {editing && <section className="fleet-list-panel" aria-labelledby="request-history-title">
         <div className="fleet-list-heading"><div><h2 id="request-history-title">Status history</h2><p className="muted">Draft details are editable only before submission. Approved status changes are separately audited here.</p></div></div>
         <ol className="customer-history-list">{history.map((entry, index) => <li key={`${entry.createdAt.toISOString()}-${index}`}><strong>{entry.fromStatus ? `${entry.fromStatus} → ${entry.toStatus}` : `Created as ${entry.toStatus}`}</strong><span>{accraDateTime.format(entry.createdAt)} · {entry.actorName}</span><p>{entry.reason}</p></li>)}</ol>
       </section>}
-      <p className="fleet-limits">Draft creation/editing and the explicit Draft → Submitted → Under Review → Declined subset are available. Customer-facing quotation approval, issuance and acceptance, availability, confirmation, assignment, reservation, cancellation and dispatch workflows remain unimplemented. Internal pricing worksheets are pre-tax records only, not quotations. {customerAccess.allowed ? '' : 'Customer record access is not granted to this role.'}</p>
+      <p className="fleet-limits">The full rental lifecycle through confirmation, assignment, completion and pre-trip cancellation is available. Internal pricing worksheets are pre-tax records only, not customer quotations; dispatch remains a separate workflow. {customerAccess.allowed ? '' : 'Customer record access is not granted to this role.'}</p>
     </div>
   </main>;
 }

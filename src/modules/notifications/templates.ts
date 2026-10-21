@@ -61,6 +61,26 @@ export function rentalStatusNotification(
         title: 'Rental request under review',
         body: `Our team is reviewing your rental request (${route}${when}). We will be in touch with next steps.`,
       };
+    case 'Confirmed':
+      return {
+        title: 'Rental booking confirmed',
+        body: `Your rental booking (${route}${when}) is confirmed and your vehicle is reserved. We will share driver details when assigned.`,
+      };
+    case 'Assigned':
+      return {
+        title: 'Driver assigned to your rental',
+        body: `A driver has been assigned to your rental (${route}${when}).`,
+      };
+    case 'Completed':
+      return {
+        title: 'Rental completed',
+        body: `Your rental (${route}${when}) is complete. Thank you for travelling with us.`,
+      };
+    case 'Cancelled':
+      return {
+        title: 'Rental booking cancelled',
+        body: `Your rental booking (${route}${when}) has been cancelled. Please contact us if you need anything else.`,
+      };
     case 'Declined':
       return {
         title: 'Rental request declined',

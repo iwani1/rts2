@@ -19,6 +19,8 @@ model Company {
   paymentReconciliations PaymentReconciliation[]
   driverPayRules DriverPayRule[]
   driverPayrollRuns DriverPayrollRun[]
+  rentalAssignments RentalAssignment[]
+  rentalCompletions RentalCompletion[]
   auditEvents     AuditEvent[]
   roleAssignments UserRoleAssignment[]
   vehicles        Vehicle[]
@@ -285,6 +287,9 @@ model User {
   payRuleStatusChanges         DriverPayRuleStatusHistory[] @relation("PayRuleStatusActor")
   payrollRunsCreated           DriverPayrollRun[]           @relation("PayrollRunCreator")
   payrollRunStatusChanges      DriverPayrollRunStatusHistory[] @relation("PayrollRunStatusActor")
+  rentalAssignmentsCreated     RentalAssignment[]           @relation("RentalAssignmentCreator")
+  rentalCompletionsSubmitted   RentalCompletion[]           @relation("RentalCompletionSubmitter")
+  rentalCompletionsDecided     RentalCompletion[]           @relation("RentalCompletionDecider")
   expenseStatusChanges         ExpenseStatusHistory[]
   contractStatusChanges ContractStatusHistory[]
   corporateInvoiceStatusChanges CorporateInvoiceStatusHistory[]
@@ -459,6 +464,7 @@ model Vehicle {
   usualDriver               Driver?   @relation("VehicleUsualDriver", fields: [usualDriverCompanyId, usualDriverId], references: [companyId, id], onDelete: Restrict)
   maintenanceWorkOrders     MaintenanceWorkOrder[]
   expenses                  Expense[]
+  rentalAssignments         RentalAssignment[]
   servicePlan               VehicleServicePlan?
   locationReports           VehicleLocationReport[]
   safetyBlocks              VehicleSafetyBlock[]
@@ -491,6 +497,7 @@ model Driver {
   usualVehicles     Vehicle[]  @relation("VehicleUsualDriver")
   trips             Trip[]
   events            DriverEvent[]
+  rentalAssignments RentalAssignment[]
 
   @@unique([companyId, id])
   @@index([companyId, archivedAt, fullName])
@@ -543,6 +550,13 @@ model RentalRequest {
   tripContactName      String?
   tripContactTelephone String?
   tripContactEmail     String?
+  acceptedByName       String?                      @db.VarChar(200)
+  acceptanceAt         DateTime?                    @db.Timestamptz(6)
+  acceptanceReference  String?                      @db.VarChar(200)
+  confirmedWorksheetId String?
+  depositDuePesewas    Int?
+  depositReceivedPesewas Int?
+  depositEvidenceReference String?                  @db.VarChar(200)
   notes                String?
   requestSource        String?
   status               String
@@ -552,6 +566,8 @@ model RentalRequest {
   customer             Customer                     @relation(fields: [companyId, customerId], references: [companyId, id], onDelete: Restrict)
   statusHistory        RentalRequestStatusHistory[]
   pricingWorksheets    RentalPricingWorksheet[]
+  assignments          RentalAssignment[]
+  completions          RentalCompletion[]
 
   @@unique([companyId, id])
   @@index([companyId, status, createdAt])
@@ -892,6 +908,61 @@ model PaymentReconciliationStatusHistory {
 
   @@unique([companyId, reconciliationId, sequence])
   @@index([companyId, reconciliationId, createdAt])
+}
+
+model RentalAssignment {
+  id          String    @id @default(cuid())
+  companyId   String
+  requestId   String
+  vehicleId   String?
+  driverId    String?
+  startsAt    DateTime  @db.Timestamptz(6)
+  endsAt      DateTime  @db.Timestamptz(6)
+  status      String    @default("ACTIVE")
+  createdById String
+  releasedAt  DateTime? @db.Timestamptz(6)
+  releaseKind String?
+  createdAt   DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(6)
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  request     RentalRequest @relation(fields: [companyId, requestId], references: [companyId, id], onDelete: Restrict)
+  vehicle     Vehicle? @relation(fields: [companyId, vehicleId], references: [companyId, id], onDelete: Restrict)
+  driver      Driver?  @relation(fields: [companyId, driverId], references: [companyId, id], onDelete: Restrict)
+  createdBy   User     @relation("RentalAssignmentCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([companyId, requestId, status])
+  @@index([companyId, vehicleId, status])
+  @@index([companyId, driverId, status])
+}
+
+model RentalCompletion {
+  id                       String    @id @default(cuid())
+  companyId                String
+  requestId                String
+  status                   String    @default("SUBMITTED")
+  actualDepartureAt        DateTime  @db.Timestamptz(6)
+  actualReturnAt           DateTime  @db.Timestamptz(6)
+  vehicleReturnedAt        DateTime  @db.Timestamptz(6)
+  actualDistanceMetres     Int?
+  damageNotes              String?
+  customerFeedback         String?
+  depositReceivedPesewas   Int
+  additionalChargesPesewas Int
+  chargesDescription       String
+  quotedSubtotalPesewas    BigInt
+  submittedById            String
+  decidedById              String?
+  decidedAt                DateTime? @db.Timestamptz(6)
+  decisionReason           String?
+  decisionChargesPesewas   Int?
+  createdAt                DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt                DateTime  @updatedAt @db.Timestamptz(6)
+  company                  Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  request                  RentalRequest @relation(fields: [companyId, requestId], references: [companyId, id], onDelete: Restrict)
+  submittedBy              User     @relation("RentalCompletionSubmitter", fields: [submittedById], references: [id], onDelete: Restrict)
+  decidedBy                User?    @relation("RentalCompletionDecider", fields: [decidedById], references: [id], onDelete: Restrict)
+
+  @@index([companyId, requestId, status])
 }
 
 model DriverPayRule {

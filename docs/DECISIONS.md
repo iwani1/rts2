@@ -979,3 +979,48 @@ phase prompt allows it only once confirmed required.
 3. The FIN-05R estimated margin flows into the finance PDF through the
    dashboard figures the finance report already passes through;
    insufficient-data stays labelled, never dressed up.
+
+## D-089 — Phase 4 rental lifecycle: confirmation, assignment, completion, cancellation (RNT-05..08)
+
+Activates the transitions D-029/D-031/D-032 deliberately left unapproved.
+One transition matrix (`rental-request-transitions.ts`) remains the single
+source of truth; dedicated service functions perform the guarded write
+(lock → matrix → preconditions → side effects → status → history → audit →
+customer notification), and the generic review/decline function cannot
+reach the new targets. All actors need `rental:manage` GLOBAL/COMPANY and
+a reason (matching D-032).
+
+1. **Confirmation (RNT-05), `Under Review → Confirmed`.** Requires: the
+   latest pricing worksheet as the price basis; a recorded customer
+   acceptance (who accepted, when, evidence reference); and the configured
+   deposit policy evaluated — unset blocks, `NOT_REQUIRED` means due 0,
+   `FIXED_AMOUNT`/`PERCENTAGE` (of the worksheet pre-tax subtotal) set the
+   due amount. At `BEFORE_CONFIRMATION` the full deposit plus evidence
+   must be recorded in the confirmation; at `BEFORE_DEPARTURE` the rental
+   confirms with the balance outstanding (never described as paid). A
+   specific vehicle is chosen at confirmation (D-029): same company, not
+   archived, no active safety block, seats ≥ passengers when known. The
+   rental conflict window must be computable (D-027) and the vehicle
+   buffer configured (D-031, fail closed). Confirmation writes an ACTIVE
+   `RentalAssignment` ledger row guarded by PostgreSQL exclusion
+   constraints (§5.1) plus the configured buffer check.
+2. **Assignment (RNT-06), `Confirmed → Assigned`.** A specific ACTIVE
+   driver is committed under the same ledger (driver exclusion constraint,
+   driver buffer fail-closed). Reassignment atomically replaces the ACTIVE
+   row (`REPLACED`) — the ledger plus audit events are the history.
+3. **Completion (RNT-07), two-step.** Staff submit actuals (departure/
+   return timestamps, distance when available, damage notes, customer
+   feedback, an explicit vehicle-return timestamp, deposit received,
+   proposed additional charges with description) as a `RentalCompletion`
+   in `SUBMITTED`; a **different** authorised user approves (may correct
+   the charge amount, recorded) or returns it. Approval moves the request
+   to `Completed` and releases the ledger (`RELEASED`/COMPLETION) —
+   release is never by scheduled time (D-031). The completion states the
+   arithmetic: quoted subtotal + approved charges − deposit received =
+   outstanding; no rental invoice is implied (rental invoicing does not
+   exist yet).
+4. **Cancellation (RNT-08), `Confirmed|Assigned → Cancelled`.** Pre-trip
+   only (before the window starts; afterwards the rental must complete),
+   releasing the ledger (`RELEASED`/CANCELLATION). Enquiry-stage refusal
+   stays the existing `Declined`; customers cancel their own portal
+   requests as before.
