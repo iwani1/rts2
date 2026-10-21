@@ -930,3 +930,22 @@ phase prompt allows it only once confirmed required.
    (independent sign-off, mirroring D-081). Permission
    `payment:reconcile`: SUPER_ADMIN GLOBAL, FINANCE_OFFICER COMPANY,
    OPS_MANAGER READ_ONLY.
+
+## D-086 — FIN-06: driver pay from approved, configurable rules only
+
+1. **No assumed formula.** A `DriverPayRule` is configured per company with
+   an explicit basis (`PER_COMPLETED_TRIP`, `PER_BOARDING`,
+   `FLAT_PER_DAY`), a pesewas rate, effectivity dates, and optional
+   overtime parameters (daily threshold minutes + hourly rate). Rules are
+   drafted, then **activated by a different authorised user**
+   (`DRAFT → ACTIVE → RETIRED`, sequenced history, `driver:pay` permission:
+   FINANCE_OFFICER COMPANY writes, OPS_MANAGER READ_ONLY).
+2. **Payroll runs** snapshot computed lines for a period under one chosen
+   ACTIVE rule: completed trips per driver, their completed (boarded)
+   bookings, active days — all from recorded trips/bookings. Overtime
+   minutes derive from recorded driver START/COMPLETE event timestamps
+   per day beyond the rule's threshold; trips lacking either timestamp
+   are counted as overtime-coverage exclusions, never estimated.
+3. Runs are `OPEN → FINAL`; a different authorised user finalises
+   (recomputed snapshot stored). **CSV export is served only for FINAL
+   runs** — the export is the approved payroll, never a draft estimate.

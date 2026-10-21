@@ -17,6 +17,8 @@ model Company {
   expenses        Expense[]
   paymentProviderEvents PaymentProviderEvent[]
   paymentReconciliations PaymentReconciliation[]
+  driverPayRules DriverPayRule[]
+  driverPayrollRuns DriverPayrollRun[]
   auditEvents     AuditEvent[]
   roleAssignments UserRoleAssignment[]
   vehicles        Vehicle[]
@@ -279,6 +281,10 @@ model User {
   providerEventsApplied        PaymentProviderEvent[]         @relation("ProviderEventApplier")
   reconciliationsCreated       PaymentReconciliation[]      @relation("ReconciliationCreator")
   reconciliationStatusChanges  PaymentReconciliationStatusHistory[] @relation("ReconciliationStatusActor")
+  payRulesCreated              DriverPayRule[]              @relation("PayRuleCreator")
+  payRuleStatusChanges         DriverPayRuleStatusHistory[] @relation("PayRuleStatusActor")
+  payrollRunsCreated           DriverPayrollRun[]           @relation("PayrollRunCreator")
+  payrollRunStatusChanges      DriverPayrollRunStatusHistory[] @relation("PayrollRunStatusActor")
   expenseStatusChanges         ExpenseStatusHistory[]
   contractStatusChanges ContractStatusHistory[]
   corporateInvoiceStatusChanges CorporateInvoiceStatusHistory[]
@@ -886,6 +892,88 @@ model PaymentReconciliationStatusHistory {
 
   @@unique([companyId, reconciliationId, sequence])
   @@index([companyId, reconciliationId, createdAt])
+}
+
+model DriverPayRule {
+  id                            String    @id @default(cuid())
+  companyId                     String
+  reference                     String
+  name                          String
+  basis                         String
+  ratePesewas                   Int
+  overtimeThresholdMinutesPerDay Int?
+  overtimeRatePesewasPerHour    Int?
+  effectiveFrom                 DateTime  @db.Date
+  effectiveTo                   DateTime? @db.Date
+  status                        String    @default("DRAFT")
+  createdById                   String
+  createdAt                     DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt                     DateTime  @updatedAt @db.Timestamptz(6)
+  company                       Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  createdBy                     User      @relation("PayRuleCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  statusHistory                 DriverPayRuleStatusHistory[]
+  payrollRuns                   DriverPayrollRun[]
+
+  @@unique([companyId, id])
+  @@unique([companyId, reference])
+  @@index([companyId, status, effectiveFrom])
+}
+
+model DriverPayRuleStatusHistory {
+  id         String   @id @default(cuid())
+  companyId  String
+  ruleId     String
+  sequence   Int
+  actorId    String
+  fromStatus String?
+  toStatus   String
+  reason     String
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  rule       DriverPayRule @relation(fields: [companyId, ruleId], references: [companyId, id], onDelete: Restrict)
+  actor      User     @relation("PayRuleStatusActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, ruleId, sequence])
+  @@index([companyId, ruleId, createdAt])
+}
+
+model DriverPayrollRun {
+  id          String   @id @default(cuid())
+  companyId   String
+  reference   String
+  ruleId      String
+  periodStart DateTime @db.Date
+  periodEnd   DateTime @db.Date
+  status      String   @default("OPEN")
+  lines       Json
+  totals      Json
+  createdById String
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  rule        DriverPayRule @relation(fields: [companyId, ruleId], references: [companyId, id], onDelete: Restrict)
+  createdBy   User     @relation("PayrollRunCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  statusHistory DriverPayrollRunStatusHistory[]
+
+  @@unique([companyId, id])
+  @@unique([companyId, reference])
+  @@index([companyId, status, createdAt])
+}
+
+model DriverPayrollRunStatusHistory {
+  id         String   @id @default(cuid())
+  companyId  String
+  runId      String
+  sequence   Int
+  actorId    String
+  fromStatus String?
+  toStatus   String
+  reason     String
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  run        DriverPayrollRun @relation(fields: [companyId, runId], references: [companyId, id], onDelete: Restrict)
+  actor      User     @relation("PayrollRunStatusActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, runId, sequence])
+  @@index([companyId, runId, createdAt])
 }
 
 model Expense {
