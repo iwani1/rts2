@@ -21,9 +21,19 @@ describe('rental request report', () => {
     const sourceGroups = [{ requestSource: 'Phone', _count: { _all: 5 } }, { requestSource: null, _count: { _all: 2 } }];
     const groupBy = vi.fn().mockResolvedValueOnce(statusGroups).mockResolvedValueOnce(sourceGroups);
     const historyCount = vi.fn().mockResolvedValue(3);
+    const invoiceGroupBy = vi.fn().mockResolvedValue([
+      { status: 'ISSUED', _count: { _all: 1 }, _sum: { totalPesewas: 9900 } },
+      { status: 'PAID', _count: { _all: 1 }, _sum: { totalPesewas: 9000 } },
+      { status: 'DRAFT', _count: { _all: 1 }, _sum: { totalPesewas: 5000 } },
+    ]);
+    const invoiceFindMany = vi.fn().mockResolvedValue([{ id: 'inv-2', totalPesewas: 9900 }]);
+    const paymentAggregate = vi.fn().mockResolvedValue({ _sum: { amountPesewas: 9100 } });
+    const paymentGroupBy = vi.fn().mockResolvedValue([{ invoiceId: 'inv-2', _sum: { amountPesewas: 100 } }]);
     const tx = {
       company: { findUnique: vi.fn().mockResolvedValue({ status: 'ACTIVE' }) }, rentalRequest: { groupBy },
       rentalRequestStatusHistory: { count: historyCount },
+      rentalInvoice: { groupBy: invoiceGroupBy, findMany: invoiceFindMany },
+      rentalInvoicePayment: { aggregate: paymentAggregate, groupBy: paymentGroupBy },
     };
     const transaction = vi.fn((callback: (client: typeof tx) => Promise<unknown>) => callback(tx));
     mocks.getPrisma.mockReturnValue({ $transaction: transaction });
@@ -33,7 +43,11 @@ describe('rental request report', () => {
       statuses: [{ status: 'Draft', count: 4 }, { status: 'Submitted', count: 2 }, { status: 'Under Review', count: 1 }],
       sources: [{ source: 'Phone', count: 5 }, { source: 'Not recorded', count: 2 }],
     });
-    expect(report.unavailableMetrics).toHaveLength(5);
+    expect(report.invoicing).toEqual({
+      recognizedRevenuePesewas: 18900, paymentsReceivedPesewas: 9100, outstandingPesewas: 9800,
+      standingInvoiceCount: 2, draftInvoiceCount: 1, voidedInvoiceCount: 0, reconciles: true,
+    });
+    expect(report.unavailableMetrics).toHaveLength(3);
     expect(groupBy).toHaveBeenNthCalledWith(1, expect.objectContaining({ by: ['status'], where: { companyId: 'company-1' } }));
     expect(groupBy).toHaveBeenNthCalledWith(2, expect.objectContaining({ by: ['requestSource'], where: { companyId: 'company-1' } }));
     expect(historyCount).toHaveBeenCalledWith({ where: { companyId: 'company-1', fromStatus: 'Draft', toStatus: 'Submitted' } });

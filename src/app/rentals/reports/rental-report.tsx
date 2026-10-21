@@ -7,8 +7,21 @@ type Report = {
   submittedRequestsEver: number;
   statuses: Array<{ status: string; count: number }>;
   sources: Array<{ source: string; count: number }>;
+  invoicing: {
+    recognizedRevenuePesewas: number;
+    paymentsReceivedPesewas: number;
+    outstandingPesewas: number;
+    standingInvoiceCount: number;
+    draftInvoiceCount: number;
+    voidedInvoiceCount: number;
+    reconciles: boolean;
+  };
   unavailableMetrics: Array<{ metric: string; reason: string }>;
 };
+
+function cedis(pesewas: number) {
+  return `GH₵ ${(pesewas / 100).toFixed(2)}`;
+}
 
 const reportTime = new Intl.DateTimeFormat('en-GH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Accra' });
 
@@ -31,11 +44,24 @@ export function RentalReport({ report }: { report: Report }) {
         <h3>Recorded request sources</h3>
         {report.sources.length === 0 ? <p className="muted">No request-source records.</p> : <ul>{report.sources.map((item) => <li key={item.source}><strong>{item.source}:</strong> {item.count}</li>)}</ul>}
       </section>
+      <section className="fleet-list-panel" aria-labelledby="rental-invoicing-title">
+        <div className="fleet-list-heading"><div><h2 id="rental-invoicing-title">Rental invoicing (all time)</h2><p className="muted">From the rental invoice ledger. Revenue is recognised on issue (D-091); quotation values are never revenue.</p></div></div>
+        <ul>
+          <li><strong>Recognised rental revenue:</strong> {cedis(report.invoicing.recognizedRevenuePesewas)} across {report.invoicing.standingInvoiceCount} issued invoice(s)</li>
+          <li><strong>Payments received:</strong> {cedis(report.invoicing.paymentsReceivedPesewas)}</li>
+          <li><strong>Outstanding:</strong> {cedis(report.invoicing.outstandingPesewas)}</li>
+          <li><strong>Draft invoices:</strong> {report.invoicing.draftInvoiceCount} (pipeline, not revenue)</li>
+          <li><strong>Voided invoices:</strong> {report.invoicing.voidedInvoiceCount} (excluded)</li>
+        </ul>
+        <p className="muted">{report.invoicing.reconciles
+          ? 'Revenue = payments + outstanding on this ledger.'
+          : 'Warning: revenue does not equal payments + outstanding on this ledger; investigate before relying on these figures.'}</p>
+      </section>
       <section className="fleet-list-panel" aria-labelledby="unavailable-metrics-title">
         <div className="fleet-list-heading"><div><h2 id="unavailable-metrics-title">Metrics not available yet</h2><p className="muted">These are shown as unavailable, not as zero; the supporting lifecycle or financial records do not exist yet.</p></div></div>
         <ul>{report.unavailableMetrics.map((item) => <li key={item.metric}><strong>{item.metric}:</strong> {item.reason}</li>)}</ul>
       </section>
-      <p className="fleet-limits">This snapshot is all-time and counts persisted rental request records only. It is not a quotation, revenue, payment, utilization, or cancellation report. No financial or operational values are inferred.</p>
+      <p className="fleet-limits">This snapshot is all-time. Quotation outcomes, utilisation and cancellation breakdowns are not computed here. No financial or operational values are inferred.</p>
     </div>
   </main>;
 }
