@@ -38,6 +38,7 @@ model Company {
   driverEvents          DriverEvent[]
   corporateInvoices     CorporateInvoice[]
   userClientBindings    UserClientBinding[]
+  passengerFeedback     PassengerFeedback[]
 }
 
 model Client {
@@ -185,9 +186,12 @@ model Employee {
   archivedAt              DateTime? @db.Timestamptz(6)
   createdAt               DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt               DateTime  @updatedAt @db.Timestamptz(6)
+  userId                  String?   @unique
+  linkedUser              User?     @relation("PassengerAccount", fields: [userId], references: [id], onDelete: Restrict)
   company                 Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
   client                  Client    @relation(fields: [companyId, clientId], references: [companyId, id], onDelete: Restrict)
   bookings                Booking[]
+  passengerFeedback       PassengerFeedback[]
 
   @@unique([companyId, id])
   @@unique([companyId, reference])
@@ -266,6 +270,7 @@ model User {
   bookingStatusChanges BookingStatusHistory[]
   tripStatusChanges TripStatusHistory[]
   driverAccount     Driver?                @relation("DriverAccount")
+  employeeAccount   Employee?              @relation("PassengerAccount")
   driverEvents      DriverEvent[]
   clientBindings    UserClientBinding[]    @relation("BindingUser")
   bindingsMade      UserClientBinding[]    @relation("BindingActor")
@@ -652,6 +657,7 @@ model Booking {
   pickupLocation   Location? @relation("BookingPickup", fields: [companyId, pickupLocationId], references: [companyId, id], onDelete: Restrict)
   dropoffLocation  Location? @relation("BookingDropoff", fields: [companyId, dropoffLocationId], references: [companyId, id], onDelete: Restrict)
   statusHistory    BookingStatusHistory[]
+  passengerFeedback PassengerFeedback[]
 
   @@unique([companyId, id])
   @@unique([companyId, reference])
@@ -779,6 +785,22 @@ model InvoicePayment {
   recordedBy    User     @relation(fields: [recordedById], references: [id], onDelete: Restrict)
 
   @@index([companyId, invoiceId, createdAt])
+}
+
+model PassengerFeedback {
+  id        String   @id @default(cuid())
+  companyId String
+  bookingId String
+  employeeId String
+  rating    Int?
+  comment   String   @db.VarChar(1000)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  booking   Booking  @relation(fields: [companyId, bookingId], references: [companyId, id], onDelete: Restrict)
+  employee  Employee @relation(fields: [companyId, employeeId], references: [companyId, id], onDelete: Restrict)
+
+  @@unique([companyId, bookingId])
+  @@index([companyId, employeeId, createdAt])
 }
 
 model UserClientBinding {

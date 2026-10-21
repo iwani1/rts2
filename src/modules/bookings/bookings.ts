@@ -218,6 +218,27 @@ export async function createBooking(input: unknown, actorId: string, companyIdIn
   const data = bookingRequestSchema.parse(input);
   const companyId = companyIdSchema.parse(companyIdInput);
   await accessFor(actorId, companyId);
+  return executeBookingCreation(data, actorId, companyId);
+}
+
+/**
+ * PAX-01 (D-065): the passenger self-service entry point. The caller
+ * (passenger service) has already resolved the caller's audited employee
+ * link, so this runs the identical creation core — eligibility, duplicate
+ * journey, contract policy and creation cut-off — for that employee only.
+ * The employeeId in the payload is ignored and replaced by the linked one.
+ */
+export async function createBookingForLinkedEmployee(
+  input: unknown, actorId: string, companyIdInput: string, linkedEmployeeId: string,
+) {
+  const raw = bookingRequestSchema.parse({ ...(input as Record<string, unknown>), employeeId: linkedEmployeeId });
+  const companyId = companyIdSchema.parse(companyIdInput);
+  return executeBookingCreation(raw, actorId, companyId);
+}
+
+type BookingRequestData = ReturnType<typeof bookingRequestSchema.parse>;
+
+async function executeBookingCreation(data: BookingRequestData, actorId: string, companyId: string) {
   const prisma = getPrisma();
   const today = accraDate.format(new Date());
   if (data.journeyDate < today) {

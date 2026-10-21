@@ -97,3 +97,27 @@ executes the whole suite, including `reports.integration.test.ts`, `csv.test.ts`
    is refused. Exports must refuse in exactly the same cases as the pages.
 5. Try a window longer than 366 days or an inverted range: both reports show a validation
    message instead of data.
+
+---
+
+# Phase 1C verification — passenger portal (PAX-01; D-065)
+
+Status: **SLICE BUILT — Fedora run required.** `./scripts/verify-phase1c.sh` now applies
+**24 migrations** and includes `passenger.integration.test.ts` plus the journey-status unit
+tests.
+
+## Manual workflow (browser)
+
+1. As Super Admin, create a login for a test passenger and assign the **Passenger** role
+   (Admin → user roles). Open **Employees**, edit the passenger's employee record, and use the
+   new **Passenger portal login** section to link the login (with a reason).
+2. Sign in as the passenger: the home page now shows **My transport**. Confirm the profile shows
+   approved pickup/drop-off points but no home address or accessibility notes.
+3. Request a journey for a future date: it appears under Upcoming as **Requested**. As an
+   Operations Manager, accept it in Bookings: the passenger now sees **Confirmed**. Cancel it
+   from the portal (reason required): it moves to history as **Cancelled**.
+4. Request another journey, have dispatch assign it to a trip and the driver start/board/complete
+   it: the passenger status moves Assigned to trip → Driver en route → Picked up → Completed,
+   and cancelling is refused once assigned. After completion, record feedback with a rating;
+   a second feedback attempt is refused.
+5. Back in Employees, unlink the login: the passenger portal returns to the "not linked" notice.

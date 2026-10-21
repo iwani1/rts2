@@ -431,3 +431,31 @@
   `richie-tms-phase-prompts.md` (workflows A/B/C/F visible in reports; KPIs matching
   `docs/KPIS.md` with coverage; permission-scoped exports). Recorded for ratification at the
   Phase 1C gate.
+
+## D-065 — Passenger portal identity, self-service bookings and feedback (PAX-01)
+- **Decision:** A passenger login is bound to exactly one employee record by an explicit, audited
+  link — `Employee.userId` (unique, nullable) with `linkPassengerAccount` /
+  `unlinkPassengerAccount` (`employee:manage` GLOBAL/COMPANY; the user must be ACTIVE and hold a
+  PASSENGER assignment in the company; one user ↔ one employee; unlink first to re-link),
+  mirroring the driver account link and D-059's fail-closed binding rule. Portal services resolve
+  the caller only through that link (`PassengerNotLinkedError` otherwise, including archived
+  employees) and never accept an employee id from the client. The portal shows the passenger's
+  own profile projection (name, client, department, work location, shift, approved pickup/drop-off
+  points, eligibility — never home address, accessibility needs or internal notes), their
+  transport arrangements (active contracts and the client's routes, i.e. the approved options),
+  and their journeys with passenger-facing statuses mapped from booking + trip state: Requested
+  (Pending), Confirmed (Accepted), Assigned to trip, Driver en route (trip Dispatched/In
+  Progress), Delayed (trip Delayed while assigned), Picked up (Boarded), Completed, Cancelled
+  (Cancelled/Rejected). The live map/ETA is not shown (PAX-02 is Phase 2). Journey requests reuse
+  the booking creation core, so eligibility, duplicate-journey, contract-policy and creation
+  cut-off rules apply identically; the employee is always the linked record. Passengers may
+  cancel their own booking only while it is Pending or Accepted — once Assigned, cancellation is
+  an operations action (dispatch/no-show flows), and the portal says so. Feedback is a new
+  append-only `PassengerFeedback` record (optional 1–5 rating, required comment), one per
+  booking, submittable only for the passenger's own Completed journeys. No free-text "transport
+  policy" setting exists, so the portal presents the factual arrangements instead of inventing
+  policy text.
+- **Source:** PAX-01 in `richie-tms-standing-brief.md` §7 (profile, approved options, request
+  eligible journeys, references/status, pickup time and location, history, cancel eligible
+  bookings, feedback, company transport policy; the eight named journey states). Recorded for
+  ratification at the Phase 1C gate.

@@ -72,7 +72,7 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | DRV-03 | Not Started | No feature implementation; Phase 1+ approval required. |
 | DRV-04 | Tested | Idempotent driver event API (replay/conflict) per D-055. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
 | DRV-05 | Not Started | No feature implementation; Phase 1+ approval required. |
-| PAX-01 | Not Started | No feature implementation; Phase 1+ approval required. |
+| PAX-01 | In Progress | Passenger portal per D-065: audited passenger↔employee link (`Employee.userId`, link/unlink in the employee editor), own-profile projection, transport arrangements (active contracts + client routes), journey requests through the shared booking creation core, portal cancellation while Pending/Accepted, passenger-facing journey states, append-only feedback on Completed journeys (migration `20261021120000_passenger_portal`). Sandbox-verified 2026-10-21 (unit 390/390 incl. status-mapper suite; 24/24 migrations on PGlite with guard checks); Fedora verification pending. |
 | PAX-02 | Not Started | No feature implementation; Phase 1+ approval required. |
 | INC-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | INC-02 | Not Started | No feature implementation; Phase 1+ approval required. |
@@ -764,3 +764,32 @@ Third Phase 1C slice, built under the owner's Phase 1C go-ahead. D-064 is record
   Fedora run pending.
 - **Remaining Phase 1C scope:** PAX-01 passenger portal, RNT-09 rental customer portal, role
   dashboards and the hardening pass, per `richie-tms-phase-prompts.md`.
+
+## Phase 1C — passenger portal (PAX-01; D-065; 2026-10-21)
+
+Fourth Phase 1C slice, built under the owner's Phase 1C go-ahead. D-065 is recorded in
+`docs/DECISIONS.md` for ratification at the Phase 1C gate.
+
+- **Identity (migration `20261021120000_passenger_portal`, 24 total):** `Employee.userId` unique
+  nullable link; `linkPassengerAccount`/`unlinkPassengerAccount` audited, manager-only
+  (`employee:manage` GLOBAL/COMPANY), login must be ACTIVE with a PASSENGER assignment; the
+  employee editor gained a "Passenger portal login" section listing unlinked passenger logins.
+- **Portal (`/passenger`, `src/modules/passenger/`):** every read/action resolves the caller via
+  the link only. Own-profile projection (no home address/accessibility/notes), arrangements
+  (active contracts + client routes as approved options), upcoming/history journeys with the
+  passenger status vocabulary (Requested, Confirmed, Assigned to trip, Driver en route, Delayed,
+  Picked up, Completed, Cancelled) mapped by a pure, unit-tested function. Pickup time/location,
+  trip reference and vehicle registration shown; no live map/ETA (PAX-02 is Phase 2).
+- **Actions:** journey requests go through the extracted booking creation core (eligibility,
+  duplicate journey, contract policy, creation cut-off all apply; the employee is always the
+  linked record — `createBookingForLinkedEmployee`); cancellation is allowed only while
+  Pending/Accepted, after which the portal directs the passenger to operations; feedback is an
+  append-only `PassengerFeedback` row (optional 1–5 rating, required comment, DB trigger +
+  rating CHECK), once per booking, Completed journeys only.
+- **Tests:** unit `journey-status.test.ts`; integration `passenger.integration.test.ts` (5 tests:
+  link rules incl. role gate and unlink/re-link, unlinked/cross-company denial, request rules
+  incl. duplicate/past-date/eligibility, cancel ownership and assignment guard, full
+  dispatch-to-completion status progression with one-time feedback). Sandbox PGlite proof: 24/24
+  migrations, unique link index, append-only trigger and rating CHECK verified. Fedora run pending.
+- **Remaining Phase 1C scope:** RNT-09 rental customer portal, role-specific dashboards and the
+  hardening pass, per `richie-tms-phase-prompts.md`.

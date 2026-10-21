@@ -13,8 +13,11 @@ function value(form: FormData, name: string) {
   return typeof entry === 'string' ? entry.trim() : '';
 }
 
-export function EmployeeManager({ companyId, clients, employee }: {
+type PassengerUserOption = { id: string; label: string };
+
+export function EmployeeManager({ companyId, clients, employee, passengerUsers = [] }: {
   companyId: string; clients: ClientOption[]; employee?: EmployeeRecord;
+  passengerUsers?: PassengerUserOption[];
 }) {
   const router = useRouter();
   const [interactive, setInteractive] = useState(false);
@@ -69,6 +72,55 @@ export function EmployeeManager({ companyId, clients, employee }: {
       if (!employee) targetForm.reset();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Unable to save this employee record.');
+    } finally {
+      setPending(false);
+    }
+  }
+
+  const [linkUserId, setLinkUserId] = useState('');
+  const [linkReason, setLinkReason] = useState('');
+
+  async function linkPassenger(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!employee) return;
+    setPending(true);
+    setError('');
+    setNotice('');
+    try {
+      const response = await fetch(`/api/companies/${encodeURIComponent(companyId)}/employees/${encodeURIComponent(employee.id)}/passenger-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: linkUserId, reason: linkReason }),
+      });
+      const body = await response.json() as { error?: string; message?: string };
+      if (!response.ok) throw new Error(body.message || body.error || 'Unable to link this passenger login.');
+      setNotice('Passenger login linked. The user can now open My transport.');
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Unable to link this passenger login.');
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function unlinkPassenger(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!employee) return;
+    setPending(true);
+    setError('');
+    setNotice('');
+    try {
+      const response = await fetch(`/api/companies/${encodeURIComponent(companyId)}/employees/${encodeURIComponent(employee.id)}/passenger-unlink`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: linkReason }),
+      });
+      const body = await response.json() as { error?: string; message?: string };
+      if (!response.ok) throw new Error(body.message || body.error || 'Unable to unlink this passenger login.');
+      setNotice('Passenger login unlinked.');
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Unable to unlink this passenger login.');
     } finally {
       setPending(false);
     }
@@ -201,6 +253,29 @@ export function EmployeeManager({ companyId, clients, employee }: {
       <p className="form-help">The reason is recorded in audit history; do not include employee personal details in it.</p>
       <div className="vehicle-form-actions"><button className="button-primary" type="submit" disabled={!interactive || pending}>{pending ? 'Saving…' : employee ? 'Save changes' : 'Add employee'}</button></div>
     </form>
+    {employee && <details className="vehicle-archive" open>
+      <summary>Passenger portal login</summary>
+      {employee.linkedUserId ? <>
+        <p className="form-help">This record is linked to a passenger login (My transport). Unlink before linking a different login.</p>
+        <form onSubmit={unlinkPassenger}>
+          <label>Reason for unlinking<input value={linkReason} onChange={(event) => setLinkReason(event.target.value)} required minLength={8} maxLength={500} /></label>
+          <button type="submit" className="button-danger" disabled={!interactive || pending}>{pending ? 'Working…' : 'Unlink passenger login'}</button>
+        </form>
+      </> : <>
+        <p className="form-help">Link this record to a login that holds the Passenger role so the employee can request journeys and record feedback in My transport.</p>
+        <form onSubmit={linkPassenger}>
+          <label>Passenger login
+            <select required value={linkUserId} onChange={(event) => setLinkUserId(event.target.value)}>
+              <option value="" disabled>Select a passenger login</option>
+              {passengerUsers.map((user) => <option key={user.id} value={user.id}>{user.label}</option>)}
+            </select>
+          </label>
+          <label>Reason for linking<input value={linkReason} onChange={(event) => setLinkReason(event.target.value)} required minLength={8} maxLength={500} /></label>
+          <button type="submit" className="button-primary" disabled={!interactive || pending || passengerUsers.length === 0}>{pending ? 'Working…' : 'Link passenger login'}</button>
+          {passengerUsers.length === 0 && <p className="form-help">No unlinked Passenger logins exist yet. Create the login and assign the Passenger role first.</p>}
+        </form>
+      </>}
+    </details>}
     {employee && <details className="vehicle-archive">
       <summary>Archive this employee</summary>
       <p className="form-help">Archiving hides the record from the active register without deleting its retained history.</p>

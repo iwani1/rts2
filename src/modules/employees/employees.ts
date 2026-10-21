@@ -66,17 +66,18 @@ export type EmployeeRecord = {
   transportEligible: boolean | null;
   accessibilityNeeds: string | null;
   notes: string | null;
+  linkedUserId: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
 
-type EmployeeDbShape = Omit<EmployeeRecord, 'clientName'> & {
+type EmployeeDbShape = Omit<EmployeeRecord, 'clientName' | 'linkedUserId'> & { userId: string | null;
   client: { name: string };
 };
 
 function presentEmployee(row: EmployeeDbShape): EmployeeRecord {
-  const { client, ...rest } = row;
-  return { ...rest, clientName: client.name };
+  const { client, userId, ...rest } = row;
+  return { ...rest, clientName: client.name, linkedUserId: userId };
 }
 
 function toEmployeeData(input: z.infer<typeof employeeRequestSchema>) {
