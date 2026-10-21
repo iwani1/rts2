@@ -239,7 +239,7 @@ describe('staff transport, fleet and financial reports with exports (RPT-02/03/0
       financeId, companyId,
     )).invoice;
     expect(invoice.totalPesewas).toBe(40000);
-    await transitionCorporateInvoice({ toStatus: 'ISSUED', reason: 'Issuing report invoice' }, financeId, companyId, invoice.id);
+    await transitionCorporateInvoice({ toStatus: 'ISSUED', dueDate: '2026-12-31', reason: 'Issuing report invoice' }, financeId, companyId, invoice.id);
     await recordInvoicePayment(
       {
         amountPesewas: 15000, method: 'Bank transfer', reference: 'FT-RPT-1',

@@ -153,6 +153,12 @@ describe('corporate invoice lifecycle and payments with PostgreSQL persistence (
     await prisma.$disconnect();
   });
 
+  it('refuses to issue without an explicit due date (D-090/5C)', async () => {
+    await expect(transitionCorporateInvoice(
+      { toStatus: 'ISSUED', reason: 'Issuing invoice A without a due date' }, financeId, companyId, invoiceAId,
+    )).rejects.toBeInstanceOf(InvoicePolicyError);
+  });
+
   it('issues an invoice and auto-marks it PAID when payments reach the total', async () => {
     const issued = await transitionCorporateInvoice(
       { toStatus: 'ISSUED', dueDate: '2026-12-31', reason: 'Issuing invoice A to the client' }, financeId, companyId, invoiceAId,

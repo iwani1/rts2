@@ -136,7 +136,7 @@ describe('FIN-04 provider webhook inbox with PostgreSQL (D-084)', () => {
     invoiceId = generated.invoice.id;
     invoiceReference = generated.invoice.reference;
     await transitionCorporateInvoice(
-      { toStatus: 'ISSUED', reason: 'Issuing invoice to the client' }, financeId, companyId, invoiceId,
+      { toStatus: 'ISSUED', dueDate: '2026-12-31', reason: 'Issuing invoice to the client' }, financeId, companyId, invoiceId,
     );
   });
 

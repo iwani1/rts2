@@ -120,7 +120,7 @@ describe('FIN-08 reconciliation runs with PostgreSQL (D-085)', () => {
     invoiceId = generated.invoice.id;
     invoiceReference = generated.invoice.reference;
     await transitionCorporateInvoice(
-      { toStatus: 'ISSUED', reason: 'Issuing invoice to the client' }, creatorId, companyId, invoiceId,
+      { toStatus: 'ISSUED', dueDate: '2026-12-31', reason: 'Issuing invoice to the client' }, creatorId, companyId, invoiceId,
     );
   });
 
