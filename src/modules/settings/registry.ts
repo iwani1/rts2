@@ -16,6 +16,7 @@ export const settingRegistry = [
   { key: 'fleet.driver_between_job_buffer_minutes', label: 'Driver between-job buffer (minutes)', category: 'fleet', blockedFeatures: ['RNT-03'] },
   { key: 'reports.on_time_threshold', label: 'On-time reporting threshold', category: 'operations', blockedFeatures: ['RPT-01'] },
   { key: 'contracts.inactive_booking_policy', label: 'Booking policy for expired or suspended contracts', category: 'contracts', blockedFeatures: ['BKG-01'] },
+  { key: 'bookings.creation_cutoff', label: 'Booking creation cut-off', category: 'bookings', blockedFeatures: ['BKG-05'] },
   { key: 'trips.boarding_code_policy', label: 'Boarding-code policy', category: 'dispatch', blockedFeatures: ['DSP-03', 'PAX-01'] },
 ] as const;
 

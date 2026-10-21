@@ -150,3 +150,17 @@ Until resolved, settings remain unset and dependent actions must be blocked with
   casts are removed); DRV-03/DRV-05 formally descoped for Phase 1B; DRAFT-only invoice lifecycle
   confirmed. Slice statuses flipped to Tested in `docs/PROGRESS.md`. Remaining before gate closure:
   the owner-run E2E pass on a separate fresh `richie_tms_e2e_phase1b_test` database.
+
+## Registry-row insertion correction (Fedora run at `b51778c`, 2026-10-21)
+- The gate commit removed the `as SettingKey` casts but the companion edit inserting the two approved
+  rows into `settingRegistry` itself was absent from that commit's diff (only the 2 constant lines
+  changed), so typecheck regressed with TS2322 at `registry.ts:44-45` — the exact signal that step is
+  meant to catch. The rows (`bookings.creation_cutoff` → category `bookings`, BKG-05;
+  `finance.corporate_rates` → category `finance`, FIN-02) are now inserted; the D-060 ratification is
+  otherwise unchanged. Lesson: verify scripted multi-part edits against the final `git diff --stat`
+  before committing, not just per-edit success messages.
+- The E2E attempts in the same session did not reach the app: the E2E database password in
+  `TEST_DATABASE_URL` was not the local `tms` password (28P01 auth failure at migrate/bootstrap), so
+  the E2E admin was never created, and the literal placeholder `AUTH_SECRET` (30 chars) also fails the
+  32+ character gate. No secrets are recorded here or needed in chat: the correct password is the one
+  in the repo's local `.env` used by `podman compose` (the same one `verify-phase1b.sh` derives).
