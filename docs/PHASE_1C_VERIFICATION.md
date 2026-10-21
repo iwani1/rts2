@@ -20,10 +20,14 @@ migrations**, full typecheck/lint/unit/integration, matching the later
 phase scripts. Counts quoted in the sections below (23–25 migrations,
 unit 375/375, integration 111/111) are historical, from build time.
 
-**Formal closing run:** `./scripts/verify-phase1c.sh` — pending owner
-execution at the time of this note. When it passes, say so in
-`docs/PROGRESS.md` and this record is closed. Browser checks for all
-Phase 1C features live in `docs/MANUAL_WALKTHROUGH.md` (Parts B–E).
+**Formal closing run: PASSED on Fedora 2026-10-21 at `4c3ec2e`**
+(database `richie_tms_p1c_20261021230648_test`, log
+`verification-logs/phase1c-20261021230648.log`): 42/42 migrations,
+typecheck + lint clean (0 errors), unit 491/491, integration 202/202
+across 48 suites. The Phase 1C automated record is **closed**; the
+browser checks for all Phase 1C features live in
+`docs/MANUAL_WALKTHROUGH.md` (Parts B–E) and remain part of the
+manual acceptance pass.
 
 **"Known limits" below are also historical:** overdue tracking
 landed as dashboard ageing (D-090/5C), PDF export as RPT-05 (Phase 3),

@@ -1317,3 +1317,10 @@ bookings/portals → corporate invoicing → finance depth → rentals end
 to end → riders/audit → deferred Paystack live test) with expected
 outcomes per step and a sign-off table. The per-phase verification
 docs now point at it. Running it remains the owner's next step.
+
+**Phase 1C formal closing verification PASSED 2026-10-21 at `4c3ec2e`:**
+the refreshed `verify-phase1c.sh` ran the current tree green — 42/42
+migrations, unit 491/491, integration 202/202 (48 suites). Phase 1C's
+previously un-gated slices (FIN-07, RPT-02/03/04, PAX-01, RNT-09,
+D-067) are now formally closed; every phase gate (1B–6) has an
+automated Fedora pass on record.
