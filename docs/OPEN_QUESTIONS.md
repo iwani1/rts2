@@ -250,3 +250,11 @@ docs/PROGRESS.md and docs/PHASE_1C_VERIFICATION.md. For ratification at the Phas
   exist (FIN-05, Phase 3) — confirm no estimated margin should ever be displayed; invoices carry
   no due dates, so outstanding is grouped by client, not aged — confirm whether invoice due dates
   (and ageing buckets) should be added in a later phase.
+
+- **Phase 2 construction completed 2026-10-21** (owner: "Start Phase 2 now"): NTF-01/02/03,
+  INC-01/02, DRV-03, DRV-05, MNT-03, AUTH-06 and GPS-01 (interface + Not-configured state) are
+  built and pushed (HEAD `8ec7088`). Decisions D-068–D-077 await ratification at the Phase 2
+  gate, and the Phase 1C Fedora run (`./scripts/verify-phase1c.sh`) is still outstanding in
+  parallel — neither gate is claimed as passed until the Fedora results exist. Next owner
+  action: `./scripts/verify-phase2.sh` (fresh disposable DB, 32 migrations) plus the manual
+  workflows in `docs/PHASE_2_VERIFICATION.md`.
