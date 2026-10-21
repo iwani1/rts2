@@ -132,3 +132,19 @@ Status: **SLICE BUILT — Fedora run required.** The verification script include
    the correct code boards them once; without a code, boarding asks for a
    manual-verification reason. With the policy unset/`DISABLED`, tap-to-board
    works exactly as before.
+
+# Phase 2 verification — driver offline queue (DRV-05; D-074)
+
+Status: **SLICE BUILT — Fedora run required.** No new migrations. The queue
+logic is unit-tested (`driver/offline-queue.test.ts`); the server idempotency
+it relies on is covered by the existing driver integration suite.
+
+## Manual workflow (browser)
+
+1. Open **My trips** on a phone (or devtools with network throttling set to
+   Offline). Start a trip or board a passenger: the action reports "saved on
+   this phone (pending sync)" and appears in **Events on this phone**.
+2. Restore connectivity (or press **Sync now**): the panel confirms the events
+   and clears; the trip reflects them after refresh.
+3. Repeat the same event online afterwards (retry the sync): the server
+   answers duplicate and nothing is applied twice.

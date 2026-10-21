@@ -10,6 +10,7 @@ import {
 } from '@/modules/driver/driver';
 import { DriverActions } from './driver-actions';
 import { DriverIncidentReportForm } from './incident-report-form';
+import { DriverSyncPanel } from './driver-sync-panel';
 
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -147,6 +148,8 @@ export default async function DriverPage({
           ) : null}
         </>
       )}
+
+      <DriverSyncPanel />
 
       {!notice ? (
         <DriverIncidentReportForm

@@ -630,3 +630,28 @@ Date: 2026-10-21. Status: decided for Phase 2 construction; recorded for ratific
 4. **Placement.** Verification happens inside the existing idempotent driver
    event (`BOARD`), so DRV-05 offline retries keep their exactly-once
    guarantee.
+
+## D-074 — Driver offline queue: events only, server stays the judge (DRV-05)
+
+Date: 2026-10-21. Status: decided for Phase 2 construction; recorded for ratification at the Phase 2 gate.
+
+1. **Scope — exactly these actions work offline:** the driver trip events
+   (`START`, `DELAY`, `RESUME`, `INTERRUPT`, `COMPLETE`, `BOARD`, `NO_SHOW`,
+   `REPORT_DEFECT`) — everything that already flows through the idempotent
+   `postDriverEvent`. Incident reports, settings, and every staff action still
+   require connectivity. No service worker or app-shell caching is introduced;
+   pages themselves need one successful load.
+2. **Queue.** When a send fails at the network layer, the event (with the
+   idempotency key generated once for that tap) is stored in `localStorage` on
+   the phone and the driver sees "pending sync". Validation answers from the
+   server are shown immediately and never queued — they need the driver.
+3. **Sync.** On page load, on the browser `online` event, and on demand
+   ("Sync now"), queued events replay in order. Server-confirmed events
+   (including `duplicate: true` replays) drop off the queue. A server conflict
+   (same key, different event — 409) or rejection (400) parks the entry as
+   conflict/failed with the server's message until the driver dismisses it;
+   nothing is silently retried or dropped.
+4. **Identity.** Queue entries carry no credentials. At sync time the server
+   applies the event under whoever is signed in and enforces trip ownership —
+   on a shared phone, another driver's entries fail visibly rather than
+   applying under the wrong name.

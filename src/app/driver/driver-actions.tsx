@@ -2,12 +2,17 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { enqueueEvent } from './offline-queue';
 
 type ManifestEntry = {
   bookingId: string;
   employeeName: string;
   status: string;
 };
+
+class QueuedOfflineError extends Error {
+  constructor() { super('Queued offline'); this.name = 'QueuedOfflineError'; }
+}
 
 const EVENT_TARGETS: Record<string, string> = {
   Planned: '',
@@ -46,19 +51,31 @@ export function DriverActions({
 
   const send = async (eventType: string, booking?: string) => {
     setBusy(true); setError(null); setMessage(null);
+    // DRV-05 (D-074): the key is generated once for this tap and stored
+    // with the queued payload, so an offline retry can never double-apply.
+    const idempotencyKey = crypto.randomUUID();
+    const payload = {
+      eventType,
+      idempotencyKey,
+      reason: reason.trim() || null,
+      bookingId: booking ?? null,
+      notes: eventType === 'COMPLETE' || eventType === 'REPORT_DEFECT' ? (notes.trim() || null) : null,
+      boardingCode: eventType === 'BOARD' && boardingCode.trim() ? boardingCode.trim() : null,
+      manualReason: eventType === 'BOARD' && manualReason.trim() ? manualReason.trim() : null,
+    };
     try {
       const response = await fetch(`/api/companies/${companyId}/driver/trips/${tripId}/events`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventType,
-          idempotencyKey: crypto.randomUUID(),
-          reason: reason.trim() || null,
-          bookingId: booking ?? null,
-          notes: eventType === 'COMPLETE' || eventType === 'REPORT_DEFECT' ? (notes.trim() || null) : null,
-          boardingCode: eventType === 'BOARD' && boardingCode.trim() ? boardingCode.trim() : null,
-          manualReason: eventType === 'BOARD' && manualReason.trim() ? manualReason.trim() : null,
-        }),
+        body: JSON.stringify(payload),
+      }).catch(() => {
+        // Network-layer failure only: queue on this phone for sync. Server
+        // validation answers are shown immediately and never queued.
+        enqueueEvent(window.localStorage, {
+          id: idempotencyKey, companyId, tripId, eventType, payload,
+          queuedAt: new Date().toISOString(), state: 'pending', message: null,
+        });
+        throw new QueuedOfflineError();
       });
       const data: unknown = await response.json().catch(() => null);
       if (!response.ok) {
@@ -73,7 +90,13 @@ export function DriverActions({
       router.push(returnTo);
       router.refresh();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'The event could not be recorded.');
+      if (caught instanceof QueuedOfflineError) {
+        setMessage(`${eventType} saved on this phone (pending sync). It will send automatically when connection returns.`);
+        setReason(''); setNotes(''); setBookingId(''); setBoardingCode(''); setManualReason('');
+        router.refresh();
+      } else {
+        setError(caught instanceof Error ? caught.message : 'The event could not be recorded.');
+      }
     } finally { setBusy(false); }
   };
 
