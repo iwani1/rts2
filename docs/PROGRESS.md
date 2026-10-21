@@ -1335,3 +1335,11 @@ executable backup/restore scripts with the documented drill.
 Sandbox: unit green, `next build` compiles, scripts syntax-checked.
 Fedora gate: `scripts/verify-phase7.sh` (42 migrations + step 8/8
 container smoke) — see `docs/PHASE_7_VERIFICATION.md`.
+
+**Phase 7 first Fedora run 2026-10-21 (`33b4402`):** stopped at step
+4/7 — TS2540 in `next.config.test.ts` (Fedora's `@types/node` marks
+`process.env.NODE_ENV` read-only; the sandbox's does not). Fixed in
+the test via `vi.stubEnv`; sandbox unit 5/5 on the affected files and
+repo-tsconfig typecheck clean for the file. Rerun of
+`scripts/verify-phase7.sh` pending; steps 5–8 (unit, integration,
+container smoke) still unverified on Fedora.
