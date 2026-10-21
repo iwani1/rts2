@@ -154,7 +154,7 @@ describe('Phase 1B workflow: booking to invoice and corporate dashboard', () => 
     );
     expect(completed.tripStatus).toBe('Completed');
     const statuses = await prisma.booking.findMany({
-      where: { id: { in: [booking1Id, booking2Id] },
+      where: { id: { in: [booking1Id, booking2Id] } },
       select: { id: true, status: true },
     });
     const byId = new Map(statuses.map((row: { id: string; status: string }) => [row.id, row.status]));
