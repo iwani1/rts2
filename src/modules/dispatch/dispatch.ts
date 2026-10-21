@@ -300,7 +300,7 @@ export async function assignTripResources(
         completionNotes: updated.completionNotes, actualStartAt: updated.actualStartAt,
         actualEndAt: updated.actualEndAt, createdAt: updated.createdAt, updatedAt: updated.updatedAt,
       },
-      warnings: conflicts,
+      warnings: introduced,
     };
   });
 }

@@ -262,7 +262,6 @@ export async function generateCorporateInvoice(
               create: freshTrips.map((trip: { id: string; reference: string; tripDate: Date; _count: { bookings: number } }) => {
                 const quantity = rate.unit === 'PER_TRIP' ? 1 : trip._count.bookings;
                 return {
-                  companyId,
                   tripId: trip.id,
                   description: `${trip.reference} on ${trip.tripDate.toISOString().slice(0, 10)} (${rate.unit === 'PER_TRIP' ? rate.unit : `${quantity} passenger(s)`})`,
                   unit: rate.unit,

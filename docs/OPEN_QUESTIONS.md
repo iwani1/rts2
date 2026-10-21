@@ -127,3 +127,12 @@ Until resolved, settings remain unset and dependent actions must be blocked with
   resources, so changing only the vehicle was blocked by a pre-existing same-day driver conflict.
   The call now diffs against the conflicts of the untouched assignment and only blocks on conflicts
   the change introduces; pre-existing conflicts still surface as board warnings.
+
+## Two more semantics corrections (Fedora run at `0500fcc`, 2026-10-21)
+- Nested Prisma creates through a composite relation must not repeat the relation's fields:
+  `CorporateInvoiceLine.companyId` is inherited from the invoice relation (`[companyId, invoiceId]`),
+  so the nested `lines.create` payload must omit it (`PrismaClientValidationError: Unknown argument
+  companyId`). Header fields on `CorporateInvoice.create` itself are fine.
+- `assignTripResources` now returns `warnings: introduced` (the conflicts the change introduced and
+  the dispatcher accepted), while the audit event keeps the full conflict snapshot. The board
+  continues to evaluate the trip's current resources, so pre-existing conflicts remain visible there.
