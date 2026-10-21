@@ -17,9 +17,15 @@ export const corporateInvoiceListQuerySchema = z.object({
   status: z.enum(['DRAFT', 'ISSUED', 'PAID', 'VOID']).optional(),
 }).strict();
 
+const invoiceDateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
+}, 'Use a valid calendar date.');
+
 export const corporateInvoiceTransitionSchema = z.object({
   toStatus: z.enum(['ISSUED', 'PAID', 'VOID']),
   reason: z.string().trim().min(8).max(500),
+  dueDate: invoiceDateOnly.optional().nullable(),
 }).strict();
 
 export const invoicePaymentRequestSchema = z.object({

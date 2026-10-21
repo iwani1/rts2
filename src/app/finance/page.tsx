@@ -180,6 +180,43 @@ export default async function FinanceDashboardPage({
             </div>
           </section>
 
+          <section className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+            <h2 className="px-4 pt-4 text-sm font-semibold text-slate-900">
+              Outstanding ageing (as of {dashboard.ageing.asOfDate}) — issued invoices only
+            </h2>
+            <table className="mt-3 min-w-full divide-y divide-slate-200 text-left text-sm">
+              <thead>
+                <tr className="text-xs uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-2 font-medium">Bucket</th>
+                  <th className="px-4 py-2 font-medium">Invoices</th>
+                  <th className="px-4 py-2 font-medium">Outstanding</th>
+                  <th className="px-4 py-2 font-medium">Of which corporate</th>
+                  <th className="px-4 py-2 font-medium">Of which rental</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {dashboard.ageing.buckets.map((bucket) => (
+                  <tr key={bucket.bucket}>
+                    <th className="px-4 py-2 font-medium text-slate-900">{bucket.label}</th>
+                    <td className="px-4 py-2 text-slate-700">{bucket.invoiceCount}</td>
+                    <td className="px-4 py-2 text-slate-700">{cedis(bucket.outstandingPesewas)}</td>
+                    <td className="px-4 py-2 text-slate-700">{bucket.corporateCount} · {cedis(bucket.corporateOutstandingPesewas)}</td>
+                    <td className="px-4 py-2 text-slate-700">{bucket.rentalCount} · {cedis(bucket.rentalOutstandingPesewas)}</td>
+                  </tr>
+                ))}
+                <tr>
+                  <th className="px-4 py-2 font-medium text-slate-900">No due date recorded</th>
+                  <td className="px-4 py-2 text-slate-700">{dashboard.ageing.undated.invoiceCount}</td>
+                  <td className="px-4 py-2 text-slate-700">{cedis(dashboard.ageing.undated.outstandingPesewas)}</td>
+                  <td className="px-4 py-2 text-slate-700" colSpan={2}>Counted separately — never aged without a due date.</td>
+                </tr>
+              </tbody>
+            </table>
+            <p className="px-4 pb-4 text-xs text-slate-500">
+              Balances derive from the append-only payment records; settled invoices do not age.
+            </p>
+          </section>
+
           <section className="mt-6 grid gap-6 lg:grid-cols-2">
             <div className="overflow-x-auto rounded-lg border border-slate-200">
               <h2 className="bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900">Approved expenses by category</h2>

@@ -777,6 +777,7 @@ model CorporateInvoice {
   reference      String
   periodStart    DateTime @db.Date
   periodEnd      DateTime @db.Date
+  dueDate        DateTime? @db.Date
   status         String
   subtotalPesewas Int
   taxPesewas     Int

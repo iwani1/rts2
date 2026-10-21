@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { summariseCostsAndMargin, summariseFinanceDashboard } from './dashboard-summary';
+import { summariseCostsAndMargin, summariseFinanceDashboard, summariseInvoiceAgeing } from './dashboard-summary';
 
 const statuses = [
   { status: 'DRAFT', invoiceCount: 1, totalPesewas: 20000 },
@@ -117,5 +117,32 @@ describe('approved-expense costs and estimated margin (FIN-05R / D-082)', () => 
     });
     expect(result.tripCosts[0].costPerPassengerPesewas).toBe(2500);
     expect(result.tripCosts[1].costPerPassengerPesewas).toBeNull();
+  });
+});
+
+describe('summariseInvoiceAgeing (D-090/5C)', () => {
+  it('buckets by whole days overdue with corporate/rental splits and an undated lane', () => {
+    const result = summariseInvoiceAgeing([
+      { kind: 'CORPORATE', dueDate: '2026-10-21', outstandingPesewas: 100 }, // due today -> CURRENT
+      { kind: 'RENTAL', dueDate: '2026-11-05', outstandingPesewas: 200 }, // future -> CURRENT
+      { kind: 'CORPORATE', dueDate: '2026-10-20', outstandingPesewas: 300 }, // 1 day
+      { kind: 'CORPORATE', dueDate: '2026-09-21', outstandingPesewas: 400 }, // 30 days
+      { kind: 'RENTAL', dueDate: '2026-09-20', outstandingPesewas: 500 }, // 31 days
+      { kind: 'CORPORATE', dueDate: '2026-08-21', outstandingPesewas: 600 }, // 61 days
+      { kind: 'CORPORATE', dueDate: '2026-07-22', outstandingPesewas: 700 }, // 91 days
+      { kind: 'RENTAL', dueDate: null, outstandingPesewas: 800 },
+      { kind: 'CORPORATE', dueDate: '2026-01-01', outstandingPesewas: 0 }, // settled: never ages
+    ], '2026-10-21');
+    expect(result.asOfDate).toBe('2026-10-21');
+    expect(result.buckets.map((b) => [b.bucket, b.invoiceCount, b.outstandingPesewas])).toEqual([
+      ['CURRENT', 2, 300],
+      ['DAYS_1_30', 2, 700],
+      ['DAYS_31_60', 1, 500],
+      ['DAYS_61_90', 1, 600],
+      ['OVER_90', 1, 700],
+    ]);
+    const current = result.buckets[0];
+    expect([current.corporateOutstandingPesewas, current.rentalOutstandingPesewas]).toEqual([100, 200]);
+    expect(result.undated).toEqual({ invoiceCount: 1, outstandingPesewas: 800 });
   });
 });

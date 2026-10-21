@@ -10,6 +10,7 @@ type InvoiceSummary = {
   totalPesewas: number;
   paidPesewas: number;
   outstandingPesewas: number;
+  dueDate: string | null;
 };
 
 type HistoryEntry = {
@@ -66,6 +67,7 @@ export function InvoiceLifecycle({
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [transitionReason, setTransitionReason] = useState('');
+  const [dueDate, setDueDate] = useState('');
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('');
   const [paymentReference, setPaymentReference] = useState('');
@@ -84,7 +86,7 @@ export function InvoiceLifecycle({
       const response = await fetch(`/api/companies/${companyId}/invoices/${invoice.id}/transition`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ toStatus, reason: transitionReason }),
+        body: JSON.stringify({ toStatus, reason: transitionReason, ...(toStatus === 'ISSUED' ? { dueDate: dueDate || null } : {}) }),
       });
       const data: unknown = await response.json().catch(() => null);
       if (!response.ok) throw new Error(readApiError(data, 'The invoice status could not be changed.'));
@@ -134,6 +136,7 @@ export function InvoiceLifecycle({
         <div><dt className="font-medium text-slate-500">Status</dt><dd>{invoice.status}</dd></div>
         <div><dt className="font-medium text-slate-500">Paid</dt><dd>{cedis(invoice.paidPesewas)}</dd></div>
         <div><dt className="font-medium text-slate-500">Outstanding</dt><dd>{cedis(invoice.outstandingPesewas)}</dd></div>
+        <div><dt className="font-medium text-slate-500">Due date</dt><dd>{invoice.dueDate ?? 'Not recorded'}</dd></div>
       </dl>
 
       {!canManage ? (
@@ -151,7 +154,12 @@ export function InvoiceLifecycle({
             </label>
             <div className="mt-3 flex flex-wrap gap-2">
               {invoice.status === 'DRAFT' ? (
-                <button className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50" disabled={busy || transitionReason.trim().length < 8} onClick={() => void transition('ISSUED')} type="button">
+                <label className="mt-2 grid gap-1 text-sm text-slate-700">Payment due date (required to issue)
+                  <input className={inputClass} type="date" onChange={(event) => setDueDate(event.target.value)} value={dueDate} />
+                </label>
+              ) : null}
+              {invoice.status === 'DRAFT' ? (
+                <button className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50" disabled={busy || transitionReason.trim().length < 8 || !dueDate} onClick={() => void transition('ISSUED')} type="button">
                   Issue invoice
                 </button>
               ) : null}

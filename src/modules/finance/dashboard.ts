@@ -5,6 +5,8 @@ import { financeDashboardQuerySchema } from './dashboard-schema';
 import {
   summariseCostsAndMargin,
   summariseFinanceDashboard,
+  summariseInvoiceAgeing,
+  type InvoiceAgeingBucket,
   type DashboardMargin,
   type ExpenseCategoryTotal,
   type TripCost,
@@ -60,18 +62,19 @@ export type FinanceDashboard = {
     pendingCount: number;
     tripCosts: TripCost[];
   };
+  ageing: {
+    asOfDate: string;
+    buckets: InvoiceAgeingBucket[];
+    undated: { invoiceCount: number; outstandingPesewas: number };
+  };
   margin: DashboardMargin;
   unavailableMetrics: Array<{ metric: string; reason: string }>;
 };
 
 const UNAVAILABLE_METRICS = [
   {
-    metric: 'Rental revenue and rental outstanding balances',
-    reason: 'Rental invoices and rental payment records are not implemented; quotation values are never treated as revenue.',
-  },
-  {
-    metric: 'Outstanding ageing by due date',
-    reason: 'Corporate invoices do not carry due dates yet, so outstanding is grouped by client instead of being aged.',
+    metric: 'Rental revenue in the headline totals',
+    reason: 'Headline revenue and the reconciliation tie-out remain corporate (FIN-07 / D-063). Rental invoices are aged in the ageing section; no rental-revenue recognition rule has been defined yet.',
   },
 ];
 
@@ -298,6 +301,46 @@ export async function getFinanceDashboard(input: {
     .filter((row) => row.method !== 'Not recorded')
     .reduce((sum, row) => sum + row.paymentCount, 0);
 
+  // D-090/5C: ageing over ISSUED invoices of both kinds, point-in-time
+  // (the dashboard window does not apply). Outstanding derives from the
+  // append-only payment records per invoice; undated invoices are counted
+  // separately by the summariser, never folded into the buckets.
+  const asOfDate = new Date().toISOString().slice(0, 10);
+  const [corporateAgeingRows, rentalAgeingRows] = await Promise.all([
+    prisma.$queryRaw<Array<{ dueDate: Date | null; outstandingPesewas: bigint }>>`
+      SELECT i."dueDate" AS "dueDate",
+        (i."totalPesewas" - COALESCE(p."paidPesewas", 0)) AS "outstandingPesewas"
+      FROM "CorporateInvoice" i
+      LEFT JOIN (
+        SELECT "invoiceId", SUM("amountPesewas") AS "paidPesewas"
+        FROM "InvoicePayment" WHERE "companyId" = ${companyId} GROUP BY "invoiceId"
+      ) p ON p."invoiceId" = i."id"
+      WHERE i."companyId" = ${companyId} AND i."status" = 'ISSUED'
+    `,
+    prisma.$queryRaw<Array<{ dueDate: Date | null; outstandingPesewas: bigint }>>`
+      SELECT i."dueDate" AS "dueDate",
+        (i."totalPesewas" - COALESCE(p."paidPesewas", 0)) AS "outstandingPesewas"
+      FROM "RentalInvoice" i
+      LEFT JOIN (
+        SELECT "invoiceId", SUM("amountPesewas") AS "paidPesewas"
+        FROM "RentalInvoicePayment" WHERE "companyId" = ${companyId} GROUP BY "invoiceId"
+      ) p ON p."invoiceId" = i."id"
+      WHERE i."companyId" = ${companyId} AND i."status" = 'ISSUED'
+    `,
+  ]);
+  const ageing = summariseInvoiceAgeing([
+    ...corporateAgeingRows.map((row) => ({
+      kind: 'CORPORATE' as const,
+      dueDate: row.dueDate ? row.dueDate.toISOString().slice(0, 10) : null,
+      outstandingPesewas: Number(row.outstandingPesewas),
+    })),
+    ...rentalAgeingRows.map((row) => ({
+      kind: 'RENTAL' as const,
+      dueDate: row.dueDate ? row.dueDate.toISOString().slice(0, 10) : null,
+      outstandingPesewas: Number(row.outstandingPesewas),
+    })),
+  ], asOfDate);
+
   return {
     generatedAt: new Date().toISOString(),
     window: { fromDate: query.fromDate ?? null, toDate: query.toDate ?? null },
@@ -336,6 +379,7 @@ export async function getFinanceDashboard(input: {
       tripCosts: costs.tripCosts,
     },
     margin: costs.margin,
+    ageing,
     unavailableMetrics: UNAVAILABLE_METRICS,
   };
 }

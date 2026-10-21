@@ -155,7 +155,7 @@ describe('corporate invoice lifecycle and payments with PostgreSQL persistence (
 
   it('issues an invoice and auto-marks it PAID when payments reach the total', async () => {
     const issued = await transitionCorporateInvoice(
-      { toStatus: 'ISSUED', reason: 'Issuing invoice A to the client' }, financeId, companyId, invoiceAId,
+      { toStatus: 'ISSUED', dueDate: '2026-12-31', reason: 'Issuing invoice A to the client' }, financeId, companyId, invoiceAId,
     );
     expect(issued.status).toBe('ISSUED');
     expect(issued.outstandingPesewas).toBe(15000);
@@ -175,7 +175,7 @@ describe('corporate invoice lifecycle and payments with PostgreSQL persistence (
 
   it('refuses overpayment, serialises parallel payments, and refuses voiding once payments exist', async () => {
     await transitionCorporateInvoice(
-      { toStatus: 'ISSUED', reason: 'Issuing invoice B to the client' }, financeId, companyId, invoiceBId,
+      { toStatus: 'ISSUED', dueDate: '2026-12-31', reason: 'Issuing invoice B to the client' }, financeId, companyId, invoiceBId,
     );
     const first = await pay(invoiceBId, 5000);
     expect(first.outstandingPesewas).toBe(10000);
@@ -203,7 +203,7 @@ describe('corporate invoice lifecycle and payments with PostgreSQL persistence (
     expect(replacement.invoice.status).toBe('DRAFT');
     expect(replacement.invoice.lines).toHaveLength(1);
     await transitionCorporateInvoice(
-      { toStatus: 'ISSUED', reason: 'Issuing the replacement invoice' }, financeId, companyId, replacement.invoice.id,
+      { toStatus: 'ISSUED', dueDate: '2026-12-31', reason: 'Issuing the replacement invoice' }, financeId, companyId, replacement.invoice.id,
     );
     const voided = await transitionCorporateInvoice(
       { toStatus: 'VOID', reason: 'Client disputed the replacement before paying' }, financeId, companyId, replacement.invoice.id,
@@ -224,10 +224,10 @@ describe('corporate invoice lifecycle and payments with PostgreSQL persistence (
     )).rejects.toBeInstanceOf(InvoiceTransitionNotAllowedError);
     await expect(pay(invoiceDId, 100)).rejects.toBeInstanceOf(InvoicePolicyError);
     await expect(transitionCorporateInvoice(
-      { toStatus: 'ISSUED', reason: 'Read-only manager attempting issuance' }, managerId, companyId, invoiceDId,
+      { toStatus: 'ISSUED', dueDate: '2026-12-31', reason: 'Read-only manager attempting issuance' }, managerId, companyId, invoiceDId,
     )).rejects.toBeInstanceOf(PermissionDeniedError);
     await expect(transitionCorporateInvoice(
-      { toStatus: 'ISSUED', reason: 'Issuing across a company boundary' }, financeId, otherCompanyId, invoiceDId,
+      { toStatus: 'ISSUED', dueDate: '2026-12-31', reason: 'Issuing across a company boundary' }, financeId, otherCompanyId, invoiceDId,
     )).rejects.toBeInstanceOf(PermissionDeniedError);
     await expect(recordInvoicePayment(
       {
@@ -269,7 +269,7 @@ describe('corporate invoice lifecycle and payments with PostgreSQL persistence (
 
   it('supports manually marking an issued invoice PAID with a reason', async () => {
     await transitionCorporateInvoice(
-      { toStatus: 'ISSUED', reason: 'Issuing invoice D to the client' }, financeId, companyId, invoiceDId,
+      { toStatus: 'ISSUED', dueDate: '2026-12-31', reason: 'Issuing invoice D to the client' }, financeId, companyId, invoiceDId,
     );
     const paid = await transitionCorporateInvoice(
       { toStatus: 'PAID', reason: 'Client settled outside the payment ledger' }, financeId, companyId, invoiceDId,

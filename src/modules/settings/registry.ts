@@ -254,6 +254,21 @@ export async function getCorporateRate(companyIdInput: string, contractId: strin
   return parsed.data.find((rate) => rate.contractId === contractId) ?? null;
 }
 
+/** Returns the full operator-entered corporate rate list, or null when unset (FIN-02). */
+export async function getCompanyCorporateRates(companyIdInput: string): Promise<CorporateRate[] | null> {
+  const companyId = companyIdSchema.parse(companyIdInput);
+  const prisma = getPrisma();
+  const company = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true } });
+  if (!company) throw new CompanyNotFoundError();
+  const row = await prisma.setting.findUnique({
+    where: { companyId_key: { companyId, key: corporateRatesKey } },
+    select: { value: true, configured: true },
+  });
+  if (!row?.configured || row.value === null) return null;
+  const parsed = corporateRatesSchema.safeParse(row.value);
+  return parsed.success ? parsed.data : null;
+}
+
 /** Returns the explicitly configured quote-validity duration, or null when unset. */
 export async function getCompanyQuoteValidityDays(companyIdInput: string) {
   const companyId = companyIdSchema.parse(companyIdInput);

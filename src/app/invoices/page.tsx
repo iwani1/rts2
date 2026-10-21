@@ -176,6 +176,7 @@ export default async function InvoicesPage({
               totalPesewas: detail.invoice.totalPesewas,
               paidPesewas: detail.invoice.paidPesewas,
               outstandingPesewas: detail.invoice.outstandingPesewas,
+              dueDate: detail.invoice.dueDate,
             }}
             history={detail.history.map((entry) => ({ ...entry, createdAt: entry.createdAt.toISOString() }))}
             payments={detail.payments.map((payment) => ({ ...payment, createdAt: payment.createdAt.toISOString() }))}

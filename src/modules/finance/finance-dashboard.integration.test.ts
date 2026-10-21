@@ -188,12 +188,12 @@ describe('finance dashboard reconciles to invoice and payment records (FIN-07 / 
 
     // I1: issued and paid in full -> PAID. I2: issued, part-paid. I3: issued, unpaid.
     // I4 stays DRAFT. I5: issued then voided (no payments) -> excluded from revenue.
-    await transitionCorporateInvoice({ toStatus: 'ISSUED', reason: 'Issuing dashboard invoice one' }, financeId, companyId, invoiceOne.id);
+    await transitionCorporateInvoice({ toStatus: 'ISSUED', dueDate: '2026-12-31', reason: 'Issuing dashboard invoice one' }, financeId, companyId, invoiceOne.id);
     await pay(invoiceOne.id, { amountPesewas: 20000, method: 'Bank transfer', reference: 'FT-2028-001', receivedAt: '2028-01-20' });
-    await transitionCorporateInvoice({ toStatus: 'ISSUED', reason: 'Issuing dashboard invoice two' }, financeId, companyId, invoiceTwo.id);
+    await transitionCorporateInvoice({ toStatus: 'ISSUED', dueDate: '2026-12-31', reason: 'Issuing dashboard invoice two' }, financeId, companyId, invoiceTwo.id);
     await pay(invoiceTwo.id, { amountPesewas: 5000, method: null, reference: null, receivedAt: '2028-02-15' });
-    await transitionCorporateInvoice({ toStatus: 'ISSUED', reason: 'Issuing dashboard invoice three' }, financeId, companyId, invoiceThree.id);
-    await transitionCorporateInvoice({ toStatus: 'ISSUED', reason: 'Issuing dashboard invoice five' }, financeId, companyId, invoiceFive.id);
+    await transitionCorporateInvoice({ toStatus: 'ISSUED', dueDate: '2026-12-31', reason: 'Issuing dashboard invoice three' }, financeId, companyId, invoiceThree.id);
+    await transitionCorporateInvoice({ toStatus: 'ISSUED', dueDate: '2026-12-31', reason: 'Issuing dashboard invoice five' }, financeId, companyId, invoiceFive.id);
     await transitionCorporateInvoice({ toStatus: 'VOID', reason: 'Voiding the unbilled dashboard invoice' }, financeId, companyId, invoiceFive.id);
   }, 120_000);
 
@@ -275,9 +275,10 @@ describe('finance dashboard reconciles to invoice and payment records (FIN-07 / 
     // unsupported metrics are listed (expenses/margin left the list in D-082).
     const dashboard = await getFinanceDashboard({ actorId: financeId, companyId });
     expect(dashboard.margin.status).toBe('INSUFFICIENT_DATA');
+    // D-090/5C: ageing is available and rental invoices exist; only the
+    // headline rental-revenue gap remains listed.
     expect(dashboard.unavailableMetrics.map((item) => item.metric)).toEqual([
-      'Rental revenue and rental outstanding balances',
-      'Outstanding ageing by due date',
+      'Rental revenue in the headline totals',
     ]);
   });
 
@@ -340,4 +341,32 @@ describe('finance dashboard reconciles to invoice and payment records (FIN-07 / 
         .toBe(dashboard.margin.revenuePesewas - dashboard.margin.approvedCostsPesewas);
     }
   });
+
+  it('ages an old-due-date issued invoice into OVER_90 with no undated spill (D-090/5C)', async () => {
+      const passenger = await prisma.employee.create({
+        data: { companyId, clientId: clientOneId, fullName: 'Ageing Passenger', transportEligible: true },
+      });
+      const contractOne = await prisma.contract.findFirstOrThrow({ where: { companyId, clientId: clientOneId, status: 'Active' } });
+      await makeCompletedTrip({ clientId: clientOneId, employeeId: passenger.id, contractId: contractOne.id, journeyDate: '2028-04-07', keyPrefix: 'fin-age1' });
+      const aged = (await generateCorporateInvoice(
+        { contractId: contractOne.id, periodStart: '2028-04-01', periodEnd: '2028-04-30', reason: 'Generating ageing fixture invoice' },
+        financeId, companyId,
+      )).invoice;
+      await transitionCorporateInvoice({ toStatus: 'ISSUED', dueDate: '2020-01-01', reason: 'Issuing ageing fixture invoice' }, financeId, companyId, aged.id);
+  
+      const dashboard = await getFinanceDashboard({ actorId: financeId, companyId });
+      expect(dashboard.ageing.asOfDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      // Every issued invoice in this company now carries a due date (5C.2).
+      expect(dashboard.ageing.undated.invoiceCount).toBe(0);
+      const over90 = dashboard.ageing.buckets.find((bucket) => bucket.bucket === 'OVER_90');
+      expect(over90).toBeDefined();
+      expect(over90?.invoiceCount ?? 0).toBeGreaterThanOrEqual(1);
+      expect(over90?.outstandingPesewas ?? 0).toBeGreaterThanOrEqual(aged.totalPesewas);
+      expect(over90?.corporateOutstandingPesewas ?? 0).toBeGreaterThanOrEqual(aged.totalPesewas);
+      expect(over90?.rentalOutstandingPesewas ?? 0).toBe(0);
+      // The ageing total reconciles with corporate outstanding minus paid/void lanes:
+      const agedTotal = dashboard.ageing.buckets.reduce((sum, bucket) => sum + bucket.outstandingPesewas, 0)
+        + dashboard.ageing.undated.outstandingPesewas;
+      expect(agedTotal).toBeGreaterThanOrEqual(aged.totalPesewas);
+    });
 });

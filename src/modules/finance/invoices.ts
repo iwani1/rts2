@@ -73,6 +73,7 @@ export type CorporateInvoiceRecord = {
   contractReference: string;
   periodStart: string;
   periodEnd: string;
+  dueDate: string | null;
   status: string;
   subtotalPesewas: number;
   taxPesewas: number;
@@ -105,7 +106,7 @@ export type CorporateInvoicePaymentRecord = {
 
 type InvoiceDbShape = {
   id: string; reference: string; clientId: string; contractId: string;
-  periodStart: Date; periodEnd: Date; status: string;
+  periodStart: Date; periodEnd: Date; dueDate: Date | null; status: string;
   subtotalPesewas: number; taxPesewas: number; totalPesewas: number; createdAt: Date;
   client: { name: string };
   contract: { reference: string };
@@ -135,6 +136,7 @@ function presentInvoice(row: InvoiceDbShape): CorporateInvoiceRecord {
     contractReference: row.contract.reference,
     periodStart: row.periodStart.toISOString().slice(0, 10),
     periodEnd: row.periodEnd.toISOString().slice(0, 10),
+    dueDate: row.dueDate ? row.dueDate.toISOString().slice(0, 10) : null,
     status: row.status,
     subtotalPesewas: row.subtotalPesewas,
     taxPesewas: row.taxPesewas,
@@ -471,6 +473,9 @@ export async function transitionCorporateInvoice(
   const invoiceId = invoiceIdSchema.parse(invoiceIdInput);
   await accessFor(actorId, companyId);
   const prisma = getPrisma();
+  if (data.toStatus === 'ISSUED' && !data.dueDate) {
+    throw new InvoicePolicyError('Record the payment due date when issuing the invoice; there is no default due date.');
+  }
   return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const current = await lockInvoice(tx, companyId, invoiceId);
     if (!isAllowedCorporateInvoiceTransition(current.status, data.toStatus)) {
@@ -487,7 +492,10 @@ export async function transitionCorporateInvoice(
     }
     const changed = await tx.corporateInvoice.updateMany({
       where: { id: invoiceId, companyId, status: current.status },
-      data: { status: data.toStatus },
+      data: {
+        status: data.toStatus,
+        ...(data.toStatus === 'ISSUED' ? { dueDate: new Date(`${data.dueDate}T00:00:00.000Z`) } : {}),
+      },
     });
     if (changed.count !== 1) throw new InvoiceTransitionNotAllowedError(current.status, data.toStatus);
     await appendStatusHistory(tx, {

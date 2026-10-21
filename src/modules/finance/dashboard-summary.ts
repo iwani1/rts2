@@ -137,3 +137,72 @@ export function summariseCostsAndMargin(input: {
     })),
   };
 }
+
+export type InvoiceAgeingInput = {
+  kind: 'CORPORATE' | 'RENTAL';
+  dueDate: string | null;
+  outstandingPesewas: number;
+};
+
+export type InvoiceAgeingBucket = {
+  bucket: 'CURRENT' | 'DAYS_1_30' | 'DAYS_31_60' | 'DAYS_61_90' | 'OVER_90';
+  label: string;
+  invoiceCount: number;
+  outstandingPesewas: number;
+  corporateCount: number;
+  corporateOutstandingPesewas: number;
+  rentalCount: number;
+  rentalOutstandingPesewas: number;
+};
+
+const AGEING_BUCKET_DEFS: Array<{ bucket: InvoiceAgeingBucket['bucket']; label: string; maxDays: number }> = [
+  { bucket: 'CURRENT', label: 'Not yet due', maxDays: 0 },
+  { bucket: 'DAYS_1_30', label: '1–30 days overdue', maxDays: 30 },
+  { bucket: 'DAYS_31_60', label: '31–60 days overdue', maxDays: 60 },
+  { bucket: 'DAYS_61_90', label: '61–90 days overdue', maxDays: 90 },
+  { bucket: 'OVER_90', label: 'Over 90 days overdue', maxDays: Number.POSITIVE_INFINITY },
+];
+
+/**
+ * D-090/5C invoice ageing, computed from ISSUED invoices only (callers
+ * filter): bucketed by whole days between the recorded due date and the
+ * as-of date. Invoices without a recorded due date are never folded into
+ * the buckets; they are counted separately as undated. Zero-outstanding
+ * rows do not age (they are settled), but undated invoices are counted
+ * regardless so the gap stays visible.
+ */
+export function summariseInvoiceAgeing(rows: InvoiceAgeingInput[], asOfDate: string) {
+  const asOf = new Date(`${asOfDate}T00:00:00.000Z`).getTime();
+  const buckets: InvoiceAgeingBucket[] = AGEING_BUCKET_DEFS.map((def) => ({
+    bucket: def.bucket,
+    label: def.label,
+    invoiceCount: 0,
+    outstandingPesewas: 0,
+    corporateCount: 0,
+    corporateOutstandingPesewas: 0,
+    rentalCount: 0,
+    rentalOutstandingPesewas: 0,
+  }));
+  const undated = { invoiceCount: 0, outstandingPesewas: 0 };
+  for (const row of rows) {
+    if (row.dueDate === null) {
+      undated.invoiceCount += 1;
+      undated.outstandingPesewas += row.outstandingPesewas;
+      continue;
+    }
+    if (row.outstandingPesewas <= 0) continue;
+    const daysOverdue = Math.floor((asOf - new Date(`${row.dueDate}T00:00:00.000Z`).getTime()) / 86_400_000);
+    const def = AGEING_BUCKET_DEFS.find((candidate) => daysOverdue <= candidate.maxDays) ?? AGEING_BUCKET_DEFS[AGEING_BUCKET_DEFS.length - 1];
+    const bucket = buckets.find((candidate) => candidate.bucket === def.bucket) as InvoiceAgeingBucket;
+    bucket.invoiceCount += 1;
+    bucket.outstandingPesewas += row.outstandingPesewas;
+    if (row.kind === 'CORPORATE') {
+      bucket.corporateCount += 1;
+      bucket.corporateOutstandingPesewas += row.outstandingPesewas;
+    } else {
+      bucket.rentalCount += 1;
+      bucket.rentalOutstandingPesewas += row.outstandingPesewas;
+    }
+  }
+  return { asOfDate, buckets, undated };
+}
