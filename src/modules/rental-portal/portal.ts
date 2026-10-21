@@ -15,6 +15,11 @@ import {
   portalReasonSchema,
 } from './portal-schema';
 
+function isUniqueViolation(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error
+    && (error as { code?: unknown }).code === 'P2002';
+}
+
 export class RentalPortalNotLinkedError extends Error {
   constructor() {
     super('This login is not linked to a rental customer record yet. Ask Richie Transport to link your account.');
@@ -78,6 +83,7 @@ export type RentalPortalHome = {
     customerType: string | null;
   };
   requests: RentalPortalRequestSummary[];
+  requestsTotal: number;
   /** D-066: no customer quotation model exists yet; stated, never invented. */
   quotations: { state: 'NONE_ISSUED'; message: string };
   /** D-066: rentals have no invoices yet; stated, never invented. */
@@ -110,6 +116,9 @@ async function rentalContext(input: { actorId: string; companyId: string }) {
 export async function getRentalPortalHome(input: { actorId: string; companyId: string }) {
   const { companyId, customer } = await rentalContext(input);
   const prisma = getPrisma();
+  const requestsTotal = await prisma.rentalRequest.count({
+    where: { companyId, customerId: customer.id },
+  });
   const rows = await prisma.rentalRequest.findMany({
     where: { companyId, customerId: customer.id },
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
@@ -160,6 +169,7 @@ export async function getRentalPortalHome(input: { actorId: string; companyId: s
       canWithdraw: row.status === 'Draft' || row.status === 'Submitted',
       createdAt: row.createdAt,
     })),
+    requestsTotal,
     quotations: {
       state: 'NONE_ISSUED',
       message: 'No quotation has been issued for your requests yet. When our team issues one, it will appear here for your review.',
@@ -288,7 +298,14 @@ export async function linkCustomerAccount(input: {
     if (existingLink) {
       throw new RentalPortalValidationError('That login is already linked to a customer record. Unlink it there first.');
     }
-    await tx.customer.update({ where: { id: customer.id }, data: { userId: data.userId } });
+    try {
+      await tx.customer.update({ where: { id: customer.id }, data: { userId: data.userId } });
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new RentalPortalValidationError('That login or customer record was linked at the same moment. Refresh and try again.');
+      }
+      throw error;
+    }
     await tx.auditEvent.create({
       data: {
         actorId: input.actorId, companyId, action: 'CUSTOMER_ACCOUNT_LINKED',

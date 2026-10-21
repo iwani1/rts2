@@ -103,7 +103,7 @@ export default async function OperationsPage() {
               <thead><tr>
                 <th scope="col">Trip</th><th scope="col">Departs</th><th scope="col">Status</th>
                 <th scope="col">Client</th><th scope="col">Route</th><th scope="col">Vehicle</th>
-                <th scope="col">Driver</th><th scope="col">Passengers</th>
+                <th scope="col">Driver</th><th scope="col">Bookings assigned</th>
               </tr></thead>
               <tbody>{dashboard.tripsToday.list.map((trip) => <tr key={trip.tripId}>
                 <td>{trip.reference}</td>

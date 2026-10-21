@@ -177,6 +177,9 @@ export default async function PassengerPortalPage() {
 
       <section className="mt-8">
         <h2 className="text-lg font-semibold text-slate-950">Upcoming journeys</h2>
+        {home.upcoming.length < home.upcomingTotal && (
+          <p className="text-sm text-slate-600">Showing the next {home.upcoming.length} of {home.upcomingTotal} upcoming journeys.</p>
+        )}
         <div className="mt-4 grid gap-4">
           {home.upcoming.map((journey) => (
             <JourneyCard companyId={company.id} journey={journey} key={journey.bookingId} />
@@ -189,6 +192,9 @@ export default async function PassengerPortalPage() {
 
       <section className="mt-8">
         <h2 className="text-lg font-semibold text-slate-950">Journey history</h2>
+        {home.history.length < home.historyTotal && (
+          <p className="text-sm text-slate-600">Showing the {home.history.length} most recent of {home.historyTotal} past journeys.</p>
+        )}
         <div className="mt-4 grid gap-4">
           {home.history.map((journey) => (
             <JourneyCard companyId={company.id} journey={journey} key={journey.bookingId} />

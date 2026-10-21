@@ -836,3 +836,22 @@ Sixth Phase 1C slice. D-067 recorded in `docs/DECISIONS.md` for gate ratificatio
   detection and the 30-day licence window). Fedora run pending.
 - **Remaining Phase 1C scope:** the hardening pass, then the Phase 1C gate (the MVP gate — Phase 2
   does not start until it is approved), per `richie-tms-phase-prompts.md`.
+
+## Phase 1C — hardening pass and gate readiness (2026-10-21)
+
+Final Phase 1C construction item. `docs/PHASE_1C_HARDENING.md` records the full review.
+
+- **Fixed:** spreadsheet formula injection in CSV exports (reports + employee register now
+  share `src/lib/csv-cell.ts`, unit-tested); `P2002` uniqueness races in account linking and
+  passenger feedback now return domain errors instead of 500s; portal list caps (50/100) are
+  labelled with totals; the operations dashboard column is honestly labelled "Bookings
+  assigned"; rental-portal API 500s now log server-side.
+- **Reviewed clean:** cross-company/cross-customer isolation of every Phase 1C surface,
+  financial derivation rules, the shared booking creation core, responsive/accessibility
+  patterns, and route error mapping.
+- **Unit suite:** 396/396 in the sandbox (was 393 before the CSV cell tests).
+- **Gate readiness:** Phase 1C construction is complete. What remains is owner-side: run
+  `./scripts/verify-phase1c.sh` on Fedora (25 migrations, all integration suites), work
+  through the manual browser checks in `docs/PHASE_1C_VERIFICATION.md`, ratify or amend
+  D-061–D-067, and declare the Phase 1C (MVP) gate. Phase 2 must not start before that
+  approval.

@@ -20,6 +20,11 @@ export class PassengerCompanyNotFoundError extends Error {
   readonly code = 'COMPANY_NOT_FOUND';
   constructor() { super('Company not found.'); this.name = 'PassengerCompanyNotFoundError'; }
 }
+function isUniqueViolation(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error
+    && (error as { code?: unknown }).code === 'P2002';
+}
+
 export class PassengerNotLinkedError extends Error {
   readonly code = 'PASSENGER_NOT_LINKED';
   constructor() {
@@ -163,6 +168,8 @@ export type PassengerHome = {
   };
   upcoming: PassengerJourney[];
   history: PassengerJourney[];
+  upcomingTotal: number;
+  historyTotal: number;
 };
 
 /** PAX-01 portal home: own profile, approved options and journey lists. */
@@ -173,7 +180,7 @@ export async function getPassengerHome(input: {
   const employee = await passengerContext(input.actorId, companyId);
   const prisma = getPrisma();
   const today = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
-  const [contracts, routes, upcoming, history] = await Promise.all([
+  const [contracts, routes, upcoming, history, upcomingTotal, historyTotal] = await Promise.all([
     prisma.contract.findMany({
       where: { companyId, clientId: employee.clientId, status: 'Active' },
       orderBy: { createdAt: 'desc' },
@@ -204,6 +211,18 @@ export async function getPassengerHome(input: {
       orderBy: [{ journeyDate: 'desc' }, { createdAt: 'desc' }],
       take: 50,
     }),
+    prisma.booking.count({
+      where: {
+        companyId, employeeId: employee.id,
+        journeyDate: { gte: today }, status: { notIn: ['Cancelled', 'Rejected'] },
+      },
+    }),
+    prisma.booking.count({
+      where: {
+        companyId, employeeId: employee.id,
+        OR: [{ journeyDate: { lt: today } }, { status: { in: ['Cancelled', 'Rejected'] } }],
+      },
+    }),
   ]);
   return {
     profile: employee,
@@ -221,6 +240,8 @@ export async function getPassengerHome(input: {
     },
     upcoming: (upcoming as JourneyRow[]).map(presentJourney),
     history: (history as JourneyRow[]).map(presentJourney),
+    upcomingTotal,
+    historyTotal,
   };
 }
 
@@ -317,10 +338,18 @@ export async function submitPassengerFeedback(
     if (existing) {
       throw new PassengerPolicyError('Feedback has already been recorded for this journey and cannot be changed.');
     }
-    const feedback = await tx.passengerFeedback.create({
-      data: { companyId, bookingId, employeeId: employee.id, rating: data.rating, comment: data.comment },
-      select: { bookingId: true, rating: true, comment: true },
-    });
+    let feedback;
+    try {
+      feedback = await tx.passengerFeedback.create({
+        data: { companyId, bookingId, employeeId: employee.id, rating: data.rating, comment: data.comment },
+        select: { bookingId: true, rating: true, comment: true },
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new PassengerPolicyError('Feedback has already been recorded for this journey and cannot be changed.');
+      }
+      throw error;
+    }
     await tx.auditEvent.create({
       data: {
         actorId, companyId, action: 'PASSENGER_FEEDBACK_RECORDED', entityType: 'BOOKING', entityId: bookingId,
@@ -373,7 +402,14 @@ export async function linkPassengerAccount(input: {
     if (!role) throw new PassengerValidationError('Only users with an active Passenger assignment in this company can be linked to an employee record.');
     if (employee.userId) throw new PassengerValidationError('This employee record is already linked to a login. Unlink it before linking another.');
     if (clash) throw new PassengerValidationError('This login is already linked to another employee record. Unlink it there first.');
-    await tx.employee.update({ where: { id: employee.id }, data: { userId: data.userId } });
+    try {
+      await tx.employee.update({ where: { id: employee.id }, data: { userId: data.userId } });
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new PassengerValidationError('That login or employee record was linked at the same moment. Refresh and try again.');
+      }
+      throw error;
+    }
     await tx.auditEvent.create({
       data: {
         actorId: input.actorId, companyId, action: 'EMPLOYEE_ACCOUNT_LINKED', entityType: 'EMPLOYEE', entityId: employee.id,

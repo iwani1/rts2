@@ -124,6 +124,9 @@ export default async function RentalPortalPage() {
 
         <section aria-labelledby="rental-requests-title">
           <h2 id="rental-requests-title">Your requests</h2>
+          {home.requests.length < home.requestsTotal && (
+            <p className="muted">Showing the {home.requests.length} most recent of {home.requestsTotal} requests.</p>
+          )}
           {home.requests.length === 0
             ? <p className="muted">You have not sent any rental requests yet.</p>
             : <div className="vehicle-grid">{home.requests.map((request) => (

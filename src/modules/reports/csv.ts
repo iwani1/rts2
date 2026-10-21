@@ -14,11 +14,7 @@ export type CsvDocument = {
   sections: CsvSection[];
 };
 
-function escapeCell(value: string | number | null): string {
-  if (value === null) return '';
-  const text = String(value);
-  return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-}
+import { csvCell as escapeCell } from '@/lib/csv-cell';
 
 /**
  * RPT-04 export document: metadata comment lines (filter period, generation

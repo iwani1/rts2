@@ -1,3 +1,4 @@
+import { csvCell } from '@/lib/csv-cell';
 import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { PermissionDeniedError, resolvePermission } from '@/modules/auth/permissions';
@@ -424,10 +425,7 @@ export async function importEmployeesFromCsv(input: {
   }
 }
 
-function csvCell(value: string | null) {
-  if (value === null) return '';
-  return /[",\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
-}
+
 
 /**
  * Manager-only operational export. Restricted fields (home address and

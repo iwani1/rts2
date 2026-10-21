@@ -33,6 +33,7 @@ function apiError(error: unknown) {
   if (error instanceof PermissionDeniedError) {
     return NextResponse.json({ error: 'FORBIDDEN', message: 'You do not have access to do that.' }, { status: 403 });
   }
+  console.error('Unexpected rental portal API error', error);
   return NextResponse.json({ error: 'INTERNAL_ERROR', message: 'Something went wrong. Please try again.' }, { status: 500 });
 }
 
