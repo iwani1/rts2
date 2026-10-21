@@ -38,6 +38,9 @@ Expected:
 > the real Fedora `tsc` passed first try). The manual walkthrough
 > below remains outstanding.
 
+> The manual steps for this phase are consolidated into the single
+> browser acceptance pass in `docs/MANUAL_WALKTHROUGH.md`.
+
 ## Manual walkthrough
 
 1. Issue and part-pay a rental invoice (Phase 5 walkthrough). On

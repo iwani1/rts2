@@ -51,6 +51,9 @@ above): typecheck clean, lint 0 errors, unit 475/475, production build
 green, all 36 migrations applied + FIN-05 guards exercised on a PGlite
 sweep.
 
+> The manual steps for this phase are consolidated into the single
+> browser acceptance pass in `docs/MANUAL_WALKTHROUGH.md`.
+
 ## Manual walkthrough (after the automated gate)
 
 Use the manual-verification database as before (`richie_tms_app_p2_test`

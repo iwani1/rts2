@@ -1309,3 +1309,11 @@ across the finance dashboard (combined headline, per-stream tie-out,
 combined-basis margin), RPT-03 (Rentals service line) and
 `/rentals/reports`. One fix round (`fcfad47`) updated two exact-shape
 assertions for the new stream fields.
+
+**Manual walkthroughs consolidated 2026-10-21:** the per-phase browser
+checklists (Phases 1C–6) are merged into `docs/MANUAL_WALKTHROUGH.md` —
+one continuous acceptance scenario (setup → fleet → clients →
+bookings/portals → corporate invoicing → finance depth → rentals end
+to end → riders/audit → deferred Paystack live test) with expected
+outcomes per step and a sign-off table. The per-phase verification
+docs now point at it. Running it remains the owner's next step.

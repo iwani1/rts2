@@ -43,6 +43,9 @@ Expected:
 > and reports suites) — the due-date policy held; the fixtures had
 > lagged it. The manual walkthrough below remains outstanding.
 
+> The manual steps for this phase are consolidated into the single
+> browser acceptance pass in `docs/MANUAL_WALKTHROUGH.md`.
+
 ## Manual walkthrough
 
 1. Complete and approve a rental (Phase 4 walkthrough). In the request's

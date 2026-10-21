@@ -37,6 +37,9 @@ Expected:
 > PostgreSQL-only behaviour the gate exists to catch. The manual
 > walkthrough below remains outstanding.
 
+> The manual steps for this phase are consolidated into the single
+> browser acceptance pass in `docs/MANUAL_WALKTHROUGH.md`.
+
 ## Manual walkthrough
 
 1. Settings → confirm a deposit policy and both resource buffers exist
