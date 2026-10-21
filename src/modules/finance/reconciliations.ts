@@ -179,7 +179,9 @@ export async function createReconciliation(input: unknown): Promise<Reconciliati
         },
       },
     });
-    return toRecord(run as never);
+    // Refetch: the create-time include ran before the history row existed.
+    const stored = await tx.paymentReconciliation.findUniqueOrThrow({ where: { id: run.id }, include });
+    return toRecord(stored as never);
   });
 }
 

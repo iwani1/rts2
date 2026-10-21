@@ -151,7 +151,9 @@ export async function createExpense(input: unknown): Promise<ExpenseRecord> {
         },
       },
     });
-    return toRecord(expense as unknown as ExpenseRow);
+    // Refetch: the create-time include ran before the history row existed.
+    const stored = await tx.expense.findUniqueOrThrow({ where: { id: expense.id }, include: expenseInclude });
+    return toRecord(stored as unknown as ExpenseRow);
   });
 }
 

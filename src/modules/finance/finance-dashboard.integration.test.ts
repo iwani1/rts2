@@ -269,15 +269,16 @@ describe('finance dashboard reconciles to invoice and payment records (FIN-07 / 
     });
   });
 
-  it('reports margin and unsupported metrics as insufficient data, never estimated', async () => {
+  it('reports margin as insufficient data before any approved expense exists (FIN-05R)', async () => {
+    // Runs before the FIN-05R expense scenario below: with no approved
+    // expenses the margin stays INSUFFICIENT_DATA and only the still
+    // unsupported metrics are listed (expenses/margin left the list in D-082).
     const dashboard = await getFinanceDashboard({ actorId: financeId, companyId });
     expect(dashboard.margin.status).toBe('INSUFFICIENT_DATA');
-    expect(dashboard.unavailableMetrics.map((item) => item.metric)).toEqual(expect.arrayContaining([
-      'Estimated margin',
+    expect(dashboard.unavailableMetrics.map((item) => item.metric)).toEqual([
       'Rental revenue and rental outstanding balances',
-      'Expenses by category, cost per trip and cost per passenger',
       'Outstanding ageing by due date',
-    ]));
+    ]);
   });
 
   it('denies read-only and unrelated roles and isolates companies', async () => {

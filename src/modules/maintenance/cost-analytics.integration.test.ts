@@ -8,6 +8,7 @@ import { getMaintenanceCostAnalytics } from './cost-analytics';
 const prisma = getPrisma();
 let companyId = '';
 let managerId = '';
+let approverId = '';
 let vehicleId = '';
 
 async function completeWorkOrder(input: {
@@ -26,8 +27,10 @@ async function completeWorkOrder(input: {
     ['Completed', 'Inspection passed and repair evidence recorded'],
   ] as const;
   for (const [toStatus, reason] of sequence) {
+    // Approval requires a different manager than the reporter; the approver
+    // performs the remaining steps too (work-orders.ts policy).
     await transitionWorkOrder({
-      actorId: managerId, companyId, workOrderId: created.id, toStatus, reason,
+      actorId: approverId, companyId, workOrderId: created.id, toStatus, reason,
       ...(toStatus === 'Approved' ? { requiredWork: 'Complete the repair', parts: 'As listed' } : {}),
       ...(toStatus === 'Completed' ? {
         completionDate: `${input.completionDate}T12:00:00.000Z`, inspectionResults: 'Work inspected and passed',
@@ -44,18 +47,23 @@ describe('MNT-04 maintenance cost analytics with PostgreSQL (D-083)', () => {
     if (!databaseUrl) throw new Error('DATABASE_URL must point to a disposable PostgreSQL test database');
     const databaseName = new URL(databaseUrl).pathname.slice(1).split('?')[0];
     if (!databaseName.endsWith('_test')) throw new Error('Refusing integration tests unless the database name ends with _test');
-    const [company, admin, manager] = await Promise.all([
+    const [company, admin, manager, approver] = await Promise.all([
       prisma.company.create({ data: { name: `Maintenance analytics ${randomUUID()}` } }),
       prisma.user.create({ data: { name: 'Analytics admin', email: `${randomUUID()}@example.invalid`, status: 'ACTIVE' } }),
       prisma.user.create({ data: { name: 'Analytics manager', email: `${randomUUID()}@example.invalid`, status: 'ACTIVE' } }),
+      prisma.user.create({ data: { name: 'Analytics approver', email: `${randomUUID()}@example.invalid`, status: 'ACTIVE' } }),
     ]);
     companyId = company.id;
     managerId = manager.id;
+    approverId = approver.id;
     await prisma.userRoleAssignment.create({
       data: { userId: admin.id, roleCode: 'SUPER_ADMIN', assignedById: admin.id, reason: 'Analytics integration administrator' },
     });
     await assignRole({
       actorId: admin.id, targetUserId: manager.id, companyId, roleCode: 'FLEET_MANAGER', reason: 'Analytics integration manager',
+    });
+    await assignRole({
+      actorId: admin.id, targetUserId: approver.id, companyId, roleCode: 'FLEET_MANAGER', reason: 'Analytics integration approver',
     });
     const vehicle = await prisma.vehicle.create({
       data: {
