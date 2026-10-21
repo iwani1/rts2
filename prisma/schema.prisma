@@ -15,6 +15,7 @@ model Company {
   updatedAt       DateTime             @updatedAt @db.Timestamptz(6)
   settings        Setting[]
   expenses        Expense[]
+  paymentProviderEvents PaymentProviderEvent[]
   auditEvents     AuditEvent[]
   roleAssignments UserRoleAssignment[]
   vehicles        Vehicle[]
@@ -274,6 +275,7 @@ model User {
   assignedRoleChanges UserRoleAssignment[] @relation("RoleAssignmentActor")
   rentalRequestStatusChanges RentalRequestStatusHistory[]
   expensesRecorded             Expense[]                    @relation("ExpenseRecorder")
+  providerEventsApplied        PaymentProviderEvent[]         @relation("ProviderEventApplier")
   expenseStatusChanges         ExpenseStatusHistory[]
   contractStatusChanges ContractStatusHistory[]
   corporateInvoiceStatusChanges CorporateInvoiceStatusHistory[]
@@ -753,6 +755,7 @@ model CorporateInvoice {
   lines          CorporateInvoiceLine[]
   statusHistory  CorporateInvoiceStatusHistory[]
   payments       InvoicePayment[]
+  providerEvents PaymentProviderEvent[] @relation("ProviderEventInvoice")
 
   @@unique([companyId, id])
   @@unique([companyId, reference])
@@ -812,8 +815,37 @@ model InvoicePayment {
   createdAt     DateTime @default(now()) @db.Timestamptz(6)
   invoice       CorporateInvoice @relation(fields: [companyId, invoiceId], references: [companyId, id], onDelete: Restrict)
   recordedBy    User     @relation(fields: [recordedById], references: [id], onDelete: Restrict)
+  providerEvents PaymentProviderEvent[]
 
   @@index([companyId, invoiceId, createdAt])
+}
+
+model PaymentProviderEvent {
+  id                String    @id @default(cuid())
+  companyId         String
+  provider          String
+  providerReference String
+  eventType         String
+  amountPesewas     Int?
+  currency          String?
+  invoiceReference  String?
+  paidDate          DateTime? @db.Date
+  status            String    @default("RECEIVED")
+  note              String?
+  rawPayload        Json
+  appliedInvoiceId  String?
+  appliedPaymentId  String?
+  appliedById       String?
+  appliedAt         DateTime? @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @db.Timestamptz(6)
+  company           Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  appliedInvoice    CorporateInvoice? @relation("ProviderEventInvoice", fields: [companyId, appliedInvoiceId], references: [companyId, id], onDelete: Restrict)
+  appliedPayment    InvoicePayment? @relation(fields: [appliedPaymentId], references: [id], onDelete: Restrict)
+  appliedBy         User?     @relation("ProviderEventApplier", fields: [appliedById], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, provider, providerReference])
+  @@index([companyId, status, createdAt])
 }
 
 model Expense {

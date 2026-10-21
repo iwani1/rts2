@@ -888,3 +888,25 @@ phase prompt allows it only once confirmed required.
    recurring-fault counts by report date; each section states its basis.
    Open (unfinished) work orders are reported as a backlog with ageing by
    report date. Reads use the `maintenance:manage` permission scopes.
+
+## D-084 — FIN-04: provider webhooks land in a governed staging inbox (Paystack adapter)
+
+1. **Adapter.** One concrete adapter: Paystack `charge.success` webhooks
+   verified with HMAC-SHA512 over the raw body against `PAYSTACK_SECRET_KEY`
+   (timing-safe compare). The provider stays hidden behind config: with no
+   secret configured the integration reports **"Not configured"** and the
+   webhook endpoint refuses work (503) — it is never described as live
+   until a test transaction succeeds with real sandbox credentials.
+2. **Staging, not auto-posting.** A verified webhook creates one
+   `PaymentProviderEvent` row — idempotent on
+   `(companyId, provider, providerReference)`, so repeated delivery can
+   never double-record (`Intro`: exit criterion). Unverified, non-charge or
+   non-GHS events never create invoice payments.
+3. **Application is governed.** An authorised finance user applies a
+   `RECEIVED` event to an ISSUED invoice: same locked balance rules as
+   manual `recordInvoicePayment` (never above the outstanding balance),
+   creating the `InvoicePayment` with the provider reference and flipping
+   the invoice to PAID when covered, with history + audit rows. The browser
+   is never involved; metadata invoice references are hints only.
+4. Events applied/ignored keep their raw payload for reconciliation
+   (FIN-08) and audit.
