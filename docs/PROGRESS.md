@@ -1195,3 +1195,16 @@ resets only an existing global Super Administrator's credential,
 revokes their sessions, and writes a `SUPER_ADMIN_PASSWORD_RESET`
 audit event. Documented in `docs/SETUP_AND_DEPLOYMENT.md` step 9 with
 the same handling cautions as the bootstrap command.
+
+## Manual-verification environment live (2026-10-21)
+
+Fresh browser environment established on Fedora for the Phase 1C/2
+manual checklists: disposable database `richie_tms_app_p2_test`
+(32/32 migrations), Super Administrator and Richie Transport Services
+bootstrapped, dev app pointed at it via `.env`. Browser sign-in and the
+AUTH-06 super-admin 2FA gate (redirect to `/account/security?required=1`)
+exercised successfully at HEAD `61a95a2`. Two environment lessons
+recorded: a shell that once exported a stale `DATABASE_URL` overrides
+`.env` for every later `npm run dev` in that terminal (use a fresh
+shell); and long-lived dev servers accumulate stale `.next` state
+across pulls — `rm -rf .next` + restart before suspecting the code.
