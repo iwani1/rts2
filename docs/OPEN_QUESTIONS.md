@@ -209,3 +209,9 @@ Until resolved, settings remain unset and dependent actions must be blocked with
 - D-060 gate decisions recorded (D-059 ratified; both settings rows registered; DRV-03/DRV-05
   descoped; DRAFT-only invoice lifecycle confirmed). Remaining: owner's formal declaration that the
   Phase 1B gate is closed; no Phase 1C work before it.
+
+## Phase 1B GATE CLOSED (owner declaration, 2026-10-21)
+- The owner formally declared the Phase 1B gate closed after verify 7/7, integration 105/105,
+  unit 373/373, and E2E 4/4, with the D-060 ratifications recorded. Phase 1C planning may begin;
+  Phase 1C construction requires the owner's separate go-ahead. Descoped items (DRV-03/DRV-05,
+  invoice issuance/payment/void lifecycle) require their own decisions first.

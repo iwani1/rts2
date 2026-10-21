@@ -13,7 +13,7 @@ work-completed with the test host's local wall clock (~1h behind
 Africa/Accra, minute-truncated), so the instant preceded `appliedAt` and
 the service correctly refused the release. The helper now emits
 Africa/Accra wall time with seconds precision; no service change was
-needed. Owner declaration of gate closure is the only remaining formality.
+needed. The owner declared the Phase 1B gate closed on 2026-10-21.
 
 ## 0. Pull and generate
 

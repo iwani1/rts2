@@ -321,3 +321,10 @@
 - **Limits:** Gate closure still awaits the owner-run E2E pass (`docs/PHASE_1B_VERIFICATION.md` §3,
   separate fresh `richie_tms_e2e_phase1b_test` database). No Phase 1C work begins until the owner
   declares the gate closed after E2E.
+
+- **Gate closed (owner declaration, 2026-10-21):** After the owner-run E2E pass went 4/4 on the fresh
+  `richie_tms_e2e_phase1b_test` database (post-`44a7e93` spec fix) and the verify script re-confirmed
+  7/7 at gate commit `d540c68`, the owner formally declared the Phase 1B gate closed. All D-060
+  ratifications stand. Phase 1C planning may begin; Phase 1C construction still requires the owner's
+  separate go-ahead, and the descoped items (DRV-03/DRV-05, invoice issuance/payment/void lifecycle)
+  require their own decisions before implementation.

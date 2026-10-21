@@ -521,10 +521,10 @@ Added the routes domain as the fourth Phase 1B vertical slice.
 - **Owner decisions (APPROVED 2026-10-21, recorded as D-060):** D-059 ratified as built; settings-registry
   rows approved for `bookings.creation_cutoff` (D-056) and `finance.corporate_rates` (D-058) — both now
   registered; DRV-03/DRV-05 formally descoped for Phase 1B; DRAFT-only invoice lifecycle confirmed.
-- **Stop line honoured:** all exit evidence is demonstrated (workflows A/B/F/G end-to-end, cross-company
-  isolation on every company-scoped route, capacity under parallel requests, full state matrices,
-  no-map dispatch board, driver own-trips isolation). Owner declaration of gate closure is the only
-  remaining formality; no Phase 1C work begins before it.
+- **Gate closed (owner declaration, 2026-10-21):** with all evidence green and the D-060 decisions
+  recorded, the owner formally declared the Phase 1B gate closed. Phase 1C planning may begin;
+  Phase 1C construction requires a separate owner go-ahead, and the descoped items (DRV-03/DRV-05,
+  invoice issuance/payment/void lifecycle) require their own decisions first.
 
 ## Phase 1B — corporate dashboard (CLI-03; D-059; 2026-10-21)
 
