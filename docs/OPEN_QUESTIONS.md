@@ -143,3 +143,10 @@ Until resolved, settings remain unset and dependent actions must be blocked with
   Remaining before the Phase 1B gate can close: owners E2E run (§3 of
   `docs/PHASE_1B_VERIFICATION.md`) and the four gate decisions (D-059, two settings-registry rows,
   DRV-03/DRV-05, DRAFT-only invoice lifecycle).
+
+## Phase 1B gate decisions APPROVED (owner, 2026-10-21) — recorded as D-060
+- D-059 ratified as built (UserClientBinding); both settings-registry rows approved and now registered
+  in `settingRegistry` (`bookings.creation_cutoff`, `finance.corporate_rates`; the `as SettingKey`
+  casts are removed); DRV-03/DRV-05 formally descoped for Phase 1B; DRAFT-only invoice lifecycle
+  confirmed. Slice statuses flipped to Tested in `docs/PROGRESS.md`. Remaining before gate closure:
+  the owner-run E2E pass on a separate fresh `richie_tms_e2e_phase1b_test` database.

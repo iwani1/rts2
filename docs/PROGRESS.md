@@ -45,39 +45,39 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | MNT-03 | Not Started | No feature implementation; Phase 1+ approval required. |
 | MNT-04 | Not Started | No feature implementation; Phase 1+ approval required. |
 | CLI-01 | Tested | Corporate client register implemented (schema, migration, service, API, pages). PostgreSQL integration tests pass 7/7 within the 14-suite/58-test integration run on a disposable `*_test` database (2026-10-20). |
-| CLI-02 | In Progress | Contract register implemented per D-049: `Contract`/`ContractStatusHistory` schema and migration with database transition guards, service with row-locked reason-audited transitions, API routes, contract register pages, unit tests for schemas and the full from-to matrix, and PostgreSQL integration tests. Verification run on Fedora is pending; see the Phase 1B CLI-02 section below. |
-| CLI-03 | In Progress | Implemented locally (D-059, commit pending); awaiting Fedora verification and owner ratification of the binding rule. |
-| EMP-01 | In Progress | Employee register implemented per D-050 (schema, migration, service, API, pages) with restricted-field handling; Fedora verification pending. |
-| EMP-02 | In Progress | CSV import implemented per D-050/D-024: fixed template, per-client preview with row errors and warning-only likely duplicates, all-or-nothing audited import; Fedora verification pending. |
-| EMP-03 | In Progress | Eligibility toggle via audited update, shift/location text as supplied, audited export without restricted fields; Fedora verification pending. Structured shifts/locations await RTE. |
-| RTE-01 | In Progress | Location register implemented per D-051 (optional coordinate pairs, landmark, Ghana digital address); Fedora verification pending. |
-| RTE-02 | In Progress | Route register with ordered stops and audited stop-order overrides implemented per D-051; Fedora verification pending. |
-| RTE-03 | In Progress | Recurring/one-time schedules with conflict detection, copy, and activation toggles implemented per D-051; trip generation awaits TRP-01. Fedora verification pending. |
-| RTE-04 | In Progress | Manual planning aid implemented per D-051 (recorded offsets only, unmapped-stop flags, seat-count capacity check, never labelled optimal); Fedora verification pending. |
+| CLI-02 | Tested | Contract register per D-049 (DB transition guards, row-locked reason-audited transitions, full from-to matrix). Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
+| CLI-03 | Tested | Corporate dashboard per D-059 (ratified at the Phase 1B gate, D-060): audited UserClientBinding, bound-client read model, bound-HR isolation. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
+| EMP-01 | Tested | Employee register per D-050 with restricted-field handling. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
+| EMP-02 | Tested | CSV import per D-050/D-024: fixed template, per-client preview, warning-only duplicates, all-or-nothing audited import. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
+| EMP-03 | Tested | Eligibility toggle via audited update; shift/location text; audited export without restricted fields. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
+| RTE-01 | Tested | Location register per D-051 (optional coordinate pairs, landmark, Ghana digital address). Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
+| RTE-02 | Tested | Route register with ordered stops and audited stop-order overrides per D-051. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
+| RTE-03 | Tested | Recurring/one-time schedules with conflict detection, copy, activation toggles per D-051. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
+| RTE-04 | Tested | Manual planning aid per D-051 (recorded offsets, unmapped-stop flags, capacity check, never labelled optimal). Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
 | RTE-05 | Not Started | No feature implementation; Phase 1+ approval required. |
-| BKG-01 | In Progress | Booking types and dated-journey booking records implemented per D-052; Fedora verification pending. |
-| BKG-02 | In Progress | Creation validation implemented per D-052 (eligibility, contract status with typed inactive-contract policy, route/client match, past dates, DB-enforced duplicate journeys incl. parallel requests); Fedora verification pending. |
-| BKG-03 | In Progress | Pending → Accepted/Rejected/Cancelled staff workflow with sequenced history implemented per D-052; assignment/boarding/completion paths land with TRP/DRV. Fedora verification pending. |
-| BKG-04 | In Progress | Implemented locally (D-053, commits 2e63cc8/d06532b); awaiting Fedora verification. |
-| BKG-05 | In Progress | Implemented locally (D-056, commit pending); awaiting Fedora verification. |
-| BKG-06 | In Progress | Implemented locally (D-056, commit pending); awaiting Fedora verification. |
-| TRP-01 | In Progress | Implemented locally (D-053, commit d06532b); awaiting Fedora verification. |
-| TRP-02 | In Progress | Implemented locally (D-053, commit d06532b); awaiting Fedora verification. |
-| DSP-01 | In Progress | Implemented locally (D-054, commit pending); awaiting Fedora verification. |
-| DSP-02 | In Progress | Implemented locally (D-054, commit pending); awaiting Fedora verification. |
-| DSP-03 | In Progress | Implemented locally (D-054, commit pending); awaiting Fedora verification. |
-| DSP-04 | In Progress | Implemented locally (D-054, commit pending); awaiting Fedora verification. |
-| DRV-01 | In Progress | Implemented locally (D-055, commit pending); awaiting Fedora verification. |
-| DRV-02 | In Progress | Implemented locally (D-055, commit pending); awaiting Fedora verification. |
+| BKG-01 | Tested | Booking types and dated-journey records per D-052. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
+| BKG-02 | Tested | Creation validation per D-052 incl. typed inactive-contract policy and DB-enforced duplicate prevention under parallel requests. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
+| BKG-03 | Tested | Pending -> Accepted/Rejected/Cancelled staff workflow with sequenced history per D-052. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
+| BKG-04 | Tested | Cancellations/waiting list/history per D-053. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
+| BKG-05 | Tested | Booking creation cut-off per D-056; registry row approved at the Phase 1B gate (D-060). Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
+| BKG-06 | Tested | Waiting-list service/API/dispatch panel per D-056. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
+| TRP-01 | Tested | Trips/manifests with transactional capacity check per D-053 (parallel assignment race covered). Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
+| TRP-02 | Tested | Schedule trip generation, idempotent per (company, schedule, date) per D-053. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
+| DSP-01 | Tested | Dispatch board read model, no map provider, per D-054. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
+| DSP-02 | Tested | Resource assignment with override-and-reason; hard blocks not overridable, per D-054. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
+| DSP-03 | Tested | Boarding-code-adjacent dispatch policies remain fail-closed where unapproved; no-show frees seats per D-054. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
+| DSP-04 | Tested | Dispatch history/audit surfaces per D-054. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
+| DRV-01 | Tested | Driver account link (audited, unique userId) per D-055. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
+| DRV-02 | Tested | Driver own-trips list/detail with linked-driver isolation per D-055. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
 | DRV-03 | Not Started | No feature implementation; Phase 1+ approval required. |
-| DRV-04 | In Progress | Implemented locally (D-055, commit pending); awaiting Fedora verification. |
+| DRV-04 | Tested | Idempotent driver event API (replay/conflict) per D-055. Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
 | DRV-05 | Not Started | No feature implementation; Phase 1+ approval required. |
 | PAX-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | PAX-02 | Not Started | No feature implementation; Phase 1+ approval required. |
 | INC-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | INC-02 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FIN-01 | Not Started | No feature implementation; Phase 1+ approval required. |
-| FIN-02 | In Progress | Implemented locally (D-057/D-058, commit pending); awaiting Fedora verification. |
+| FIN-02 | Tested | Corporate invoice generation per D-057/D-058 (DRAFT-only lifecycle confirmed at the Phase 1B gate, D-060); rates registry row approved (D-060). Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
 | FIN-03 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FIN-04 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FIN-05 | Not Started | No feature implementation; Phase 1+ approval required. |
@@ -452,7 +452,7 @@ Added corporate client records as the first Phase 1B vertical slice, following t
 | DRV-02 | In Progress | Driver actions with idempotent event APIs implemented locally (D-055, commit pending); navigation stays text-only (names/locations) without a map provider. |
 | DRV-04 | In Progress | Driver defect/interruption reporting implemented locally (D-055, commit pending); awaiting Fedora verification. |
 | FIN-01 (contract pricing) | Not Started | Contract pricing models. |
-| FIN-02 (corporate invoice) | In Progress | Corporate invoice generation with duplicate-billing protection implemented locally (D-057/D-058, commit pending); awaiting Fedora verification. |
+| FIN-02 (corporate invoice) | Tested | Corporate invoice generation with duplicate-billing protection (D-057/D-058); DRAFT-only lifecycle confirmed at the Phase 1B gate (D-060). Fedora-verified 2026-10-21 at commit 3e32798. |
 
 ## Phase 1B — corporate contracts (CLI-02; D-049; 2026-10-20)
 
@@ -497,7 +497,7 @@ Added the routes domain as the fourth Phase 1B vertical slice.
 - **Tests**: `route-plan.test.ts`, `route-schema.test.ts`, `routes.integration.test.ts` (locations, stop-order override, plan capacity, schedule conflicts/copy/reactivation, cross-company denial). Not yet run: sandbox has no `node_modules`/database; Fedora verification is batched with CLI-02/EMP.
 - **Limits**: No map provider, no trip generation (TRP-01), no availability/assignment checks (DSP-02), no optimisation (RTE-05, Phase 3).
 
-## Phase 1B gate — automated verification PASSED on Fedora (2026-10-21); owner approval pending
+## Phase 1B gate — automated verification PASSED; owner decisions APPROVED (D-060); E2E pending
 
 - **Verified at commit `3e32798`** by `./scripts/verify-phase1b.sh` on a fresh disposable database
   (`richie_tms_p1b_20261021011206_test`): Prisma generate ✅, 21/21 migrations ✅, `tsc --noEmit` ✅,
@@ -514,10 +514,11 @@ Added the routes domain as the fourth Phase 1B vertical slice.
   no-map dispatch board.
 - **Still outstanding:** the E2E pass (`docs/PHASE_1B_VERIFICATION.md` §3, separate fresh
   `richie_tms_e2e_phase1b_test` database) — owner-run, not yet executed.
-- **Owner decisions owed at the gate:** ratify or reshape D-059 (client binding); approve settings-registry
-  rows for `bookings.creation_cutoff` (D-056) and `finance.corporate_rates` (D-058); define or descope
-  DRV-03/DRV-05; confirm the DRAFT-only invoice lifecycle scope for Phase 1C planning.
-- **Stop line honoured:** no Phase 1C work begins until the owner verifies and approves.
+- **Owner decisions (APPROVED 2026-10-21, recorded as D-060):** D-059 ratified as built; settings-registry
+  rows approved for `bookings.creation_cutoff` (D-056) and `finance.corporate_rates` (D-058) — both now
+  registered; DRV-03/DRV-05 formally descoped for Phase 1B; DRAFT-only invoice lifecycle confirmed.
+- **Stop line honoured:** gate closure still awaits the owner-run E2E pass; no Phase 1C work begins until
+  the owner declares the gate closed after E2E.
 
 ## Phase 1B — corporate dashboard (CLI-03; D-059; 2026-10-21)
 

@@ -41,8 +41,8 @@ const pricingModelsKey: SettingKey = 'rental.pricing_models';
 const taxLinesKey: SettingKey = 'finance.tax_lines';
 const depositPolicyKey: SettingKey = 'rental.deposit_policy';
 const inactiveContractPolicyKey: SettingKey = 'contracts.inactive_booking_policy';
-const bookingCreationCutoffKey: SettingKey = 'bookings.creation_cutoff' as SettingKey; // registry row pending owner approval
-const corporateRatesKey: SettingKey = 'finance.corporate_rates' as SettingKey; // registry row pending owner approval
+const bookingCreationCutoffKey: SettingKey = 'bookings.creation_cutoff'; // registry row approved by owner at the Phase 1B gate (2026-10-21)
+const corporateRatesKey: SettingKey = 'finance.corporate_rates'; // registry row approved by owner at the Phase 1B gate (2026-10-21)
 const corporateRateSchema = z.object({
   contractId: z.string().trim().min(1).max(128),
   unit: z.enum(['PER_TRIP', 'PER_PASSENGER']),

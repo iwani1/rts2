@@ -299,3 +299,25 @@
 - **Decision:** The HR-to-client binding that blocks CLI-03 is resolved with the same pattern as the driver link (D-055): a user may be bound to exactly one corporate client **per company** when they hold the Corporate HR Admin role, through a new audited service `bindUserClient` (Super Administrator GLOBAL or Operations Manager COMPANY actors; both linkage directions unique per user+company and client+company). `UserClientBinding` is a company+user+client row with composite FKs (no deletion, unbind sets `revokedAt`; re-binding after revoke is a new row). Read paths never treat the CORP_HR_ADMIN role alone as sufficient: a corporate dashboard request first resolves an active binding, then restricts every query to that client; without a binding the dashboard is an explicit denial, never a company-wide view. The binding is read-only — it confers no staff powers and does not change the fail-closed posture of bookings/employees routes for HR scopes, which are separate later decisions.
 - **Source:** CLI-03 in the standing brief ("Corporate dashboard limited to the client's own records"), the D-050 limit ("HR-to-client binding rule" unapproved), and the owner's standing instruction on 2026-10-20 to continue Phase 1B without stopping. This decision is recorded for owner ratification like D-053..D-058; the owner may direct a single-client membership model instead, in which case the table reshapes but the read-model code stays.
 - **Limits:** Only the Corporate HR Admin dashboard is enabled by this decision. Booking creation for HR users, roster minimums for dispatchers, and passenger self-service remain disabled pending their own decisions.
+
+## D-060 — Phase 1B gate ratifications (owner-approved 2026-10-21)
+- **Decision:** At the Phase 1B gate the owner approved the recommended package:
+  (1) **D-059 ratified as built** — the audited `UserClientBinding` (one active binding per user+company,
+  revoke-only mutation, CORP_HR_ADMIN role alone never sufficient) is the approved HR-to-client binding
+  rule; the recorded limit stands (one login per client for multi-client HR staff) until a future decision
+  reshapes it.
+  (2) **Settings registry rows approved** — `bookings.creation_cutoff` (D-056, category `bookings`,
+  blocked feature BKG-05) and `finance.corporate_rates` (D-058, category `finance`, blocked feature
+  FIN-02) are registered in `settingRegistry`, so both are configurable through the settings UI; values
+  remain unset until deliberately configured and services keep failing closed meanwhile. The temporary
+  `as SettingKey` casts in `registry.ts` are removed.
+  (3) **DRV-03 / DRV-05 formally descoped for Phase 1B** — they were never defined in the approved
+  documents; they remain "Not Started — requires definition before any future phase" and do not block
+  the gate.
+  (4) **Invoice lifecycle confirmed DRAFT-only** — Phase 1B closes with immutable DRAFT generation
+  (D-057/D-058); issuance, payment, and voiding are a Phase 1C finance decision and must not be assumed.
+- **Source:** Phase 1B gate after automated verification passed at commit `3e32798` (unit 373/373,
+  integration 105/105 on fresh `richie_tms_p1b_20261021011206_test`); owner "APPROVE" on 2026-10-21.
+- **Limits:** Gate closure still awaits the owner-run E2E pass (`docs/PHASE_1B_VERIFICATION.md` §3,
+  separate fresh `richie_tms_e2e_phase1b_test` database). No Phase 1C work begins until the owner
+  declares the gate closed after E2E.
