@@ -158,7 +158,7 @@ describe('staff transport, fleet and financial reports with exports (RPT-02/03/0
     await prisma.maintenanceWorkOrder.create({
       data: {
         companyId, vehicleId: vehicleOneId, reference: `WO-${randomUUID().replaceAll('-', '').slice(0, 16).toUpperCase()}`,
-        reportedFault: 'Brake pads worn', dateReported: new Date('2028-01-10'), safetyRelated: true,
+        reportedFault: 'Brake pads worn', dateReported: new Date('2028-01-10'), safetyRelated: false,
         reason: 'Report fixture work order', createdById: opsId,
         labourCostPesewas: BigInt(10000), partsCostPesewas: BigInt(5000), otherCostPesewas: null,
       },
