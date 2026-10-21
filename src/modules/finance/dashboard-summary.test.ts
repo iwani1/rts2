@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { summariseCostsAndMargin, summariseFinanceDashboard, summariseInvoiceAgeing } from './dashboard-summary';
+import { summariseCostsAndMargin, summariseFinanceDashboard, summariseInvoiceAgeing, summariseRevenueStream, combineRevenueStreams } from './dashboard-summary';
+
+const emptyStream = { statusTotals: [], totalPaymentsPesewas: 0, outstandingPesewas: 0 };
 
 const statuses = [
   { status: 'DRAFT', invoiceCount: 1, totalPesewas: 20000 },
@@ -11,7 +13,8 @@ const statuses = [
 describe('summariseFinanceDashboard (FIN-07 / D-063)', () => {
   it('recognises revenue from issued and paid invoices only, with drafts as pipeline', () => {
     const summary = summariseFinanceDashboard({
-      statusTotals: statuses, totalPaymentsPesewas: 25000, outstandingPesewas: 35000, clients: [],
+      corporate: { statusTotals: statuses, totalPaymentsPesewas: 25000, outstandingPesewas: 35000 },
+      rental: emptyStream, statusTotals: statuses, clients: [],
     });
     expect(summary.recognizedRevenuePesewas).toBe(60000);
     expect(summary.draftPipelinePesewas).toBe(20000);
@@ -28,7 +31,8 @@ describe('summariseFinanceDashboard (FIN-07 / D-063)', () => {
 
   it('proves the reconciliation identity revenue = payments + outstanding', () => {
     const summary = summariseFinanceDashboard({
-      statusTotals: statuses, totalPaymentsPesewas: 25000, outstandingPesewas: 35000, clients: [],
+      corporate: { statusTotals: statuses, totalPaymentsPesewas: 25000, outstandingPesewas: 35000 },
+      rental: emptyStream, statusTotals: statuses, clients: [],
     });
     expect(summary.reconciliation).toEqual({
       recognizedRevenuePesewas: 60000,
@@ -40,14 +44,16 @@ describe('summariseFinanceDashboard (FIN-07 / D-063)', () => {
 
   it('flags a broken tie-out instead of hiding it', () => {
     const summary = summariseFinanceDashboard({
-      statusTotals: statuses, totalPaymentsPesewas: 20000, outstandingPesewas: 35000, clients: [],
+      corporate: { statusTotals: statuses, totalPaymentsPesewas: 20000, outstandingPesewas: 35000 },
+      rental: emptyStream, statusTotals: statuses, clients: [],
     });
     expect(summary.reconciliation.reconciles).toBe(false);
   });
 
   it('derives per-client outstanding and sorts by largest balance, then name', () => {
     const summary = summariseFinanceDashboard({
-      statusTotals: statuses, totalPaymentsPesewas: 25000, outstandingPesewas: 35000,
+      corporate: { statusTotals: statuses, totalPaymentsPesewas: 25000, outstandingPesewas: 35000 },
+      rental: emptyStream, statusTotals: statuses,
       clients: [
         { clientId: 'c1', clientName: 'Beta Ltd', standingInvoiceCount: 2, invoicedPesewas: 40000, paidPesewas: 25000 },
         { clientId: 'c2', clientName: 'alpha Ltd', standingInvoiceCount: 1, invoicedPesewas: 20000, paidPesewas: 5000 },
@@ -62,7 +68,7 @@ describe('summariseFinanceDashboard (FIN-07 / D-063)', () => {
 
   it('treats an empty ledger as reconciled zeros', () => {
     const summary = summariseFinanceDashboard({
-      statusTotals: [], totalPaymentsPesewas: 0, outstandingPesewas: 0, clients: [],
+      corporate: emptyStream, rental: emptyStream, statusTotals: [], clients: [],
     });
     expect(summary.recognizedRevenuePesewas).toBe(0);
     expect(summary.countsByStatus).toEqual([
@@ -144,5 +150,41 @@ describe('summariseInvoiceAgeing (D-090/5C)', () => {
     const current = result.buckets[0];
     expect([current.corporateOutstandingPesewas, current.rentalOutstandingPesewas]).toEqual([100, 200]);
     expect(result.undated).toEqual({ invoiceCount: 1, outstandingPesewas: 800 });
+  });
+});
+
+describe('rental revenue recognition (D-091 / Phase 6)', () => {
+  const rentalStatuses = [
+    { status: 'DRAFT', invoiceCount: 1, totalPesewas: 5000 },
+    { status: 'ISSUED', invoiceCount: 1, totalPesewas: 12000 },
+    { status: 'PAID', invoiceCount: 1, totalPesewas: 8000 },
+    { status: 'VOID', invoiceCount: 1, totalPesewas: 3000 },
+  ];
+
+  it('recognises a rental stream on issue and reconciles it independently', () => {
+    const rental = summariseRevenueStream({ statusTotals: rentalStatuses, totalPaymentsPesewas: 14000, outstandingPesewas: 6000 });
+    expect(rental.recognizedRevenuePesewas).toBe(20000);
+    expect(rental.outstandingPesewas).toBe(6000);
+    expect(rental.draftPipelinePesewas).toBe(5000);
+    expect(rental.voidedTotalPesewas).toBe(3000);
+    expect(rental.reconciles).toBe(true);
+  });
+
+  it('combines streams with the identity holding per stream and combined', () => {
+    const summary = summariseFinanceDashboard({
+      corporate: { statusTotals: statuses, totalPaymentsPesewas: 25000, outstandingPesewas: 35000 },
+      rental: { statusTotals: rentalStatuses, totalPaymentsPesewas: 14000, outstandingPesewas: 6000 },
+      statusTotals: [...statuses, ...rentalStatuses],
+      clients: [],
+    });
+    expect(summary.streams.corporate.recognizedRevenuePesewas).toBe(60000);
+    expect(summary.streams.rental.recognizedRevenuePesewas).toBe(20000);
+    expect(summary.recognizedRevenuePesewas).toBe(80000);
+    expect(summary.paymentsReceivedPesewas).toBe(39000);
+    expect(summary.outstandingPesewas).toBe(41000);
+    expect(summary.reconciliation.reconciles).toBe(true);
+    expect(summary.streams.rental.reconciles).toBe(true);
+    // Combined status totals aggregate same-status rows across families.
+    expect(summary.countsByStatus.find((row) => row.status === 'ISSUED')).toEqual({ status: 'ISSUED', invoiceCount: 3, totalPesewas: 52000 });
   });
 });

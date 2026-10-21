@@ -7,6 +7,7 @@ import {
   summariseFinanceDashboard,
   summariseInvoiceAgeing,
   type InvoiceAgeingBucket,
+  type RevenueStreamSummary,
   type DashboardMargin,
   type ExpenseCategoryTotal,
   type TripCost,
@@ -42,7 +43,10 @@ export type FinanceDashboard = {
     paymentCount: number;
     invoicesIssuedCount: number;
     revenueRecognizedPesewas: number;
+    corporate: { paymentsReceivedPesewas: number; paymentCount: number; invoicesIssuedCount: number; revenueRecognizedPesewas: number };
+    rental: { paymentsReceivedPesewas: number; paymentCount: number; invoicesIssuedCount: number; revenueRecognizedPesewas: number };
   };
+  streams: { corporate: RevenueStreamSummary; rental: RevenueStreamSummary };
   coverage: {
     issuedInvoicesWithTimestamp: FinanceCoveragePair;
     paymentsWithMethod: FinanceCoveragePair;
@@ -71,12 +75,7 @@ export type FinanceDashboard = {
   unavailableMetrics: Array<{ metric: string; reason: string }>;
 };
 
-const UNAVAILABLE_METRICS = [
-  {
-    metric: 'Rental revenue in the headline totals',
-    reason: 'Headline revenue and the reconciliation tie-out remain corporate (FIN-07 / D-063). Rental invoices are aged in the ageing section; no rental-revenue recognition rule has been defined yet.',
-  },
-];
+const UNAVAILABLE_METRICS: Array<{ metric: string; reason: string }> = [];
 
 /**
  * FIN-07 / D-063: read-only finance dashboard whose totals reconcile to the
@@ -123,6 +122,8 @@ export async function getFinanceDashboard(input: {
     statusGroups, paymentsSum, paymentCount, paymentsByMethod, clientInvoiceGroups,
     clientPaidRows, outstandingRows, windowPaymentsSum, windowPaymentCount,
     issuedHistory, paymentsWithReference,
+    rentalStatusGroups, rentalPaymentsSum, rentalOutstandingRows, rentalWindowPaymentsSum,
+    rentalWindowPaymentCount, rentalIssuedHistory,
   ] = await Promise.all([
     prisma.corporateInvoice.groupBy({
       by: ['status'], where: { companyId },
@@ -172,6 +173,51 @@ export async function getFinanceDashboard(input: {
       select: { invoiceId: true },
     }),
     prisma.invoicePayment.count({ where: { companyId, reference: { not: null } } }),
+    prisma.rentalInvoice.groupBy({
+      by: ['status'], where: { companyId },
+      _count: { _all: true }, _sum: { totalPesewas: true },
+    }),
+    prisma.rentalInvoicePayment.aggregate({ where: { companyId }, _sum: { amountPesewas: true } }),
+    prisma.$queryRaw<Array<{ outstandingPesewas: bigint }>>`
+      SELECT COALESCE(SUM(i."totalPesewas" - COALESCE(p."paidPesewas", 0)), 0) AS "outstandingPesewas"
+      FROM "RentalInvoice" i
+      LEFT JOIN (
+        SELECT "invoiceId", SUM("amountPesewas") AS "paidPesewas"
+        FROM "RentalInvoicePayment"
+        WHERE "companyId" = ${companyId}
+        GROUP BY "invoiceId"
+      ) p ON p."invoiceId" = i."id"
+      WHERE i."companyId" = ${companyId} AND i."status" = 'ISSUED'
+    `,
+    prisma.rentalInvoicePayment.aggregate({
+      where: { companyId, ...(paymentWindow ? { receivedAt: paymentWindow } : {}) },
+      _sum: { amountPesewas: true },
+    }),
+    prisma.rentalInvoicePayment.count({
+      where: { companyId, ...(paymentWindow ? { receivedAt: paymentWindow } : {}) },
+    }),
+    prisma.rentalInvoiceStatusHistory.findMany({
+      where: {
+        companyId, toStatus: 'ISSUED',
+        ...(historyWindow ? { createdAt: historyWindow } : {}),
+      },
+      select: { invoiceId: true },
+    }),
+  ]);
+
+  const rentalIssuedInvoiceIds = [...new Set(rentalIssuedHistory.map((row: { invoiceId: string }) => row.invoiceId))];
+  const [rentalIssuedInWindowSum, rentalIssuedInWindowCount] = await Promise.all([
+    rentalIssuedInvoiceIds.length > 0
+      ? prisma.rentalInvoice.aggregate({
+        where: { companyId, id: { in: rentalIssuedInvoiceIds }, status: { not: 'VOID' } },
+        _sum: { totalPesewas: true },
+      })
+      : Promise.resolve({ _sum: { totalPesewas: null } }),
+    rentalIssuedInvoiceIds.length > 0
+      ? prisma.rentalInvoice.count({
+        where: { companyId, id: { in: rentalIssuedInvoiceIds }, status: { not: 'VOID' } },
+      })
+      : Promise.resolve(0),
   ]);
 
   const issuedInvoiceIds = [...new Set(issuedHistory.map((row: { invoiceId: string }) => row.invoiceId))];
@@ -205,16 +251,27 @@ export async function getFinanceDashboard(input: {
     : [];
   const clientNames = new Map(clientRows.map((client: { id: string; name: string }) => [client.id, client.name]));
 
+  const mapStatusTotals = (groups: Array<{
+    status: string; _count: { _all: number }; _sum: { totalPesewas: number | null };
+  }>) => groups.map((row) => ({
+    status: row.status,
+    invoiceCount: row._count._all,
+    totalPesewas: row._sum.totalPesewas ?? 0,
+  }));
+  const corporateStatusTotals = mapStatusTotals(statusGroups);
+  const rentalStatusTotals = mapStatusTotals(rentalStatusGroups);
   const summary = summariseFinanceDashboard({
-    statusTotals: statusGroups.map((row: {
-      status: string; _count: { _all: number }; _sum: { totalPesewas: number | null };
-    }) => ({
-      status: row.status,
-      invoiceCount: row._count._all,
-      totalPesewas: row._sum.totalPesewas ?? 0,
-    })),
-    totalPaymentsPesewas: paymentsSum._sum.amountPesewas ?? 0,
-    outstandingPesewas: Number(outstandingRows[0]?.outstandingPesewas ?? BigInt(0)),
+    corporate: {
+      statusTotals: corporateStatusTotals,
+      totalPaymentsPesewas: paymentsSum._sum.amountPesewas ?? 0,
+      outstandingPesewas: Number(outstandingRows[0]?.outstandingPesewas ?? BigInt(0)),
+    },
+    rental: {
+      statusTotals: rentalStatusTotals,
+      totalPaymentsPesewas: rentalPaymentsSum._sum.amountPesewas ?? 0,
+      outstandingPesewas: Number(rentalOutstandingRows[0]?.outstandingPesewas ?? BigInt(0)),
+    },
+    statusTotals: [...corporateStatusTotals, ...rentalStatusTotals],
     clients: clientIds.map((clientId) => ({
       clientId,
       clientName: clientNames.get(clientId) ?? 'Unknown client',
@@ -285,7 +342,7 @@ export async function getFinanceDashboard(input: {
       }))
       .sort((a, b) => b.approvedCostPesewas - a.approvedCostPesewas),
     revenuePesewas: hasWindow
-      ? (issuedInWindowSum._sum.totalPesewas ?? 0)
+      ? (issuedInWindowSum._sum.totalPesewas ?? 0) + (rentalIssuedInWindowSum._sum.totalPesewas ?? 0)
       : summary.recognizedRevenuePesewas,
     basis: hasWindow ? 'window' : 'all-time',
   });
@@ -355,11 +412,24 @@ export async function getFinanceDashboard(input: {
     clients: summary.clients,
     paymentsByMethod: methodRows,
     activity: {
-      paymentsReceivedPesewas: windowPaymentsSum._sum.amountPesewas ?? 0,
-      paymentCount: windowPaymentCount,
-      invoicesIssuedCount: issuedInWindowCount,
-      revenueRecognizedPesewas: issuedInWindowSum._sum.totalPesewas ?? 0,
+      paymentsReceivedPesewas: (windowPaymentsSum._sum.amountPesewas ?? 0) + (rentalWindowPaymentsSum._sum.amountPesewas ?? 0),
+      paymentCount: windowPaymentCount + rentalWindowPaymentCount,
+      invoicesIssuedCount: issuedInWindowCount + rentalIssuedInWindowCount,
+      revenueRecognizedPesewas: (issuedInWindowSum._sum.totalPesewas ?? 0) + (rentalIssuedInWindowSum._sum.totalPesewas ?? 0),
+      corporate: {
+        paymentsReceivedPesewas: windowPaymentsSum._sum.amountPesewas ?? 0,
+        paymentCount: windowPaymentCount,
+        invoicesIssuedCount: issuedInWindowCount,
+        revenueRecognizedPesewas: issuedInWindowSum._sum.totalPesewas ?? 0,
+      },
+      rental: {
+        paymentsReceivedPesewas: rentalWindowPaymentsSum._sum.amountPesewas ?? 0,
+        paymentCount: rentalWindowPaymentCount,
+        invoicesIssuedCount: rentalIssuedInWindowCount,
+        revenueRecognizedPesewas: rentalIssuedInWindowSum._sum.totalPesewas ?? 0,
+      },
     },
+    streams: summary.streams,
     coverage: {
       issuedInvoicesWithTimestamp: { numerator: standingWithTimestamp, denominator: standingIssuedCount },
       paymentsWithMethod: { numerator: paymentsWithMethod, denominator: paymentCount },

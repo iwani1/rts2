@@ -81,11 +81,11 @@ export default async function FinanceDashboardPage({
           <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">{company.name}</p>
           <h1 className="mt-1 text-3xl font-semibold text-slate-950">Finance dashboard</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            Every figure below is derived from the corporate invoice and payment records themselves:
-            revenue counts invoices that have been issued and not voided, payments are the recorded
-            payment sums, and outstanding is each issued invoice&apos;s total minus its payments.
-            Draft invoices are pipeline only, and margin is shown only when attributable cost
-            records exist — they do not yet, so no margin figure is presented.
+            Every figure below is derived from the corporate and rental invoice ledgers themselves:
+            revenue counts invoices that have been issued and not voided (accrual on issue, D-091),
+            payments are the recorded payment sums, and outstanding is each issued invoice&apos;s
+            total minus its payments. Draft invoices are pipeline only, and margin is shown only
+            when attributable cost records exist.
           </p>
         </div>
         <div className="flex gap-2">
@@ -141,7 +141,7 @@ export default async function FinanceDashboardPage({
             <div className="rounded-lg border border-slate-200 bg-white p-5">
               <p className="text-sm font-medium text-slate-500">Recognised revenue</p>
               <p className="mt-2 text-2xl font-semibold text-slate-950">{cedis(dashboard.recognizedRevenuePesewas)}</p>
-              <p className="mt-1 text-xs text-slate-500">Issued + paid invoice totals; drafts and voids excluded.</p>
+              <p className="mt-1 text-xs text-slate-500">Corporate + rental issued and paid totals; drafts and voids excluded.</p>
             </div>
             <div className="rounded-lg border border-slate-200 bg-white p-5">
               <p className="text-sm font-medium text-slate-500">Payments received</p>
@@ -171,13 +171,58 @@ export default async function FinanceDashboardPage({
                 <>
                   <p className="mt-2 text-2xl font-semibold text-slate-950">{cedis(dashboard.margin.marginPesewas)}</p>
                   <p className="mt-1 text-xs text-slate-500">
-                    Revenue {cedis(dashboard.margin.revenuePesewas)} minus approved costs {cedis(dashboard.margin.approvedCostsPesewas)} ({dashboard.margin.basis}). Estimated — not audited profit.
+                    Revenue {cedis(dashboard.margin.revenuePesewas)} minus approved costs {cedis(dashboard.margin.approvedCostsPesewas)} ({dashboard.margin.basis}). Since Phase 6 the revenue basis is combined corporate + rental (D-091); earlier figures were corporate-only. Estimated — not audited profit.
                   </p>
                 </>
               ) : (
                 <p className="mt-2 text-sm text-slate-600">{dashboard.margin.reason}</p>
               )}
             </div>
+          </section>
+
+          <section className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+            <h2 className="px-4 pt-4 text-sm font-semibold text-slate-900">Revenue by stream</h2>
+            <table className="mt-3 min-w-full divide-y divide-slate-200 text-left text-sm">
+              <thead>
+                <tr className="text-xs uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-2 font-medium">Stream</th>
+                  <th className="px-4 py-2 font-medium">Recognised revenue</th>
+                  <th className="px-4 py-2 font-medium">Payments received</th>
+                  <th className="px-4 py-2 font-medium">Outstanding</th>
+                  <th className="px-4 py-2 font-medium">Draft pipeline</th>
+                  <th className="px-4 py-2 font-medium">Voided</th>
+                  <th className="px-4 py-2 font-medium">Tie-out</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {([
+                  ['Corporate contracts', dashboard.streams.corporate],
+                  ['Rentals', dashboard.streams.rental],
+                ] as const).map(([label, stream]) => (
+                  <tr key={label}>
+                    <th className="px-4 py-2 font-medium text-slate-900">{label}</th>
+                    <td className="px-4 py-2 text-slate-700">{cedis(stream.recognizedRevenuePesewas)}</td>
+                    <td className="px-4 py-2 text-slate-700">{cedis(stream.paymentsReceivedPesewas)}</td>
+                    <td className="px-4 py-2 text-slate-700">{cedis(stream.outstandingPesewas)}</td>
+                    <td className="px-4 py-2 text-slate-700">{stream.draftInvoiceCount} · {cedis(stream.draftPipelinePesewas)}</td>
+                    <td className="px-4 py-2 text-slate-700">{stream.voidedInvoiceCount} · {cedis(stream.voidedTotalPesewas)}</td>
+                    <td className="px-4 py-2 text-slate-700">{stream.reconciles ? 'Reconciled' : 'Mismatch — investigate'}</td>
+                  </tr>
+                ))}
+                <tr>
+                  <th className="px-4 py-2 font-medium text-slate-900">Combined</th>
+                  <td className="px-4 py-2 font-medium text-slate-900">{cedis(dashboard.recognizedRevenuePesewas)}</td>
+                  <td className="px-4 py-2 font-medium text-slate-900">{cedis(dashboard.paymentsReceivedPesewas)}</td>
+                  <td className="px-4 py-2 font-medium text-slate-900">{cedis(dashboard.outstandingPesewas)}</td>
+                  <td className="px-4 py-2 font-medium text-slate-900">{dashboard.draftInvoiceCount} · {cedis(dashboard.draftPipelinePesewas)}</td>
+                  <td className="px-4 py-2 font-medium text-slate-900">{dashboard.voidedInvoiceCount} · {cedis(dashboard.voidedTotalPesewas)}</td>
+                  <td className="px-4 py-2 font-medium text-slate-900">{dashboard.reconciliation.reconciles ? 'Reconciled' : 'Mismatch — investigate'}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p className="px-4 pb-4 text-xs text-slate-500">
+              Rental revenue is recognised on issue (D-091) from the rental invoice ledger; quotation values are never revenue.
+            </p>
           </section>
 
           <section className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
@@ -263,7 +308,7 @@ export default async function FinanceDashboardPage({
 
           <section className="mt-6 grid gap-6 lg:grid-cols-2">
             <div className="overflow-x-auto rounded-lg border border-slate-200">
-              <h2 className="bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900">Invoices by status</h2>
+              <h2 className="bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900">Invoices by status (both families)</h2>
               <table className="w-full text-left text-sm">
                 <thead className="text-slate-500">
                   <tr><th className="px-4 py-2 font-medium">Status</th><th className="px-4 py-2 font-medium">Invoices</th><th className="px-4 py-2 font-medium">Total</th></tr>
@@ -280,7 +325,7 @@ export default async function FinanceDashboardPage({
               </table>
             </div>
             <div className="overflow-x-auto rounded-lg border border-slate-200">
-              <h2 className="bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900">Payments by method (all time)</h2>
+              <h2 className="bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900">Payments by method — corporate (all time)</h2>
               <table className="w-full text-left text-sm">
                 <thead className="text-slate-500">
                   <tr><th className="px-4 py-2 font-medium">Method</th><th className="px-4 py-2 font-medium">Payments</th><th className="px-4 py-2 font-medium">Amount</th></tr>
@@ -337,6 +382,8 @@ export default async function FinanceDashboardPage({
                 <div className="flex justify-between"><dt>Payments received</dt><dd>{cedis(dashboard.activity.paymentsReceivedPesewas)} ({dashboard.activity.paymentCount})</dd></div>
                 <div className="flex justify-between"><dt>Invoices issued (still standing)</dt><dd>{dashboard.activity.invoicesIssuedCount}</dd></div>
                 <div className="flex justify-between"><dt>Revenue recognised</dt><dd>{cedis(dashboard.activity.revenueRecognizedPesewas)}</dd></div>
+                <div className="flex justify-between"><dt>— of which corporate</dt><dd>{cedis(dashboard.activity.corporate.revenueRecognizedPesewas)} ({dashboard.activity.corporate.invoicesIssuedCount} issued)</dd></div>
+                <div className="flex justify-between"><dt>— of which rentals</dt><dd>{cedis(dashboard.activity.rental.revenueRecognizedPesewas)} ({dashboard.activity.rental.invoicesIssuedCount} issued)</dd></div>
               </dl>
               <p className="mt-3 text-xs text-slate-500">
                 Activity is dated by when payments were received and when invoices were issued;
@@ -344,7 +391,7 @@ export default async function FinanceDashboardPage({
               </p>
             </div>
             <div className="rounded-lg border border-slate-200 bg-white p-5">
-              <h2 className="text-sm font-semibold text-slate-900">Data coverage</h2>
+              <h2 className="text-sm font-semibold text-slate-900">Data coverage (corporate records)</h2>
               <dl className="mt-3 space-y-2 text-sm text-slate-700">
                 <div className="flex justify-between"><dt>Issued invoices with an issue timestamp</dt><dd>{dashboard.coverage.issuedInvoicesWithTimestamp.numerator} / {dashboard.coverage.issuedInvoicesWithTimestamp.denominator}</dd></div>
                 <div className="flex justify-between"><dt>Payments with a recorded method</dt><dd>{dashboard.coverage.paymentsWithMethod.numerator} / {dashboard.coverage.paymentsWithMethod.denominator}</dd></div>
@@ -354,6 +401,7 @@ export default async function FinanceDashboardPage({
             </div>
           </section>
 
+          {dashboard.unavailableMetrics.length > 0 ? (
           <section className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-5">
             <h2 className="text-sm font-semibold text-amber-900">Not shown — insufficient data</h2>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-900">
@@ -362,6 +410,7 @@ export default async function FinanceDashboardPage({
               ))}
             </ul>
           </section>
+          ) : null}
         </>
       ) : null}
     </main>

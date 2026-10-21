@@ -10,6 +10,7 @@ import {
   decideRentalCompletion,
   submitRentalCompletion,
 } from '@/modules/rentals/rental-lifecycle';
+import { getFinanceDashboard } from './dashboard';
 import {
   RentalInvoicePaymentExceedsError,
   createRentalInvoice,
@@ -164,5 +165,20 @@ describe('Phase 5A rental invoices with PostgreSQL (D-090)', () => {
     const requestId3 = await completedRequest({ depositReceivedPesewas: 50000, proposedChargesPesewas: 0, approvedChargesPesewas: 0 });
     await expect(createRentalInvoice(financeId, companyId, requestId3))
       .rejects.toMatchObject({ code: 'RENTAL_INVOICE_DEPOSIT_EXCEEDS_TOTAL' });
+  });
+
+  it('recognises rental revenue on the finance dashboard once issued (D-091)', async () => {
+    // Standing rental position after the earlier tests: invoice one PAID
+    // at 9000 (9000 paid); invoice two ISSUED at 9900 with 100 paid.
+    const dashboard = await getFinanceDashboard({ actorId: financeId, companyId });
+    expect(dashboard.streams.rental).toMatchObject({
+      recognizedRevenuePesewas: 18900,
+      paymentsReceivedPesewas: 9100,
+      outstandingPesewas: 9800,
+      reconciles: true,
+    });
+    expect(dashboard.streams.corporate.recognizedRevenuePesewas).toBe(0);
+    expect(dashboard.recognizedRevenuePesewas).toBe(18900);
+    expect(dashboard.reconciliation.reconciles).toBe(true);
   });
 });

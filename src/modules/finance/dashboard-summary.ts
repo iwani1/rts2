@@ -17,44 +17,113 @@ export type FinanceClientTotal = FinanceClientTotalInput & { outstandingPesewas:
 const STATUS_ORDER = ['DRAFT', 'ISSUED', 'PAID', 'VOID'] as const;
 
 /**
- * FIN-07 / D-063 pure aggregation. Recognised revenue counts only invoices
- * that have been issued and not voided (ISSUED + PAID); DRAFT is pipeline and
- * VOID is reported separately. Outstanding arrives derived from the payment
- * records, and the structural identity revenue = payments + outstanding is
- * surfaced so the dashboard proves its own tie-out on every response.
+ * FIN-07 / D-063 pure aggregation, extended to both invoice families by
+ * D-091 (Phase 6). A revenue stream recognises issued + paid invoice
+ * totals; DRAFT is pipeline and VOID is reported separately. Outstanding
+ * arrives derived from the payment records, and the structural identity
+ * revenue = payments + outstanding is computed per stream so the
+ * dashboard proves its own tie-out on every response.
  */
-export function summariseFinanceDashboard(input: {
+export type RevenueStreamInput = {
   statusTotals: FinanceStatusTotalInput[];
   totalPaymentsPesewas: number;
   outstandingPesewas: number;
-  clients: FinanceClientTotalInput[];
-}) {
-  const byStatus = new Map(input.statusTotals.map((row) => [row.status, row]));
+};
+
+export type RevenueStreamSummary = {
+  recognizedRevenuePesewas: number;
+  paymentsReceivedPesewas: number;
+  outstandingPesewas: number;
+  draftInvoiceCount: number;
+  draftPipelinePesewas: number;
+  voidedInvoiceCount: number;
+  voidedTotalPesewas: number;
+  issuedCount: number;
+  reconciles: boolean;
+};
+
+function aggregateStatusTotals(rows: FinanceStatusTotalInput[]) {
+  const byStatus = new Map<string, { status: string; invoiceCount: number; totalPesewas: number }>();
+  for (const row of rows) {
+    const existing = byStatus.get(row.status);
+    if (existing) {
+      existing.invoiceCount += row.invoiceCount;
+      existing.totalPesewas += row.totalPesewas;
+    } else {
+      byStatus.set(row.status, { status: row.status, invoiceCount: row.invoiceCount, totalPesewas: row.totalPesewas });
+    }
+  }
+  return byStatus;
+}
+
+export function summariseRevenueStream(input: RevenueStreamInput): RevenueStreamSummary {
+  const byStatus = aggregateStatusTotals(input.statusTotals);
   const totalFor = (status: string) => byStatus.get(status)?.totalPesewas ?? 0;
   const countFor = (status: string) => byStatus.get(status)?.invoiceCount ?? 0;
   const recognizedRevenuePesewas = totalFor('ISSUED') + totalFor('PAID');
-  const clients: FinanceClientTotal[] = input.clients
-    .map((client) => ({ ...client, outstandingPesewas: client.invoicedPesewas - client.paidPesewas }))
-    .sort((a, b) => (b.outstandingPesewas - a.outstandingPesewas) || a.clientName.localeCompare(b.clientName));
   return {
     recognizedRevenuePesewas,
     paymentsReceivedPesewas: input.totalPaymentsPesewas,
     outstandingPesewas: input.outstandingPesewas,
-    draftPipelinePesewas: totalFor('DRAFT'),
     draftInvoiceCount: countFor('DRAFT'),
+    draftPipelinePesewas: totalFor('DRAFT'),
     voidedInvoiceCount: countFor('VOID'),
     voidedTotalPesewas: totalFor('VOID'),
+    issuedCount: countFor('ISSUED') + countFor('PAID'),
+    reconciles: recognizedRevenuePesewas === input.totalPaymentsPesewas + input.outstandingPesewas,
+  };
+}
+
+export function combineRevenueStreams(a: RevenueStreamSummary, b: RevenueStreamSummary): RevenueStreamSummary {
+  const recognizedRevenuePesewas = a.recognizedRevenuePesewas + b.recognizedRevenuePesewas;
+  const paymentsReceivedPesewas = a.paymentsReceivedPesewas + b.paymentsReceivedPesewas;
+  const outstandingPesewas = a.outstandingPesewas + b.outstandingPesewas;
+  return {
+    recognizedRevenuePesewas,
+    paymentsReceivedPesewas,
+    outstandingPesewas,
+    draftInvoiceCount: a.draftInvoiceCount + b.draftInvoiceCount,
+    draftPipelinePesewas: a.draftPipelinePesewas + b.draftPipelinePesewas,
+    voidedInvoiceCount: a.voidedInvoiceCount + b.voidedInvoiceCount,
+    voidedTotalPesewas: a.voidedTotalPesewas + b.voidedTotalPesewas,
+    issuedCount: a.issuedCount + b.issuedCount,
+    reconciles: recognizedRevenuePesewas === paymentsReceivedPesewas + outstandingPesewas,
+  };
+}
+
+export function summariseFinanceDashboard(input: {
+  corporate: RevenueStreamInput;
+  rental: RevenueStreamInput;
+  statusTotals: FinanceStatusTotalInput[];
+  clients: FinanceClientTotalInput[];
+}) {
+  const corporate = summariseRevenueStream(input.corporate);
+  const rental = summariseRevenueStream(input.rental);
+  const combined = combineRevenueStreams(corporate, rental);
+  const byStatus = aggregateStatusTotals(input.statusTotals);
+  const clients: FinanceClientTotal[] = input.clients
+    .map((client) => ({ ...client, outstandingPesewas: client.invoicedPesewas - client.paidPesewas }))
+    .sort((a, b) => (b.outstandingPesewas - a.outstandingPesewas) || a.clientName.localeCompare(b.clientName));
+  return {
+    recognizedRevenuePesewas: combined.recognizedRevenuePesewas,
+    paymentsReceivedPesewas: combined.paymentsReceivedPesewas,
+    outstandingPesewas: combined.outstandingPesewas,
+    draftPipelinePesewas: combined.draftPipelinePesewas,
+    draftInvoiceCount: combined.draftInvoiceCount,
+    voidedInvoiceCount: combined.voidedInvoiceCount,
+    voidedTotalPesewas: combined.voidedTotalPesewas,
     countsByStatus: STATUS_ORDER.map((status) => ({
       status,
-      invoiceCount: countFor(status),
-      totalPesewas: totalFor(status),
+      invoiceCount: byStatus.get(status)?.invoiceCount ?? 0,
+      totalPesewas: byStatus.get(status)?.totalPesewas ?? 0,
     })),
     clients,
+    streams: { corporate, rental },
     reconciliation: {
-      recognizedRevenuePesewas,
-      paymentsReceivedPesewas: input.totalPaymentsPesewas,
-      outstandingPesewas: input.outstandingPesewas,
-      reconciles: recognizedRevenuePesewas === input.totalPaymentsPesewas + input.outstandingPesewas,
+      recognizedRevenuePesewas: combined.recognizedRevenuePesewas,
+      paymentsReceivedPesewas: combined.paymentsReceivedPesewas,
+      outstandingPesewas: combined.outstandingPesewas,
+      reconciles: combined.reconciles,
     },
   };
 }

@@ -275,11 +275,13 @@ describe('finance dashboard reconciles to invoice and payment records (FIN-07 / 
     // unsupported metrics are listed (expenses/margin left the list in D-082).
     const dashboard = await getFinanceDashboard({ actorId: financeId, companyId });
     expect(dashboard.margin.status).toBe('INSUFFICIENT_DATA');
-    // D-090/5C: ageing is available and rental invoices exist; only the
-    // headline rental-revenue gap remains listed.
-    expect(dashboard.unavailableMetrics.map((item) => item.metric)).toEqual([
-      'Rental revenue in the headline totals',
-    ]);
+    // D-091 (Phase 6): rental revenue is recognised on issue and combined
+    // into the headline; no dashboard metric remains unavailable.
+    expect(dashboard.unavailableMetrics).toEqual([]);
+    expect(dashboard.streams.corporate.recognizedRevenuePesewas).toBe(dashboard.recognizedRevenuePesewas);
+    expect(dashboard.streams.rental.recognizedRevenuePesewas).toBe(0);
+    expect(dashboard.streams.corporate.reconciles).toBe(true);
+    expect(dashboard.streams.rental.reconciles).toBe(true);
   });
 
   it('denies read-only and unrelated roles and isolates companies', async () => {
