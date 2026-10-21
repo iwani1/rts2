@@ -17,3 +17,21 @@ services:
       retries: 10
 volumes:
   postgres_data:
+
+  # D-092/7A: production app (build first: `podman compose build app`).
+  # The verify-phase*.sh scripts only ever start `db`, so this service
+  # never interferes with the disposable test databases. AUTH_SECRET
+  # must be supplied (compose .env or shell) — there is no default.
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://tms:tms_local_only@db:5432/richie_tms
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET must be set (at least 32 characters)}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      NODE_ENV: production
+    ports:
+      - "3000:3000"

@@ -1,0 +1,15 @@
+.git
+.github
+.next
+node_modules
+verification-logs
+backups
+e2e
+.env
+.env.*
+!.env.example
+*.log
+npm-debug.log*
+coverage
+playwright-report
+test-results
