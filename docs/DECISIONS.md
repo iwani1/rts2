@@ -482,3 +482,17 @@ Date: 2026-10-21. Status: decided for Phase 1C construction; recorded for ratifi
    invoices. The portal shows explicit "no quotation issued" and "no payment due" states; accepting a quotation
    becomes possible only when formal quotation issuance (RNT-04/05) lands.
 4. The profile projection shows the customer's own contact and billing details, never internal notes.
+
+## D-067 — Operations dashboard: permission-scoped, point-in-time operational picture (Phase 1C)
+
+Date: 2026-10-21. Status: decided for Phase 1C construction; recorded for ratification at the Phase 1C gate.
+
+1. Role dashboards already exist for drivers (`/driver`), dispatchers (`/dispatch`), corporate HR
+   (`/corporate`), finance (`/finance`), passengers (`/passenger`) and rental customers
+   (`/rentals/portal`). The remaining gap, an Operations Manager landing page, is `/operations`.
+2. Access requires `trip:manage` or `booking:manage` at GLOBAL or COMPANY scope, matching the
+   staff surfaces it summarises; everything is company-scoped and read-only (no new write paths).
+3. The dashboard is a point-in-time snapshot, never an estimate: today's trips (Africa/Accra) by
+   status with resourcing flags, the pending-booking decision queue, accepted-but-unassigned
+   bookings, active vehicle safety blocks, and driver/vehicle documents expired or expiring
+   within 30 days. Lists are capped and labelled with their totals; no derived KPI is invented.

@@ -70,6 +70,7 @@ export default async function Home() {
         {canManageRoutes && <Link className="header-link" href="/routes">Routes and schedules</Link>}
         {canManageBookings && <Link className="header-link" href="/bookings">Bookings</Link>}
         {canManageTrips && <Link className="header-link" href="/trips">Trips</Link>}
+        {canManageTrips && <Link className="header-link" href="/operations">Operations dashboard</Link>}
         {canManageTrips && <Link className="header-link" href="/dispatch">Dispatch</Link>}
         {canManageInvoices && <Link className="header-link" href="/invoices">Invoices</Link>}
         {canManageInvoices && <Link className="header-link" href="/finance">Finance dashboard</Link>}

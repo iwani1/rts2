@@ -140,3 +140,17 @@ Status: **SLICE BUILT — Fedora run required.** `./scripts/verify-phase1c.sh` n
    it shows as **Cancelled**.
 4. Confirm the Quotations and payments section honestly states that none are issued/due yet.
 5. Unlink the login in Customers: the portal returns to the "not linked" notice.
+
+---
+
+# Phase 1C verification — role dashboards (D-067)
+
+Status: **SLICE BUILT — Fedora run required.** The verification script includes
+`operations/dashboard.integration.test.ts`.
+
+## Manual workflow (browser)
+
+1. As Operations Manager, open **Operations dashboard** from the workspace. Confirm today's
+   trips, queues and fleet alerts match the Trips/Bookings/Fleet registers.
+2. As a Passenger or Rental Customer login, confirm `/operations` refuses access with the
+   explanatory notice.

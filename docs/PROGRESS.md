@@ -817,3 +817,22 @@ Fifth Phase 1C slice. D-066 recorded in `docs/DECISIONS.md` for gate ratificatio
   Draft→Cancelled allowed with history, unapproved transitions still refused. Fedora run pending.
 - **Remaining Phase 1C scope:** role-specific dashboards and the hardening pass, per
   `richie-tms-phase-prompts.md`.
+
+## Phase 1C — role-specific dashboards (D-067; 2026-10-21)
+
+Sixth Phase 1C slice. D-067 recorded in `docs/DECISIONS.md` for gate ratification.
+
+- Role dashboards already existed for drivers, dispatchers, corporate HR, finance, passengers
+  and rental customers. The gap — an Operations Manager landing page — is now `/operations`
+  (`src/modules/operations/dashboard.ts`), linked from the workspace for trip managers.
+- Read-only snapshot, `trip:manage` or `booking:manage` at GLOBAL/COMPANY scope: today's trips
+  (Africa/Accra) by status with vehicle/driver resourcing flags and assigned-passenger counts,
+  the pending-booking decision queue, accepted-but-unassigned bookings (oldest/next first,
+  totals labelled), active vehicle safety blocks, and driver/vehicle documents expired or
+  expiring within 30 days. Every figure is a direct count over governed records; nothing is
+  estimated.
+- Tests: unit `dashboard.test.ts` (status bucketing, Accra date, day arithmetic) and integration
+  `dashboard.integration.test.ts` (permission denial, snapshot correctness incl. unresourced
+  detection and the 30-day licence window). Fedora run pending.
+- **Remaining Phase 1C scope:** the hardening pass, then the Phase 1C gate (the MVP gate — Phase 2
+  does not start until it is approved), per `richie-tms-phase-prompts.md`.
