@@ -439,11 +439,11 @@ Added corporate client records as the first Phase 1B vertical slice, following t
 | BKG-01 | Not Started | Booking types. |
 | BKG-02 | Not Started | Booking validation. |
 | BKG-03 | Not Started | Booking workflow. |
-| BKG-04 | Not Started | Assign bookings to trips with capacity check. |
+| BKG-04 | In Progress | Trip assignment with transactional capacity check implemented locally (D-053, commit pending); awaiting Fedora verification. |
 | BKG-05 | Not Started | Cancellation deadlines and waiting list. |
 | BKG-06 | Not Started | Booking change history. |
-| TRP-01 | Not Started | Trip records. |
-| TRP-02 | Not Started | Passenger manifests. |
+| TRP-01 | In Progress | Trip records, lifecycle state machine and schedule generation implemented locally (D-053, commit pending); awaiting Fedora verification. |
+| TRP-02 | In Progress | Passenger manifests implemented locally (D-053, commit pending); awaiting Fedora verification. |
 | DSP-01 | Not Started | Daily dispatch board. |
 | DSP-02 | Not Started | Assign/reassign vehicle and driver. |
 | DSP-03 | Not Started | Emergency trip creation. |
@@ -496,6 +496,30 @@ Added the routes domain as the fourth Phase 1B vertical slice.
 - **Pages** (`src/app/routes/`): location register + manager, route register, route editor with stop-order editor, manual plan panel, and schedule panel (add/copy/activate with audited reasons). Workspace navigation links Routes and schedules.
 - **Tests**: `route-plan.test.ts`, `route-schema.test.ts`, `routes.integration.test.ts` (locations, stop-order override, plan capacity, schedule conflicts/copy/reactivation, cross-company denial). Not yet run: sandbox has no `node_modules`/database; Fedora verification is batched with CLI-02/EMP.
 - **Limits**: No map provider, no trip generation (TRP-01), no availability/assignment checks (DSP-02), no optimisation (RTE-05, Phase 3).
+
+## Phase 1B — trips, manifests and capacity (TRP-01/02, BKG-04; D-053; 2026-10-21)
+
+- **Implemented locally (unverified until Fedora runs).** Migration `20261020170000_trips` adds `Trip` and
+  append-only `TripStatusHistory` to PostgreSQL, `Booking.tripId` with a composite FK, a partial unique index
+  `(companyId, scheduleId, tripDate)` so regenerating schedule occurrences creates nothing twice, and database
+  status guards (creation must be Planned, transition allowlist, history-required and history-matches triggers)
+  matching the contract/booking pattern. `src/modules/trips/` provides the transition table (full 8×8 matrix
+  unit-tested), typed schemas, and services: manual creation (route defaults snapshot), schedule generation
+  (≤31 days, created/skipped counts), lifecycle transitions (dispatch requires vehicle+driver; actual start/end
+  stamped), transactional booking assignment with the trip row locked (capacity basis = assigned vehicle seats
+  else recorded limit), unassignment, and the passenger manifest projecting only name/type/pickup/drop-off.
+  APIs under `/api/companies/[companyId]/trips` (list/create, generate, detail, transition, manifest, assign,
+  unassign) and a `/trips` UI (register, filters, create + generate forms, lifecycle panel, manifest,
+  assignment panel) gated on `trip:dispatch` GLOBAL/COMPANY; home navigation links Trips.
+- **Tests written (not yet run in sandbox).** Unit: full trip matrix and exact transition set. Integration
+  (PostgreSQL): schedule generation creates 5 weekday trips and reruns skip 5; one-seat trip assignment,
+  over-capacity refusal, unassign, and two parallel assignments where exactly one succeeds; manifest entry keys
+  exclude restricted employee fields; dispatch refused without resources; lifecycle walk through Delayed to
+  Completed with actual times; cross-company denial.
+- **Follow-ups recorded.** Vehicle/driver assignment UI is DSP-02; bulk release of Assigned bookings when a
+  trip is cancelled is a dispatch operational action for the DSP slice; driver-side boarding/completion events
+  are DRV-01/02. Batch Fedora verification of CLI-02, EMP, RTE, BKG and TRP remains at the next phase transition
+  per the owner's standing instruction.
 
 ## Phase 1B — bookings (BKG-01..03; D-052; 2026-10-21)
 

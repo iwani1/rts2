@@ -66,6 +66,7 @@ export type BookingRecord = {
   routeName: string | null;
   bookingType: string;
   journeyDate: string;
+  tripId: string | null;
   pickupLocationId: string | null;
   pickupName: string | null;
   dropoffLocationId: string | null;
@@ -106,6 +107,7 @@ function presentBooking(row: BookingDbShape): BookingRecord {
     routeName: row.route?.name ?? null,
     bookingType: row.bookingType,
     journeyDate: row.journeyDate.toISOString().slice(0, 10),
+    tripId: row.tripId,
     pickupLocationId: row.pickupLocationId,
     pickupName: row.pickupLocation?.name ?? null,
     dropoffLocationId: row.dropoffLocationId,

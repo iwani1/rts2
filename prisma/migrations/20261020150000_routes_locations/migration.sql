@@ -99,4 +99,5 @@ CREATE TABLE "RouteSchedule" (
   ),
   CONSTRAINT "RouteSchedule_plannedStartTime_format" CHECK ("plannedStartTime" IS NULL OR "plannedStartTime" ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$')
 );
+CREATE UNIQUE INDEX "RouteSchedule_companyId_id_key" ON "RouteSchedule"("companyId", "id");
 CREATE INDEX "RouteSchedule_companyId_routeId_active_idx" ON "RouteSchedule"("companyId", "routeId", "active");

@@ -33,6 +33,8 @@ model Company {
   routeSchedules        RouteSchedule[]
   bookings              Booking[]
   bookingStatusHistory  BookingStatusHistory[]
+  trips                 Trip[]
+  tripStatusHistory     TripStatusHistory[]
 }
 
 model Client {
@@ -54,6 +56,7 @@ model Client {
   employees        Employee[]
   routes           Route[]
   bookings         Booking[]
+  trips            Trip[]
 
   @@unique([companyId, id])
   @@index([companyId, archivedAt, name])
@@ -108,6 +111,7 @@ model Route {
   stops                   RouteStop[]
   schedules               RouteSchedule[]
   bookings                Booking[]
+  trips                   Trip[]
 
   @@unique([companyId, id])
   @@unique([companyId, reference])
@@ -149,7 +153,9 @@ model RouteSchedule {
   updatedAt        DateTime  @updatedAt @db.Timestamptz(6)
   company          Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
   route            Route     @relation(fields: [companyId, routeId], references: [companyId, id], onDelete: Restrict)
+  trips            Trip[]
 
+  @@unique([companyId, id])
   @@index([companyId, routeId, active])
 }
 
@@ -250,6 +256,7 @@ model User {
   rentalRequestStatusChanges RentalRequestStatusHistory[]
   contractStatusChanges ContractStatusHistory[]
   bookingStatusChanges BookingStatusHistory[]
+  tripStatusChanges TripStatusHistory[]
   createdPricingWorksheets RentalPricingWorksheet[]
   createdMaintenanceWorkOrders MaintenanceWorkOrder[] @relation("WorkOrderCreator")
   maintenanceWorkOrderStatusChanges MaintenanceWorkOrderStatusHistory[]
@@ -404,6 +411,7 @@ model Vehicle {
   usualDriver               Driver?   @relation("VehicleUsualDriver", fields: [usualDriverCompanyId, usualDriverId], references: [companyId, id], onDelete: Restrict)
   maintenanceWorkOrders     MaintenanceWorkOrder[]
   safetyBlocks              VehicleSafetyBlock[]
+  trips                     Trip[]
 
   @@unique([companyId, registrationNumber])
   @@unique([companyId, id])
@@ -426,6 +434,7 @@ model Driver {
   updatedAt         DateTime  @updatedAt @db.Timestamptz(6)
   company           Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
   usualVehicles     Vehicle[] @relation("VehicleUsualDriver")
+  trips             Trip[]
 
   @@unique([companyId, id])
   @@index([companyId, archivedAt, fullName])
@@ -609,6 +618,7 @@ model Booking {
   employeeId       String
   contractId       String?
   routeId          String?
+  tripId           String?
   reference        String
   bookingType      String
   journeyDate      DateTime  @db.Date
@@ -623,6 +633,7 @@ model Booking {
   employee         Employee  @relation(fields: [companyId, employeeId], references: [companyId, id], onDelete: Restrict)
   contract         Contract? @relation(fields: [companyId, contractId], references: [companyId, id], onDelete: Restrict)
   route            Route?    @relation(fields: [companyId, routeId], references: [companyId, id], onDelete: Restrict)
+  trip             Trip?     @relation(fields: [companyId, tripId], references: [companyId, id], onDelete: Restrict)
   pickupLocation   Location? @relation("BookingPickup", fields: [companyId, pickupLocationId], references: [companyId, id], onDelete: Restrict)
   dropoffLocation  Location? @relation("BookingDropoff", fields: [companyId, dropoffLocationId], references: [companyId, id], onDelete: Restrict)
   statusHistory    BookingStatusHistory[]
@@ -632,6 +643,7 @@ model Booking {
   @@index([companyId, status, journeyDate])
   @@index([companyId, employeeId, journeyDate])
   @@index([companyId, clientId, journeyDate])
+  @@index([companyId, tripId])
 }
 
 model BookingStatusHistory {
@@ -650,4 +662,59 @@ model BookingStatusHistory {
 
   @@unique([companyId, bookingId, sequence])
   @@index([companyId, bookingId, createdAt])
+}
+
+model Trip {
+  id                     String    @id @default(cuid())
+  companyId              String
+  clientId               String?
+  routeId                String?
+  scheduleId             String?
+  reference              String
+  serviceType            String?
+  tripDate               DateTime  @db.Date
+  plannedStartTime       String?
+  plannedDurationMinutes Int?
+  capacityLimit          Int?
+  vehicleId              String?
+  driverId               String?
+  status                 String
+  delayReason            String?
+  completionNotes        String?
+  actualStartAt          DateTime? @db.Timestamptz(6)
+  actualEndAt            DateTime? @db.Timestamptz(6)
+  createdAt              DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime  @updatedAt @db.Timestamptz(6)
+  company                Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  client                 Client?   @relation(fields: [companyId, clientId], references: [companyId, id], onDelete: Restrict)
+  route                  Route?    @relation(fields: [companyId, routeId], references: [companyId, id], onDelete: Restrict)
+  schedule               RouteSchedule? @relation(fields: [companyId, scheduleId], references: [companyId, id], onDelete: Restrict)
+  vehicle                Vehicle?  @relation(fields: [companyId, vehicleId], references: [companyId, id], onDelete: Restrict)
+  driver                 Driver?   @relation(fields: [companyId, driverId], references: [companyId, id], onDelete: Restrict)
+  bookings               Booking[]
+  statusHistory          TripStatusHistory[]
+
+  @@unique([companyId, id])
+  @@unique([companyId, reference])
+  @@index([companyId, status, tripDate])
+  @@index([companyId, routeId, tripDate])
+  @@index([companyId, driverId, tripDate])
+}
+
+model TripStatusHistory {
+  id         String   @id @default(cuid())
+  companyId  String
+  tripId     String
+  sequence   Int
+  actorId    String
+  fromStatus String?
+  toStatus   String
+  reason     String
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  trip       Trip     @relation(fields: [companyId, tripId], references: [companyId, id], onDelete: Restrict)
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, tripId, sequence])
+  @@index([companyId, tripId, createdAt])
 }
