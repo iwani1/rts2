@@ -19,7 +19,7 @@ git pull --ff-only
 
 Expected:
 
-- 38/38 migrations (new: `20261021234000_rental_reservations`,
+- 39/39 migrations (new: `20261021234000_rental_reservations`, `20261021235000_rental_lifecycle_transitions`,
   `20261021234000_rental_confirmation_facts`)
 - typecheck and lint clean
 - unit suite green (includes the full 8×8 rental transition-matrix test)
