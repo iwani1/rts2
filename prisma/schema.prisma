@@ -19,6 +19,8 @@ model Company {
   vehicles        Vehicle[]
   drivers         Driver[]
   customers       Customer[]
+  notifications             Notification[]
+  notificationPreferences   NotificationPreference[]
   rentalRequests  RentalRequest[]
   pricingWorksheets RentalPricingWorksheet[]
   maintenanceWorkOrders MaintenanceWorkOrder[]
@@ -272,6 +274,8 @@ model User {
   driverAccount     Driver?                @relation("DriverAccount")
   employeeAccount   Employee?              @relation("PassengerAccount")
   customerAccount   Customer?              @relation("CustomerAccount")
+  notifications     Notification[]
+  notificationPreferences NotificationPreference[]
   driverEvents      DriverEvent[]
   clientBindings    UserClientBinding[]    @relation("BindingUser")
   bindingsMade      UserClientBinding[]    @relation("BindingActor")
@@ -879,4 +883,41 @@ model TripStatusHistory {
 
   @@unique([companyId, tripId, sequence])
   @@index([companyId, tripId, createdAt])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  companyId String
+  userId    String
+  channel   String    @default("IN_APP")
+  type      String    @db.VarChar(64)
+  title     String    @db.VarChar(200)
+  body      String    @db.VarChar(1000)
+  entityType String?  @db.VarChar(64)
+  entityId   String?
+  dedupeKey String    @db.VarChar(200)
+  status    String    @default("DELIVERED")
+  readAt    DateTime? @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, userId, channel, dedupeKey])
+  @@index([companyId, userId, readAt, createdAt])
+  @@index([companyId, userId, createdAt])
+}
+
+model NotificationPreference {
+  id           String   @id @default(cuid())
+  companyId    String
+  userId       String
+  inAppEnabled Boolean  @default(true)
+  smsEnabled   Boolean  @default(true)
+  emailEnabled Boolean  @default(true)
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(6)
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, userId])
 }

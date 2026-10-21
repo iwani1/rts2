@@ -2,6 +2,10 @@ import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { PermissionDeniedError, resolvePermission } from '@/modules/auth/permissions';
 import { getPrisma } from '@/server/prisma';
+import {
+  notifyLinkedCustomer,
+  rentalStatusNotification,
+} from '@/modules/notifications/notifications';
 import { missingRentalRequestSubmissionFields, rentalRequestDraftSchema, rentalRequestListQuerySchema, rentalRequestSubmitSchema } from './rental-request-schema';
 import { isAllowedRentalRequestTransition } from './rental-request-transitions';
 
@@ -410,8 +414,9 @@ export async function transitionRentalRequest(input: unknown, actorId: string, c
       data: { status: data.toStatus },
     });
     if (changed.count !== 1) throw new RentalRequestTransitionNotAllowedError(current.status, data.toStatus);
-    await tx.rentalRequestStatusHistory.create({
+    const history = await tx.rentalRequestStatusHistory.create({
       data: { companyId, requestId, actorId, fromStatus: current.status, toStatus: data.toStatus, reason: data.reason },
+      select: { id: true },
     });
     await tx.auditEvent.create({
       data: {
@@ -421,6 +426,17 @@ export async function transitionRentalRequest(input: unknown, actorId: string, c
     });
     const request = await tx.rentalRequest.findUniqueOrThrow({
       where: { id: requestId }, include: { customer: { select: { displayName: true, archivedAt: true } } },
+    });
+    // NTF-01 (D-068): tell the linked customer about the status change.
+    await notifyLinkedCustomer(tx, {
+      companyId, actorId, customerId: request.customerId,
+      type: 'RENTAL_REQUEST_STATUS_CHANGED', entityType: 'RENTAL_REQUEST', entityId: requestId,
+      dedupeKey: `rental-history:${history.id}`,
+      ...rentalStatusNotification({
+        pickupLocation: request.pickupLocation,
+        destination: request.destination,
+        serviceDate: request.serviceDate ? request.serviceDate.toISOString().slice(0, 10) : null,
+      }, data.toStatus),
     });
     return presentRequest(request);
   });

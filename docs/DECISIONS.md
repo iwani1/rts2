@@ -496,3 +496,29 @@ Date: 2026-10-21. Status: decided for Phase 1C construction; recorded for ratifi
    status with resourcing flags, the pending-booking decision queue, accepted-but-unassigned
    bookings, active vehicle safety blocks, and driver/vehicle documents expired or expiring
    within 30 days. Lists are capped and labelled with their totals; no derived KPI is invented.
+
+## D-068 — Phase 2 opens; notification service starts with the in-app channel (NTF-01)
+
+Date: 2026-10-21. Status: decided for Phase 2 construction.
+
+1. **Phase 2 opening.** The owner directed Phase 2 to start on 2026-10-21 (checkpoint answer
+   "Start Phase 2 now"). Fedora verification of Phase 1C (`./scripts/verify-phase1c.sh`) and
+   formal ratification of D-061–D-067 remain outstanding and continue in parallel; they are not
+   recorded as passed here. Phase 2 order follows `richie-tms-phase-prompts.md`: notifications,
+   incidents/breakdown, boarding verification, driver offline queue, preventive-maintenance
+   reminders, two-factor authentication.
+2. **In-app first (NTF-01).** A `Notification` record per recipient login, company-scoped, with
+   channel (`IN_APP` now; `SMS`/`EMAIL` reserved for NTF-02/03), delivery status, and a dedupe
+   key unique per (company, recipient, channel, key) so duplicate events never double-notify.
+   In-app delivery happens inside the same governed transaction as the event (atomic, and
+   in-app "delivered" means stored — never claimed before storage). Users are never notified
+   about their own actions.
+3. **Preferences.** `NotificationPreference` per (company, user): `inApp`/`sms`/`email`
+   switches, default on. The in-app switch is enforced from day one; sms/email switches are
+   stored now and enforced when those adapters land.
+4. **Emit points (slice 1).** Booking created/status-changed/assigned-to-trip → the linked
+   passenger; rental request status changes → the linked customer. Templates are a code-side
+   registry with passenger/customer-friendly wording; admin-editable template text is deferred
+   (no settings keys exist yet) and is not claimed as configurable in the UI.
+5. **Own-inbox only.** Notification reads require no new permission vocabulary: a login can
+   only ever list, read and set preferences for its own notifications.

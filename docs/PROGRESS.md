@@ -84,7 +84,7 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | FIN-06 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FIN-07 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FIN-08 | Not Started | No feature implementation; Phase 1+ approval required. |
-| NTF-01 | Not Started | No feature implementation; Phase 1+ approval required. |
+| NTF-01 | In Progress | In-app notification service per D-068: `Notification`/`NotificationPreference` (migration `20261021140000_notifications`), transactional emitter with per-event dedupe keys and channel preferences, wired to booking created/status-changed/trip-assigned (linked passenger) and rental status changes (linked customer), own-inbox page with unread bell, mark-read/read-all and preference switches. SMS/email channels stored but not yet delivered (NTF-02/03). Sandbox-verified 2026-10-21 (unit 400/400; 26/26 migrations on PGlite); Fedora verification pending. |
 | NTF-02 | Not Started | No feature implementation; Phase 1+ approval required. |
 | NTF-03 | Not Started | No feature implementation; Phase 1+ approval required. |
 | RPT-01 | In Progress | D-047/D-048 provide an all-time, manager-only request status/source aggregate plus audited `Draft → Submitted` count. Draft-inclusive scope and unavailable quote, confirmed/completed, financial, utilization and cancellation metrics are explicit; this is not a date-filtered complete RPT-01 report. Focused tests pass; database and browser E2E remain unrun. |
@@ -855,3 +855,32 @@ Final Phase 1C construction item. `docs/PHASE_1C_HARDENING.md` records the full 
   through the manual browser checks in `docs/PHASE_1C_VERIFICATION.md`, ratify or amend
   D-061–D-067, and declare the Phase 1C (MVP) gate. Phase 2 must not start before that
   approval.
+
+## Phase 2 — opening and in-app notifications (NTF-01; D-068; 2026-10-21)
+
+Phase 2 opened by owner direction ("Start Phase 2 now", D-068). Phase 1C Fedora
+verification and D-061–D-067 ratification remain outstanding in parallel and are not
+recorded as passed.
+
+- **Notification service (`src/modules/notifications/`):** one `Notification` per
+  recipient login and channel (migration `20261021140000_notifications`, 26 total), with
+  delivery status, `(company, recipient, channel, dedupeKey)` uniqueness so duplicate
+  events never double-notify, and read tracking. Emission happens inside the governed
+  event transaction (atomic; in-app "delivered" means stored in the inbox). Users are
+  never notified about their own actions. `NotificationPreference` stores in-app/SMS/
+  email switches (defaults on); the in-app switch is enforced now, SMS/email switches
+  are stored for NTF-02/03.
+- **Wired events:** booking created, booking status changed, booking assigned to a trip
+  (linked passenger); rental request status changes (linked customer). Wording comes
+  from a code-side template registry (admin-editable templates deferred, not claimed).
+- **Inbox:** `/notifications` page, workspace bell with unread count, mark-read /
+  mark-all-read, preference form. Inbox access is own-login only — no new permission
+  vocabulary.
+- **Tests:** template unit suite (4 tests; workspace bell assertion added to
+  `page.test.tsx`) and `notifications.integration.test.ts` (5 tests: lifecycle
+  emission with actor suppression, dedupe, preference switch, owner-only read marking,
+  rental customer emission). Sandbox PGlite proof: 26/26 migrations, dedupe index,
+  channel CHECK, preference defaults. Fedora run pending (`scripts/verify-phase2.sh`).
+- **Next Phase 2 slices:** NTF-02 SMS adapter, NTF-03 email adapter, then incidents and
+  breakdown workflow, boarding verification, driver offline queue,
+  preventive-maintenance reminders, two-factor authentication.

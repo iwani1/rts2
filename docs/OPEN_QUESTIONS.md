@@ -232,6 +232,8 @@ docs/PROGRESS.md and docs/PHASE_1C_VERIFICATION.md. For ratification at the Phas
   confirm a future adjustment/credit-note process is the right vehicle.
 - A dedicated editor for `finance.corporate_rates` (and `bookings.creation_cutoff`) is still
   outstanding; rates are currently written through the settings service only.
+- Phase 2 opened 2026-10-21 by owner direction (D-068) while the Phase 1C gate items
+  below remain outstanding in parallel.
 - Remaining Phase 1C scope per richie-tms-phase-prompts.md: the hardening pass, then the
   Phase 1C gate (the MVP gate; Phase 2 must not start until it is approved).
   FIN-07 (D-063), RPT-02/RPT-03/RPT-04 (D-064), PAX-01 (D-065), RNT-09 (D-066) and the

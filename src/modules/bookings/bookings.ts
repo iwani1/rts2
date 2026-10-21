@@ -5,6 +5,11 @@ import { PermissionDeniedError, resolvePermission } from '@/modules/auth/permiss
 import { getBookingCreationCutoff, getInactiveContractBookingPolicy } from '@/modules/settings/registry';
 import { getPrisma } from '@/server/prisma';
 import { bookingListQuerySchema, bookingRequestSchema, bookingTransitionSchema } from './booking-schema';
+import {
+  bookingCreatedNotification,
+  bookingStatusNotification,
+  notifyLinkedEmployee,
+} from '@/modules/notifications/notifications';
 import { isAllowedBookingTransition } from './booking-transitions';
 
 const companyIdSchema = z.string().trim().min(1).max(128);
@@ -348,6 +353,16 @@ async function executeBookingCreation(data: BookingRequestData, actorId: string,
             },
           },
         });
+        // NTF-01 (D-068): tell the linked passenger a journey was requested
+        // for them (suppressed automatically when they requested it).
+        await notifyLinkedEmployee(tx, {
+          companyId, actorId, employeeId: employee.id,
+          type: 'BOOKING_CREATED', entityType: 'BOOKING', entityId: booking.id,
+          dedupeKey: `booking:${booking.id}:created`,
+          ...bookingCreatedNotification({
+            reference, journeyDate: data.journeyDate, bookingType: data.bookingType,
+          }),
+        });
         return presentBooking(booking);
       });
     } catch (error) {
@@ -411,11 +426,12 @@ export async function transitionBooking(input: unknown, actorId: string, company
       orderBy: { sequence: 'desc' },
       select: { sequence: true },
     });
-    await tx.bookingStatusHistory.create({
+    const history = await tx.bookingStatusHistory.create({
       data: {
         companyId, bookingId, sequence: (latest?.sequence ?? 0) + 1, actorId,
         fromStatus: current.status, toStatus: data.toStatus, reason: data.reason,
       },
+      select: { id: true },
     });
     await tx.auditEvent.create({
       data: {
@@ -424,6 +440,17 @@ export async function transitionBooking(input: unknown, actorId: string, company
       },
     });
     const booking = await tx.booking.findUniqueOrThrow({ where: { id: bookingId }, include: bookingInclude });
+    // NTF-01 (D-068): tell the linked passenger about the status change.
+    await notifyLinkedEmployee(tx, {
+      companyId, actorId, employeeId: booking.employeeId,
+      type: 'BOOKING_STATUS_CHANGED', entityType: 'BOOKING', entityId: bookingId,
+      dedupeKey: `booking-history:${history.id}`,
+      ...bookingStatusNotification({
+        reference: booking.reference,
+        journeyDate: booking.journeyDate.toISOString().slice(0, 10),
+        bookingType: booking.bookingType,
+      }, data.toStatus),
+    });
     return presentBooking(booking);
   });
 }

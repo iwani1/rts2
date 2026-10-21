@@ -4,6 +4,10 @@ import { z } from 'zod';
 import { PermissionDeniedError, resolvePermission } from '@/modules/auth/permissions';
 import { getPrisma } from '@/server/prisma';
 import {
+  bookingAssignedNotification,
+  notifyLinkedEmployee,
+} from '@/modules/notifications/notifications';
+import {
   tripAssignBookingSchema,
   tripGenerateSchema,
   tripListQuerySchema,
@@ -556,6 +560,21 @@ export async function assignBookingToTrip(input: unknown, actorId: string, compa
         actorId, companyId, action: 'BOOKING_ASSIGNED_TO_TRIP', entityType: 'BOOKING', entityId: booking.id,
         summary: { bookingReference: booking.reference, tripReference: trip.reference, reason: data.reason },
       },
+    });
+    // NTF-01 (D-068): tell the linked passenger their bus is assigned.
+    const assignedBooking = await tx.booking.findUniqueOrThrow({
+      where: { id: booking.id },
+      select: { employeeId: true, bookingType: true, reference: true, journeyDate: true },
+    });
+    await notifyLinkedEmployee(tx, {
+      companyId, actorId, employeeId: assignedBooking.employeeId,
+      type: 'BOOKING_ASSIGNED_TO_TRIP', entityType: 'BOOKING', entityId: booking.id,
+      dedupeKey: `booking:${booking.id}:assigned:trip:${tripId}`,
+      ...bookingAssignedNotification({
+        reference: assignedBooking.reference,
+        journeyDate: assignedBooking.journeyDate.toISOString().slice(0, 10),
+        bookingType: assignedBooking.bookingType,
+      }, trip.reference),
     });
     const updated = await tx.trip.findUniqueOrThrow({ where: { id: tripId }, include: tripInclude });
     return presentTrip(updated);

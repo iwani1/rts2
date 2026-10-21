@@ -19,6 +19,11 @@ export default async function Home() {
   const canManageUserRoles = await isActiveSuperAdmin(session.user.id);
   const companies = await prisma.company.findMany({ where: { status: 'ACTIVE' }, orderBy: { createdAt: 'asc' }, take: 2, select: { id: true } });
   const company = companies.length === 1 ? companies[0] : undefined;
+  const unreadNotifications = company
+    ? await prisma.notification.count({
+      where: { companyId: company.id, userId: session.user.id, channel: 'IN_APP', readAt: null },
+    })
+    : 0;
   const fleetAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'fleet:manage' }) : { allowed: false, scopes: [] };
   const driverAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'driver:manage' }) : { allowed: false, scopes: [] };
   const customerAccess = company ? await resolvePermission({ userId: session.user.id, companyId: company.id, permission: 'customer:manage' }) : { allowed: false, scopes: [] };
@@ -80,6 +85,7 @@ export default async function Home() {
         {isRentalCustomer && <Link className="header-link" href="/rentals/portal">My rentals</Link>}
         {canManageRentalRequests && <Link className="header-link" href="/rentals/requests">Rental requests</Link>}
         {canManageRentalRequests && <Link className="header-link" href="/rentals/reports">Rental reports</Link>}
+        {company && <Link className="header-link" href="/notifications">Notifications{unreadNotifications > 0 ? ` (${unreadNotifications} new)` : ''}</Link>}
         <Link className="header-link" href="/account/profile">My profile</Link>
         <Link className="header-link" href="/account/security">Change password</Link>
         <span>{session.user.name || session.user.email}</span>
