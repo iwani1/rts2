@@ -966,3 +966,16 @@ phase prompt allows it only once confirmed required.
 3. Request validation (schema) rejects empty fleets, out-of-range
    coordinates and inverted time windows, so a future provider integrates
    against a tested boundary.
+
+## D-088 — RPT-05: PDF reports from the same governed report services
+
+1. PDFs serialize **exactly** the RPT-03/RPT-02 service results (the
+   RPT-04 rule): the PDF path adds no queries of its own, so a PDF can
+   never show a figure its caller could not already see.
+2. No new dependency: a small in-repo PDF 1.4 writer renders the text
+   tables (standard Helvetica, escaped strings, computed xref). It is
+   deliberately plain — the value is the governed data with its period,
+   timezone and formula notes on the page, not typography.
+3. The FIN-05R estimated margin flows into the finance PDF through the
+   dashboard figures the finance report already passes through;
+   insufficient-data stays labelled, never dressed up.

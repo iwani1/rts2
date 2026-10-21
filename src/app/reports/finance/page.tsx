@@ -95,6 +95,11 @@ export default async function FinanceReportPage({
               Export CSV
             </a>
           ) : null}
+          {report ? (
+            <a className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700" href={`/api/companies/${company.id}/reports/finance/export/pdf${exportQuery ? `?${exportQuery}` : ''}`}>
+              Export PDF
+            </a>
+          ) : null}
           <Link className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700" href="/reports">Reports</Link>
           <Link className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700" href="/finance">Finance dashboard</Link>
         </div>

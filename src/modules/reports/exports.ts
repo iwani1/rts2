@@ -136,7 +136,9 @@ export function financeReportCsv(report: FinanceReport): string {
       'Windowed revenue counts standing invoices by their ISSUED history timestamp; payments are dated by receivedAt.',
       `Coverage: issued invoices with timestamp ${report.coverage.issuedInvoicesWithTimestamp.numerator}/${report.coverage.issuedInvoicesWithTimestamp.denominator}; payments with method ${report.coverage.paymentsWithMethod.numerator}/${report.coverage.paymentsWithMethod.denominator}; payments with reference ${report.coverage.paymentsWithReference.numerator}/${report.coverage.paymentsWithReference.denominator}.`,
       `Outstanding list shows ${report.outstandingInvoices.listedCount} of ${report.outstandingInvoices.totalCount} invoices with a balance.`,
-      'Margin, expenses and unit costs are insufficient-data until attributable cost records exist (FIN-05, Phase 3); nothing is estimated.',
+      report.margin.status === 'ESTIMATED'
+        ? `Estimated gross margin (${report.margin.basis}): revenue GHS ${cedis(report.margin.revenuePesewas)} minus approved expenses GHS ${cedis(report.margin.approvedCostsPesewas)} = GHS ${cedis(report.margin.marginPesewas)}. Estimated only, never audited profit (D-082).`
+        : `Estimated gross margin is not shown: ${report.margin.reason}`,
     ],
     sections: [
       {
