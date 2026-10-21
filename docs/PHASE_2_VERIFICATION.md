@@ -99,3 +99,20 @@ Status: **SLICE BUILT — Fedora run required.** The verification script include
    Open → Acknowledged → In Progress → Resolved (resolution notes required)
    → Closed, with every step in the status history. Trying to resolve without
    notes is refused.
+
+# Phase 2 verification — breakdown response (INC-02; D-072)
+
+Status: **SLICE BUILT — Fedora run required.** The verification script includes
+`incidents/incident-response.integration.test.ts`. No new migrations in this slice.
+
+## Manual workflow (browser)
+
+1. A driver reports a breakdown from **My trips** (or record one in **Incidents**
+   linked to an active trip).
+2. Open the incident: **Breakdown response** lists the affected trip and
+   passengers. Safety-blocked vehicles and expired-licence drivers never appear
+   as replacement options; busy ones are excluded too.
+3. Confirm a replacement vehicle/driver: the trip keeps its original assignment
+   in the audit history, linked passengers are notified, and with the boxes
+   ticked the original vehicle is safety-blocked and a work order (`WO-…`) is
+   opened. Resolve the incident afterwards from the same page.

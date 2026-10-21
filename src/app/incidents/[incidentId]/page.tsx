@@ -10,6 +10,8 @@ import {
 } from '@/modules/incidents/incidents';
 import { INCIDENT_TYPE_LABELS, type IncidentType } from '@/modules/incidents/incident-transitions';
 import { IncidentTransitionForm } from '../incident-actions';
+import { IncidentResponseForm } from '../incident-response-form';
+import { getIncidentResponsePlan } from '@/modules/incidents/incident-response';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +45,7 @@ export default async function IncidentDetailPage({
   const company = companies[0];
 
   let detail: Awaited<ReturnType<typeof getIncidentDetail>> | null = null;
+  let plan: Awaited<ReturnType<typeof getIncidentResponsePlan>> | null = null;
   let notice: string | null = null;
   try {
     detail = await getIncidentDetail({ actorId: session.user.id, companyId: company.id, incidentId });
@@ -53,6 +56,14 @@ export default async function IncidentDetailPage({
       notice = 'That incident could not be found.';
     } else {
       throw error;
+    }
+  }
+
+  if (detail) {
+    try {
+      plan = await getIncidentResponsePlan({ actorId: session.user.id, companyId: company.id, incidentId });
+    } catch {
+      plan = null;
     }
   }
 
@@ -115,6 +126,15 @@ export default async function IncidentDetailPage({
                   </li>
                 ))}
               </ul>
+            )}
+          </section>
+
+          <section className="mt-6 rounded-lg border border-slate-200 bg-white p-5">
+            <h2 className="text-base font-semibold text-slate-950">Breakdown response</h2>
+            {plan ? (
+              <IncidentResponseForm companyId={company.id} plan={plan} />
+            ) : (
+              <p className="mt-3 text-sm text-slate-600">No response plan is available for this incident.</p>
             )}
           </section>
 

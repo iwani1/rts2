@@ -35,3 +35,16 @@ export const driverIncidentReportSchema = z.object({
   immediateAction: optionalText(1000),
   reason: z.string().trim().min(8).max(500),
 }).strict();
+
+/** INC-02 (D-072): dispatcher confirms a replacement on an active trip. */
+export const incidentReplacementSchema = z.object({
+  tripId: z.string().trim().min(1).max(128),
+  newVehicleId: z.string().trim().min(1).max(128).nullable(),
+  newDriverId: z.string().trim().min(1).max(128).nullable(),
+  override: z.boolean(),
+  reason: z.string().trim().min(8).max(500),
+  blockOriginalVehicle: z.boolean(),
+  createWorkOrder: z.boolean(),
+}).strict().refine((data) => data.newVehicleId !== null || data.newDriverId !== null, {
+  message: 'Choose a replacement vehicle, a replacement driver, or both.',
+});

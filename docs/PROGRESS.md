@@ -75,7 +75,7 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | PAX-01 | In Progress | Passenger portal per D-065: audited passenger↔employee link (`Employee.userId`, link/unlink in the employee editor), own-profile projection, transport arrangements (active contracts + client routes), journey requests through the shared booking creation core, portal cancellation while Pending/Accepted, passenger-facing journey states, append-only feedback on Completed journeys (migration `20261021120000_passenger_portal`). Sandbox-verified 2026-10-21 (unit 390/390 incl. status-mapper suite; 24/24 migrations on PGlite with guard checks); Fedora verification pending. |
 | PAX-02 | Not Started | No feature implementation; Phase 1+ approval required. |
 | INC-01 | In Progress | Incident records per D-071: governed `Incident` + sequenced history (DB transition guard, append-only history), driver self-reporting against own active trips, dispatcher in-app alerts, restricted people-affected detail. Sandbox-verified 2026-10-21 (unit 412/412; PGlite 28/28 migrations + guard checks); Fedora verification pending. |
-| INC-02 | In Progress | Breakdown response flow (replacement suggestions/confirmation, safety block, work order, passenger notification) builds on INC-01 next; driver reporting and dispatcher alert entry points already landed with INC-01. |
+| INC-02 | In Progress | Breakdown response per D-072: eligible replacement suggestions (safety-blocked/busy/expired never offered), audited confirmation on active trips with override discipline, optional safety block + work order via maintenance services, passenger notification. Sandbox-verified 2026-10-21 (unit 412/412; build compiled); Fedora verification pending. |
 | FIN-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FIN-02 | Tested | Corporate invoice generation per D-057/D-058 (DRAFT-only lifecycle confirmed at the Phase 1B gate, D-060); rates registry row approved (D-060). Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). Phase 1C extends FIN-02 with the governed lifecycle per D-061, Fedora-verified 2026-10-21 at commit 51bfbd6 (unit 375/375, integration 111/111; log verification-logs/phase1c-20261021132250.log). |
 | FIN-03 | Tested | Manual invoice payments per D-062: append-only `InvoicePayment` records against ISSUED invoices, overpayment refused under the invoice row lock, outstanding derived (`total − Σ payments`), automatic PAID at full payment. Fedora-verified 2026-10-21 at commit 51bfbd6 (unit 375/375, integration 111/111 incl. lifecycle 6/6; log verification-logs/phase1c-20261021132250.log). See the Phase 1C section below. |
@@ -958,3 +958,30 @@ foundation. Migration 28 (`20261021160000_incidents`).
   confirmation on active trips, optional safety block + work order, passenger
   notification), then boarding verification, driver offline queue,
   preventive-maintenance reminders, two-factor authentication.
+
+## Phase 2 — breakdown response (INC-02; D-072; 2026-10-21)
+
+Fifth Phase 2 slice; completes the brief's breakdown chain on top of INC-01.
+No new migration.
+
+- **Plan (`getIncidentResponsePlan`):** affected trips (the incident trip plus
+  same-day active trips sharing its vehicle/driver) with passenger counts, and
+  replacement options — vehicles not archived, not safety-blocked, not busy that
+  day, flagged for passenger fit; drivers active, licence-valid, not busy. The
+  current vehicle/driver are never offered as their own replacement.
+- **Confirm (`confirmIncidentReplacement`):** one locked transaction — incident
+  must be Open/Acknowledged/In Progress, trip active; archived or safety-blocked
+  vehicles and inactive/licence-expired drivers refuse outright, day-overlap and
+  seat shortfalls need `override` with a reason; the trip update, an
+  `INCIDENT_REPLACEMENT_CONFIRMED` audit row (previous + new), and passenger
+  notifications (NTF fan-out) commit together. Afterwards the optional safety
+  block ("Out of Service") and work order run through the existing maintenance
+  services; failures degrade to plain warnings, never silent.
+- **Screens:** "Breakdown response" panel on the incident detail page with the
+  confirmation form and honest result reporting.
+- **Tests:** `incident-response.integration.test.ts` (suggestion eligibility,
+  hard refusals, override path, clean replacement with block + work order +
+  passenger alert + audit, resolved-incident refusal). Sandbox: unit 412/412,
+  build compiled. Fedora run pending.
+- **Next:** boarding verification (DRV-03), driver offline queue (DRV-05),
+  preventive-maintenance reminders (MNT-03), two-factor authentication (AUTH-06).

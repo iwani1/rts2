@@ -582,3 +582,26 @@ Date: 2026-10-21. Status: decided for Phase 2 construction; recorded for ratific
    (the Planned/Ready-only resource rule in dispatch stays untouched), optional safety block
    and work order via the existing maintenance services, passenger notification, and
    resolution through the same transition function.
+
+## D-072 — Breakdown response: replacement on active trips (INC-02)
+
+Date: 2026-10-21. Status: decided for Phase 2 construction; recorded for ratification at the Phase 2 gate.
+
+1. **Suggestions.** For the incident's trip, the system lists replacement vehicles that are
+   not archived, not under an active safety block, and not committed to another active
+   trip that day (flagging whether they fit the passenger count), and replacement
+   drivers who are active, not archived, licence-valid, and not committed that day.
+2. **Confirmation.** A dispatcher confirms a replacement vehicle and/or driver on an
+   **active** trip (Ready for Dispatch, Dispatched, In Progress, Delayed, Interrupted)
+   while the incident is Open, Acknowledged or In Progress. The Planned/Ready-only
+   rule in dispatch resource assignment is unchanged. Archived/safety-blocked vehicles
+   and inactive or licence-expired drivers refuse outright; day-overlap conflicts and
+   seat shortfalls require an explicit override with a reason. The change is audited
+   with previous and new assignments, so original and replacement history is kept.
+3. **Follow-ups.** On confirmation the dispatcher may also safety-block the original
+   vehicle ("Out of Service") and/or open a maintenance work order, through the
+   existing maintenance services; if the dispatcher lacks maintenance access the
+   replacement still stands and the UI reports plainly what was not applied.
+4. **Passengers.** Passengers assigned or boarded on the trip are notified through
+   NTF-01 (plus SMS/email copies where configured). The incident stays open until a
+   dispatcher resolves it through the normal transition.

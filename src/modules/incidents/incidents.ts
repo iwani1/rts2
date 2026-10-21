@@ -40,7 +40,7 @@ export class IncidentDriverNotLinkedError extends Error {
 const companyIdSchema = z.string().trim().min(1).max(128);
 const idSchema = z.string().trim().min(1).max(128);
 
-async function accessFor(actorId: string, companyId: string) {
+export async function accessFor(actorId: string, companyId: string) {
   const permission = await resolvePermission({ userId: actorId, companyId, permission: 'trip:manage' });
   if (!permission.allowed) throw new PermissionDeniedError();
   if (!(permission.scopes.includes('GLOBAL') || permission.scopes.includes('COMPANY'))) {
