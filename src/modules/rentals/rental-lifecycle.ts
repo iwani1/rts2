@@ -510,13 +510,15 @@ export async function reassignRentalVehicle(actorId: string, companyId: string, 
     }
     await assertVehicleUsable(tx, { companyId, vehicleId: input.vehicleId, passengerCount: request.passengerCount });
     const window: RentalConflictWindow = { startAt: current.startsAt, endAt: current.endsAt };
-    const replacement = await createAssignment(tx, {
-      companyId, requestId, vehicleId: input.vehicleId, driverId: current.driverId,
-      window, actorId, buffers, excludeAssignmentId: current.id,
-    });
+    // Retire before replace (see assignRentalDriver): the still-ACTIVE row
+    // would trip the exclusion constraint against its own replacement.
     await tx.rentalAssignment.update({
       where: { id: current.id },
       data: { status: 'REPLACED', releasedAt: new Date(), releaseKind: 'REASSIGNMENT' },
+    });
+    const replacement = await createAssignment(tx, {
+      companyId, requestId, vehicleId: input.vehicleId, driverId: current.driverId,
+      window, actorId, buffers, excludeAssignmentId: current.id,
     });
     await writeAuditEvent(tx, auditInput({
       companyId, actorId, entityType: 'RentalRequest', entityId: request.id,
