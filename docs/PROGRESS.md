@@ -512,8 +512,14 @@ Added the routes domain as the fourth Phase 1B vertical slice.
   generation idempotency, dispatch hard blocks (safety block, expired licence) that override cannot bypass,
   driver idempotent events with own-trips-only isolation, invoice duplicate-billing protection, and the
   no-map dispatch board.
-- **Still outstanding:** the E2E pass (`docs/PHASE_1B_VERIFICATION.md` §3, separate fresh
-  `richie_tms_e2e_phase1b_test` database) — owner-run, not yet executed.
+- **Re-confirmed at gate commit `d540c68` (2026-10-21):** `./scripts/verify-phase1b.sh` 7/7 green on
+  `richie_tms_p1b_20261021014258_test` with both D-060 registry rows registered. **E2E (§3): 3/4 specs
+  pass** on the fresh `richie_tms_e2e_phase1b_test` database. The remaining failure
+  (`vehicle-safety-blocks.spec.ts`, release step) is a spec defect, not a service defect: the spec fills
+  work-completed with the test host's local wall clock (~1h behind Africa/Accra, minute-truncated), so
+  the instant precedes `appliedAt` and the release is correctly refused; git history shows the spec
+  never passed (Phase 1A verified only 3 of its then-3 specs). Fix the spec helper to Africa/Accra
+  wall time (seconds precision) and re-run — no Phase 1C work until the owner declares the gate closed.
 - **Owner decisions (APPROVED 2026-10-21, recorded as D-060):** D-059 ratified as built; settings-registry
   rows approved for `bookings.creation_cutoff` (D-056) and `finance.corporate_rates` (D-058) — both now
   registered; DRV-03/DRV-05 formally descoped for Phase 1B; DRAFT-only invoice lifecycle confirmed.

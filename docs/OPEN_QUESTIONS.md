@@ -180,3 +180,19 @@ Until resolved, settings remain unset and dependent actions must be blocked with
   `richie_tms_e2e_phase1b_test`); all 4 specs failed at sign-in because the shell exports still
   contained the literal `<...>` placeholder email/password. Re-running needs only the real
   `TMS_E2E_EMAIL`/`TMS_E2E_PASSWORD` exports against the existing database — no re-bootstrap.
+
+## E2E safety-blocks spec defect (Fedora, 2026-10-21, HEAD `d540c68`)
+- Verify script 7/7 green at the gate commit; E2E 3/4. `vehicle-safety-blocks.spec.ts` fills
+  work-completed via a host-local `localDateTime(new Date())` (minute-truncated; host ~1h behind
+  Africa/Accra), while the UI interprets the value as Africa/Accra wall time (`step="0.001"` input).
+  The instant lands before `appliedAt` (1:44 am UTC) and the release is correctly refused
+  ("Work completion must be recorded after the safety block was applied" — visible in row text).
+  The git-conflicting timezone guidance above (commit `d70e5aa`, "Interpret E2E work-completed time in
+  Accra timezone") made the spec host-TZ-dependent, and it regressed further when run an hour later.
+  Fix: spec helper emits Africa/Accra wall time with seconds; replace the no-op
+  `expect(page).toHaveURL('/fleet/maintenance')` (returns Promise, never awaited) with
+  `await page.waitForURL('**/fleet/maintenance')`. No service change. Phase 1A verified only 3 of
+  its then-3 specs, so this was likely never a real pass.
+- Tooling note (same session): heredoc-written `/tmp` scripts intermittently vanished in this sandbox
+  (files absent on the next call). Prefer `edit_file` for surgical changes and verify every change with
+  `git diff` before committing — a silent no-op edit batch was caught this way twice.

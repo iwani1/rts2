@@ -1,11 +1,19 @@
 # Phase 1B verification on Fedora (owner-run, 2026-10-21)
 
-**Status: AUTOMATED STEPS PASSED at commit `3e32798` (2026-10-21).**
-`./scripts/verify-phase1b.sh` completed 7/7 on a fresh disposable database
-(`richie_tms_p1b_20261021011206_test`): Prisma generate, 21/21 migrations,
+**Status: AUTOMATED STEPS PASSED — re-confirmed 7/7 at gate commit `d540c68` (2026-10-21).**
+`./scripts/verify-phase1b.sh` completed 7/7 on fresh disposable databases
+(most recently `richie_tms_p1b_20261021014258_test`; first pass at `3e32798`,
+`richie_tms_p1b_20261021011206_test`): Prisma generate, 21/21 migrations,
 typecheck, lint (0 errors), unit 373/373, integration 105/105 against real
-PostgreSQL. Log: `verification-logs/phase1b-20261021011206.log`. Only §3 (E2E,
-separate fresh database) and the §4 gate decisions remain.
+PostgreSQL. Gate decisions approved and recorded as D-060. **E2E (§3):
+3/4 specs pass** on the fresh `richie_tms_e2e_phase1b_test` database;
+`vehicle-safety-blocks.spec.ts` fails at the safety-block release step —
+the spec fills work-completed with the test host's local wall clock, which
+is ~1h behind Africa/Accra and minute-truncated, so the instant precedes
+`appliedAt` (1:44 am UTC) and the release is correctly refused
+("Work completion must be recorded after the safety block was applied").
+Fix §3's helper to use Africa/Accra wall time with seconds precision and
+re-run; no service change.
 
 ## 0. Pull and generate
 

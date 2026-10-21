@@ -1,9 +1,16 @@
 import { expect, test } from '@playwright/test';
 
-function localDateTime(value: Date) {
-  const pad = (part: number, width = 2) => String(part).padStart(width, '0');
-  // datetime-local inputs do not accept milliseconds.
-  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}`;
+function accraDateTime(value: Date) {
+  // The safety-block form interprets datetime-local values as Africa/Accra
+  // wall time (see accraLocalDateTimeToISOString); emit that wall time with
+  // seconds so the instant is safely after the block's appliedAt.
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Accra', hourCycle: 'h23',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).formatToParts(value);
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? '00';
+  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}:${get('second')}`;
 }
 
 test('authorized fleet manager applies and releases a safety block, then records and searches non-safety maintenance', async ({ page }) => {
@@ -43,7 +50,7 @@ test('authorized fleet manager applies and releases a safety block, then records
   await expect(vehicleRow).toContainText('E2E test records immediate safety restriction');
 
   await vehicleRow.getByRole('button', { name: 'Record inspection and release' }).click();
-  await vehicleRow.getByLabel('Work completed at').fill(localDateTime(new Date()));
+  await vehicleRow.getByLabel('Work completed at').fill(accraDateTime(new Date()));
   await vehicleRow.getByLabel('Inspection results').fill('E2E brake and steering inspection passed after repair');
   await vehicleRow.getByLabel('I confirm the inspection passed and this vehicle is safe to return to service.').check();
   await vehicleRow.getByLabel('Release reason').fill('E2E release after completed work and passed inspection');
