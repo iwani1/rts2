@@ -655,3 +655,25 @@ Date: 2026-10-21. Status: decided for Phase 2 construction; recorded for ratific
    applies the event under whoever is signed in and enforces trip ownership —
    on a shared phone, another driver's entries fail visibly rather than
    applying under the wrong name.
+
+## D-075 — Preventive maintenance reminders: computed, never auto-completed (MNT-03)
+
+Date: 2026-10-21. Status: decided for Phase 2 construction; recorded for ratification at the Phase 2 gate.
+
+1. **Plans.** `VehicleServicePlan` holds one plan per vehicle: a calendar
+   interval (days) and/or a mileage interval (km), plus the last-service
+   baseline (date and odometer). Saving a plan requires at least one interval.
+   Saving recomputes the vehicle's stored `nextServiceAt` from the date
+   interval so the fleet register agrees with the reminder register.
+2. **Reminder state is computed, never stored.** From the baseline: date due
+   (baseline + days), mileage due (baseline km + interval km vs the vehicle's
+   current odometer, kilometre readings only). `OVERDUE` when past due,
+   `DUE_SOON` within 14 days or 500 km, otherwise `OK`; vehicles with a stored
+   `nextServiceAt` but no plan still appear date-only. **A passed date never
+   marks maintenance complete** — only `recordVehicleService` (an audited
+   action with date, odometer and reason) moves the baseline.
+3. **Alerting.** The maintenance page carries the reminder register. A fleet
+   manager can press "Notify fleet team" to alert every login holding
+   `maintenance:manage` (GLOBAL/COMPANY) about overdue/due-soon vehicles;
+   dedupe per vehicle + due date + severity keeps repeat presses quiet, and
+   nothing pretends a scheduler exists.

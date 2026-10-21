@@ -148,3 +148,19 @@ it relies on is covered by the existing driver integration suite.
    and clears; the trip reflects them after refresh.
 3. Repeat the same event online afterwards (retry the sync): the server
    answers duplicate and nothing is applied twice.
+
+# Phase 2 verification — preventive maintenance reminders (MNT-03; D-075)
+
+Status: **SLICE BUILT — Fedora run required.** Migration 30
+(`20261021180000_service_plans`); the verification script includes
+`maintenance/service-plans.integration.test.ts`.
+
+## Manual workflow (browser)
+
+1. Open **Maintenance → Service reminders**: every vehicle shows its computed
+   state (overdue / due soon / up to date / no plan).
+2. Set a plan (calendar and/or mileage interval with the last-service
+   baseline) and watch the due date and remaining km update. **Notify fleet
+   team** alerts other maintenance managers once per due cycle.
+3. Record a completed service: the baseline (and next due date) moves. Note
+   that waiting past a due date changes nothing by itself.

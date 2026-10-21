@@ -25,6 +25,7 @@ model Company {
   incidentStatusHistory     IncidentStatusHistory[]
   boardingCodes             BookingBoardingCode[]
   boardingAttempts          BoardingVerificationAttempt[]
+  vehicleServicePlans       VehicleServicePlan[]
   rentalRequests  RentalRequest[]
   pricingWorksheets RentalPricingWorksheet[]
   maintenanceWorkOrders MaintenanceWorkOrder[]
@@ -440,6 +441,7 @@ model Vehicle {
   company                   Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
   usualDriver               Driver?   @relation("VehicleUsualDriver", fields: [usualDriverCompanyId, usualDriverId], references: [companyId, id], onDelete: Restrict)
   maintenanceWorkOrders     MaintenanceWorkOrder[]
+  servicePlan               VehicleServicePlan?
   safetyBlocks              VehicleSafetyBlock[]
   incidents                 Incident[]
   trips                     Trip[]
@@ -1032,4 +1034,21 @@ model BoardingVerificationAttempt {
 
   @@index([companyId, bookingId, createdAt])
   @@index([companyId, tripId, createdAt])
+}
+
+model VehicleServicePlan {
+  id                    String   @id @default(cuid())
+  companyId             String
+  vehicleId             String
+  intervalDays          Int?
+  intervalKm            Int?
+  lastServiceDate       DateTime @db.Date
+  lastServiceOdometerKm Decimal? @db.Decimal(12, 2)
+  createdAt             DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime @updatedAt @db.Timestamptz(6)
+  company               Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  vehicle               Vehicle  @relation(fields: [companyId, vehicleId], references: [companyId, id], onDelete: Restrict)
+
+  @@unique([companyId, vehicleId])
+  @@index([companyId, vehicleId])
 }

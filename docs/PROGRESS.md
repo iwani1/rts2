@@ -42,7 +42,7 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | FLT-05 | In Progress | Manager-only Fleet overview shows an exact count of non-archived vehicle records and groups them by the user-supplied category, with tenant scope enforced. A PostgreSQL test covers company isolation and archived-record exclusion but remains unrun. It explicitly does not infer availability or classify documents. Availability, assignment, trip, maintenance, upcoming-service, utilisation and downtime metrics await their authoritative workflows and owner-approved rules; PostgreSQL/browser verification remains outstanding. |
 | MNT-01 | In Progress | D-044/D-046 implement manager-only non-safety intake and a reason-audited fixed lifecycle with independent approver separation, planned-work/parts fields at approval, explicit completion date/inspection results, and optional explicit pesewa costs. Datetime-local completion and safety-release inputs are interpreted as Africa/Accra wall time independent of the browser timezone. Intake vehicle selection searches all active same-company vehicles by registration, make, or model instead of being limited to the first vehicle-register page. Current status, the latest 50 sequenced events, planned work, completion/inspection evidence and optional pesewa costs are visible to managers; the register supports case-insensitive reference/fault/registration search, status filtering, and stable cursor pagination (100 records per page, with validated same-company anchors and filter-preserving previous/next navigation). A malformed, stale, or foreign-company cursor returns a client error at the API or safely resets the register to its first page. Focused service, API and UI tests cover page bounds, foreign cursors, recovery, navigation history, and preserved filters. A Playwright flow now exercises vehicle safety-block release followed by non-safety maintenance intake and registration search; browser execution remains outstanding. Technician assignment and safety-block linkage remain inactive. |
 | MNT-02 | In Progress | D-045 adds atomic, reason-audited application of approved safety blocks, register visibility without reason disclosure, one-time release with completed-work timestamp and passed inspection, and database immutability/one-active-block constraints. The release API returns only block ID, status, and release timestamp. No assignment workflow exists, so assignment prevention is not active. |
-| MNT-03 | Not Started | No feature implementation; Phase 1+ approval required. |
+| MNT-03 | In Progress | Preventive-maintenance reminders per D-075: per-vehicle service plans (calendar/mileage intervals + last-service baseline), computed reminder register (a passed date never completes maintenance), audited record-service action, deduped fleet-team alerts. Sandbox-verified 2026-10-21 (unit 422/422; PGlite 30/30 migrations); Fedora verification pending. |
 | MNT-04 | Not Started | No feature implementation; Phase 1+ approval required. |
 | CLI-01 | Tested | Corporate client register implemented (schema, migration, service, API, pages). PostgreSQL integration tests pass 7/7 within the 14-suite/58-test integration run on a disposable `*_test` database (2026-10-20). |
 | CLI-02 | Tested | Contract register per D-049 (DB transition guards, row-locked reason-audited transitions, full from-to matrix). Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). |
@@ -1031,3 +1031,27 @@ Seventh Phase 2 slice. No new migration, no service worker.
   Sandbox: build compiled. Fedora run pending (browser workflow above).
 - **Next:** preventive-maintenance reminders (MNT-03), two-factor
   authentication (AUTH-06), then the Phase 2 gate.
+
+## Phase 2 — preventive maintenance reminders (MNT-03; D-075; 2026-10-21)
+
+Eighth Phase 2 slice. Migration 30 (`20261021180000_service_plans`).
+
+- **Plans:** `VehicleServicePlan` — calendar (days) and/or mileage (km)
+  interval plus last-service baseline; saving requires at least one interval
+  (schema refine; positive-value CHECKs in the DB) and refreshes the vehicle's
+  stored `nextServiceAt` so the fleet register agrees.
+- **Computed reminders:** OVERDUE / DUE_SOON (≤14 days or ≤500 km) / OK from
+  the baseline and the current odometer; plan-less vehicles with a stored
+  next-service date still appear. State is computed on read — **a passed date
+  never marks maintenance complete**; only the audited
+  `VEHICLE_SERVICE_RECORDED` action moves the baseline.
+- **Screens:** `/fleet/maintenance/service-plans` register + plan/record
+  forms + "Notify fleet team" (alerts `maintenance:manage` holders, dedupe
+  per vehicle + due date + severity; no scheduler pretended).
+- **Tests:** computation unit tests (calendar/mileage/stored-date/NO_PLAN)
+  and `service-plans.integration.test.ts` (interval requirement, access,
+  overdue computation + nextServiceAt sync, one-alert-per-cycle dedupe,
+  record-service baseline move, foreign-vehicle refusal). Sandbox: unit
+  422/422, PGlite 30/30. Fedora run pending.
+- **Next:** two-factor authentication (AUTH-06), GPS provider state (GPS-01),
+  then the Phase 2 gate.
