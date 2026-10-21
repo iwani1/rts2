@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ getPrisma: vi.fn() }));
 vi.mock('@/server/prisma', () => ({ getPrisma: mocks.getPrisma }));
 
-import { CompanyNotFoundError, getCompanyQuoteValidityDays, getCompanyRentalPricingModels, getCompanyTaxLines, getCompanyDepositPolicy, listCompanySettingStatus, requireCompanySetting, setCompanySetting, settingRegistry } from './registry';
+import { CompanyNotFoundError, bookingCreationCutoffSchema, corporateRatesSchema, getCompanyQuoteValidityDays, getCompanyRentalPricingModels, getCompanyTaxLines, getCompanyDepositPolicy, listCompanySettingStatus, requireCompanySetting, setCompanySetting, settingRegistry } from './registry';
 
 function mockTransaction({ admin = true, company = true }: { admin?: boolean; company?: boolean } = {}) {
   const tx = {
@@ -18,6 +18,41 @@ function mockTransaction({ admin = true, company = true }: { admin?: boolean; co
   mocks.getPrisma.mockReturnValue({ $transaction: transaction });
   return { tx, transaction };
 }
+
+
+describe('D-056/D-058 typed booking and finance settings', () => {
+  it('parses a NONE booking creation cut-off', () => {
+    expect(bookingCreationCutoffSchema.parse({ mode: 'NONE' })).toEqual({ mode: 'NONE' });
+  });
+
+  it('parses an hours-before-journey cut-off and bounds the hours', () => {
+    expect(bookingCreationCutoffSchema.parse({ mode: 'HOURS_BEFORE_JOURNEY', hours: 24 }))
+      .toEqual({ mode: 'HOURS_BEFORE_JOURNEY', hours: 24 });
+    expect(() => bookingCreationCutoffSchema.parse({ mode: 'HOURS_BEFORE_JOURNEY', hours: 721 })).toThrow();
+    expect(() => bookingCreationCutoffSchema.parse({ mode: 'HOURS_BEFORE_JOURNEY', hours: -1 })).toThrow();
+    expect(() => bookingCreationCutoffSchema.parse({ mode: 'HOURS_BEFORE_JOURNEY' })).toThrow();
+  });
+
+  it('rejects unknown cut-off modes and extra fields', () => {
+    expect(() => bookingCreationCutoffSchema.parse({ mode: 'SOMETHING_ELSE' })).toThrow();
+    expect(() => bookingCreationCutoffSchema.parse({ mode: 'NONE', hours: 4 })).toThrow();
+  });
+
+  it('parses corporate rates and requires pesewas integers', () => {
+    expect(corporateRatesSchema.parse([{ contractId: 'c1', unit: 'PER_TRIP', ratePesewas: 100 }]))
+      .toEqual([{ contractId: 'c1', unit: 'PER_TRIP', ratePesewas: 100 }]);
+    expect(() => corporateRatesSchema.parse([{ contractId: 'c1', unit: 'PER_DAY', ratePesewas: 100 }])).toThrow();
+    expect(() => corporateRatesSchema.parse([{ contractId: 'c1', unit: 'PER_TRIP', ratePesewas: 10.5 }])).toThrow();
+    expect(() => corporateRatesSchema.parse([{ contractId: 'c1', unit: 'PER_TRIP', ratePesewas: 0 }])).toThrow();
+  });
+
+  it('rejects duplicate contract rates', () => {
+    expect(() => corporateRatesSchema.parse([
+      { contractId: 'c1', unit: 'PER_TRIP', ratePesewas: 100 },
+      { contractId: 'c1', unit: 'PER_PASSENGER', ratePesewas: 50 },
+    ])).toThrow();
+  });
+});
 
 describe('company settings registry', () => {
   beforeEach(() => vi.resetAllMocks());

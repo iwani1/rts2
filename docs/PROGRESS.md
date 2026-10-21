@@ -499,6 +499,10 @@ Added the routes domain as the fourth Phase 1B vertical slice.
 
 ## Phase 1B gate — awaiting Fedora verification and owner approval (2026-10-21)
 
+- **Final evidence (commit pending):** a cross-slice `workflow.integration.test.ts` walks one Monday end to end —
+  contract → bookings → schedule trip generation → resource assignment → booking assignment → dispatch no-show
+  → linked-driver START/BOARD/COMPLETE → per-passenger invoice (GH₵200.00) billed exactly once → bound-HR
+  dashboard — plus D-056/D-058 settings-schema unit tests. Self-contained (journeys dated next month).
 - **Implemented locally and pushed:** CLI-01 (Fedora-verified), CLI-02, CLI-03, EMP-01..03, RTE-01..04,
   BKG-01..06, TRP-01/02, DSP-01..04, DRV-01/02/04, FIN-02 (commits `6c2ba81`, `9520371`, `ef83d47`,
   `2e63cc8`, `d06532b`, `d2e9573`, `d54faaf`, `aae103e`, `6bb733f`, `f55be6f`). Everything after CLI-01
