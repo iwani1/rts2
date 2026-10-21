@@ -1,5 +1,9 @@
 # Phase 3 verification (Fedora)
 
+> **Automated gate PASSED 2026-10-21 at `f71aba9`**: 36/36 migrations,
+> typecheck clean, lint 0 errors, unit 475/475 (129 files), integration
+> 183/183 (45 suites). Manual walkthrough below still outstanding.
+
 Phase 3 builds FIN-04, FIN-05, FIN-05R (reporting integration), FIN-06,
 FIN-08, MNT-04, RTE-05 (interface only) and RPT-05. Decisions D-081–D-088
 in `docs/DECISIONS.md`. GRA e-VAT is **excluded**: `docs/OPEN_QUESTIONS.md`

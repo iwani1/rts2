@@ -1235,3 +1235,17 @@ FIN-05 guards exercised on PGlite. **Fedora gate pending:**
 183) plus the manual walkthrough in `docs/PHASE_3_VERIFICATION.md`.
 Paystack is implemented and test-verified but NOT live — no real
 sandbox credentials have been used yet.
+
+## Phase 3 automated Fedora verification PASSED (2026-10-21)
+
+`scripts/verify-phase3.sh` at `f71aba9` fully green: 36/36 migrations,
+typecheck clean, lint 0 errors (4 pre-existing warnings), unit 475/475
+(129 files), integration **183 passed / 0 failed (45 suites)**. The first
+run at `6370819` found three defects — create-time `include` returning an
+empty expense/reconciliation history, a stale pre-FIN-05R dashboard
+assertion, and a single-actor work-order fixture violating the
+independent-approval policy — all fixed in `f71aba9` and re-verified.
+Remaining Phase 3 gate items: the manual walkthrough in
+`docs/PHASE_3_VERIFICATION.md`, and the Paystack sandbox (test-mode)
+transaction whenever credentials are available — the provider is
+implemented and test-verified, not yet live-verified (D-084).
