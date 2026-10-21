@@ -85,3 +85,9 @@ Until resolved, settings remain unset and dependent actions must be blocked with
   real model fields; Zod request schemas compose refined field schemas with `.and(z.object({ reason }))`;
   the two pending settings keys are annotated through `SettingKey` with the registry-row gap unchanged
   (owner approval still required).
+
+## Typecheck fixed pattern (Fedora run 4, 2026-10-21)
+- Prisma include/select args passed via shared constants infer `'asc'`/`'desc'` as `string`, not the
+  `SortOrder` literal. The working convention (used by pre-existing modules) keeps shared include objects
+  un-`as const` and adds per-property `'asc' as const` only where Prisma needs the literal union — applied
+  to `CorporateInvoiceInclude.lines.orderBy` in `src/modules/finance/invoices.ts`.
