@@ -6,8 +6,12 @@ services:
       POSTGRES_USER: tms
       POSTGRES_PASSWORD: tms_local_only
       POSTGRES_DB: richie_tms
+    # Host port is overridable (DB_PORT) so a second compose project —
+    # e.g. the Phase 7 smoke stack — can run its own database while
+    # this one is up; containers always reach Postgres on 5432 via the
+    # compose network. Default unchanged for every existing workflow.
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -34,4 +38,4 @@ volumes:
       APP_URL: ${APP_URL:-http://localhost:3000}
       NODE_ENV: production
     ports:
-      - "3000:3000"
+      - "${APP_PORT:-3000}:3000"

@@ -6,7 +6,7 @@
 # Integration suites create synthetic companies/users and never clean them up
 # (AuditEvent is append-only), so never point this at a database you reuse.
 #
-# Usage:  ./scripts/verify-phase4.sh
+# Usage:  ./scripts/verify-phase7.sh
 # Env overrides: COMPOSE="podman compose" | "docker compose" (auto-detected)
 set -euo pipefail
 
@@ -76,9 +76,26 @@ npm run test:integration
 
 echo
 echo "== 8/8 Container smoke test (D-092): build the image, boot app + db, require readiness =="
+# Port note: step 2's main-project db already publishes host 5432, so
+# the smoke db publishes host 5433 instead (DB_PORT below; the app
+# reaches its db over the compose network on 5432 either way). The
+# env is exported for the whole step because compose evaluates the
+# app service's ${AUTH_SECRET:?} guard on every invocation, `down`
+# included — inline-only env on `up` would leave teardown unparsable
+# on strict compose implementations.
 SMOKE_PROJECT="richie-tms-smoke"
-$COMPOSE_CMD -p "$SMOKE_PROJECT" down -v >/dev/null 2>&1 || true
-AUTH_SECRET="$(openssl rand -hex 32)" APP_URL="http://localhost:3000" $COMPOSE_CMD -p "$SMOKE_PROJECT" up -d --build
+export AUTH_SECRET="$(openssl rand -hex 32)"
+export APP_URL="http://localhost:3000"
+export DB_PORT=5433
+export APP_PORT=3000
+smoke_teardown() { $COMPOSE_CMD -p "$SMOKE_PROJECT" down -v >/dev/null 2>&1 || true; }
+smoke_teardown
+trap smoke_teardown EXIT
+if ! $COMPOSE_CMD -p "$SMOKE_PROJECT" up -d --build; then
+  echo "Container smoke failed: the smoke stack did not start." >&2
+  $COMPOSE_CMD -p "$SMOKE_PROJECT" logs app db 2>&1 | tail -80 >&2 || true
+  exit 1
+fi
 READY=""
 for attempt in $(seq 1 30); do
   if curl -fsS http://localhost:3000/api/health/ready >/dev/null 2>&1; then READY="yes"; break; fi
@@ -86,8 +103,7 @@ for attempt in $(seq 1 30); do
 done
 if [ -z "$READY" ]; then
   echo "Container smoke failed: /api/health/ready never became ready." >&2
-  $COMPOSE_CMD -p "$SMOKE_PROJECT" logs app | tail -50 >&2 || true
-  $COMPOSE_CMD -p "$SMOKE_PROJECT" down -v >/dev/null 2>&1 || true
+  $COMPOSE_CMD -p "$SMOKE_PROJECT" logs app 2>&1 | tail -50 >&2 || true
   exit 1
 fi
 curl -fsS http://localhost:3000/api/health
@@ -95,6 +111,7 @@ echo
 echo "Security headers (production):"
 curl -fsSI http://localhost:3000/login | grep -iE "content-security-policy|x-frame-options|strict-transport|x-robots-tag" || true
 $COMPOSE_CMD -p "$SMOKE_PROJECT" down -v
+trap - EXIT
 echo "Container smoke passed and was torn down."
 
 echo

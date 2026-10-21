@@ -1343,3 +1343,13 @@ the test via `vi.stubEnv`; sandbox unit 5/5 on the affected files and
 repo-tsconfig typecheck clean for the file. Rerun of
 `scripts/verify-phase7.sh` pending; steps 5–8 (unit, integration,
 container smoke) still unverified on Fedora.
+
+**Phase 7 second Fedora run 2026-10-21 (`826e41a`): steps 1–7
+PASSED** (42/42 migrations, typecheck+lint clean, unit 495/495,
+integration 202/202). Step 8/8 container smoke blocked by a
+host-port collision: the smoke project's db tried to publish 5432,
+already held by the script's own main-project db from step 2. Fix:
+compose host ports parameterised (`DB_PORT`/`APP_PORT`, defaults
+unchanged), smoke stack on 5433, EXIT-trap teardown, failure log
+dump. Rerun pending; image build / in-container migrate deploy /
+readiness still to be proven on Fedora.

@@ -32,6 +32,28 @@ Expected:
 > container runtime, so step 8/8 exists precisely for Fedora).
 > Fedora automated verification is **outstanding**, as is the drill
 > below.
+>
+> First Fedora run (2026-10-21, HEAD `33b4402`) stopped at step 4/7:
+> the real `@types/node` on Fedora declares `process.env.NODE_ENV`
+> read-only, so the header test's direct assignment failed typecheck
+> (TS2540) — a combination the sandbox's type environment does not
+> reproduce. Fixed by stubbing the variable through Vitest
+> (`vi.stubEnv`) instead of assigning it; test-only change, rerun
+> pending.
+>
+> Second Fedora run (2026-10-21, HEAD `826e41a`): **steps 1–7
+> PASSED** — 42/42 migrations on a fresh disposable database,
+> typecheck and lint clean (4 pre-existing warnings, 0 errors),
+> unit 495/495, integration 202/202. Step 8/8 stopped before the
+> app could start: the smoke project's `db` tried to publish host
+> port 5432, already held by the main project's `db` started in
+> step 2 (`rootlessport … bind: address already in use`). Fixed by
+> making the compose host ports overridable (`DB_PORT`/`APP_PORT`,
+> defaults 5432/3000 unchanged) with the smoke stack on 5433, and
+> by tearing the smoke project down via an EXIT trap so a failed
+> `up` cannot leak containers. The image build itself, the
+> in-container `migrate deploy`, and the readiness/header checks
+> are still unproven on Fedora; full pass pending the rerun.
 
 ## Manual deployment drill (after the automated run)
 
