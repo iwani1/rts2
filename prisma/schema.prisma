@@ -26,6 +26,7 @@ model Company {
   vehicleSafetyBlocks  VehicleSafetyBlock[]
   clients               Client[]
   contracts             Contract[]
+  employees             Employee[]
 }
 
 model Client {
@@ -44,9 +45,40 @@ model Client {
   updatedAt        DateTime @updatedAt @db.Timestamptz(6)
   company          Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
   contracts        Contract[]
+  employees        Employee[]
 
   @@unique([companyId, id])
   @@index([companyId, archivedAt, name])
+}
+
+model Employee {
+  id                      String    @id @default(cuid())
+  companyId               String
+  clientId                String
+  reference               String?
+  fullName                String
+  telephone               String?
+  email                   String?
+  homeAddress             String?
+  department              String?
+  workLocation            String?
+  shift                   String?
+  approvedPickupLocation  String?
+  approvedDropoffLocation String?
+  accountStatus           String?
+  transportEligible       Boolean?
+  accessibilityNeeds      String?
+  notes                   String?
+  archivedAt              DateTime? @db.Timestamptz(6)
+  createdAt               DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt               DateTime  @updatedAt @db.Timestamptz(6)
+  company                 Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  client                  Client    @relation(fields: [companyId, clientId], references: [companyId, id], onDelete: Restrict)
+
+  @@unique([companyId, id])
+  @@unique([companyId, reference])
+  @@index([companyId, archivedAt, fullName])
+  @@index([companyId, clientId, archivedAt])
 }
 
 model Contract {

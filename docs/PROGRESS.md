@@ -47,9 +47,9 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | CLI-01 | Tested | Corporate client register implemented (schema, migration, service, API, pages). PostgreSQL integration tests pass 7/7 within the 14-suite/58-test integration run on a disposable `*_test` database (2026-10-20). |
 | CLI-02 | In Progress | Contract register implemented per D-049: `Contract`/`ContractStatusHistory` schema and migration with database transition guards, service with row-locked reason-audited transitions, API routes, contract register pages, unit tests for schemas and the full from-to matrix, and PostgreSQL integration tests. Verification run on Fedora is pending; see the Phase 1B CLI-02 section below. |
 | CLI-03 | Not Started | No feature implementation; Phase 1+ approval required. |
-| EMP-01 | Not Started | No feature implementation; Phase 1+ approval required. |
-| EMP-02 | Not Started | No feature implementation; Phase 1+ approval required. |
-| EMP-03 | Not Started | No feature implementation; Phase 1+ approval required. |
+| EMP-01 | In Progress | Employee register implemented per D-050 (schema, migration, service, API, pages) with restricted-field handling; Fedora verification pending. |
+| EMP-02 | In Progress | CSV import implemented per D-050/D-024: fixed template, per-client preview with row errors and warning-only likely duplicates, all-or-nothing audited import; Fedora verification pending. |
+| EMP-03 | In Progress | Eligibility toggle via audited update, shift/location text as supplied, audited export without restricted fields; Fedora verification pending. Structured shifts/locations await RTE. |
 | RTE-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | RTE-02 | Not Started | No feature implementation; Phase 1+ approval required. |
 | RTE-03 | Not Started | No feature implementation; Phase 1+ approval required. |
@@ -470,5 +470,18 @@ Added the contract register as the second Phase 1B vertical slice, following the
 | Feature ID | Status | Notes |
 |---|---|---|
 | CLI-02 | In Progress | Contract register implemented; unit/integration/E2E verification on Fedora pending. CLI-03 (corporate dashboard) not started. |
+
+## Phase 1B — employees and CSV import (EMP-01/02/03; D-050; 2026-10-20)
+
+Added the employee register as the third Phase 1B vertical slice, following the customers/clients register patterns and the established CSV-import machinery.
+
+- **Prisma schema**: Added `Employee` (companyId, clientId composite FK to `Client`, optional company-unique reference, required fullName, restricted telephone/email/homeAddress/accessibilityNeeds, department, workLocation, shift, approved pickup/drop-off landmark text, accountStatus, nullable transportEligible, notes, archivedAt) with company/client indexes. Added `employees` relations to `Company`/`Client`.
+- **Migration**: `prisma/migrations/20261020140000_employees/migration.sql` creates the table, unique indexes, and a non-empty-name CHECK.
+- **Service layer** (`src/modules/employees/employees.ts`): `listEmployees` (search/client/eligibility filters, cursor pagination), `getEmployee` with audit history, `createEmployee`, `updateEmployee` (eligibility toggle), `archiveEmployee`, `previewEmployeeImport`, `importEmployeesFromCsv`, `exportEmployeesCsv` — all behind company-scoped `employee:manage`; narrower scopes fail closed. References are checked for company uniqueness in-transaction with a P2002 race guard.
+- **Import** (`employee-import.ts` + constants): fixed 14-column template (`fullName` required), TRUE/FALSE/blank eligibility, repeated/existing references as row errors, same-name-and-contact likely duplicates as warnings only, all-or-nothing audited import (D-024/D-050).
+- **API routes**: `GET/POST /api/companies/[companyId]/employees`, `GET/PUT/DELETE /api/companies/[companyId]/employees/[employeeId]`, `POST .../employees/import/preview`, `POST .../employees/import`, `GET .../employees/export` (CSV attachment, restricted fields excluded).
+- **Pages** (`src/app/employees/page.tsx` + `employee-manager.tsx`): searchable/filterable register, create/edit/archive forms, CSV template download, preview table with per-row errors/warnings, and confirm-import flow. Workspace navigation links Employees for `employee:manage` users.
+- **Tests**: `employee-schema.test.ts`, `employee-import.test.ts` (parsing, eligibility, duplicate references, likely-duplicate warnings, header/email errors), `employees.integration.test.ts` (PostgreSQL CRUD, eligibility toggle, unique reference, cross-company and dispatcher-scope denial, preview/all-or-nothing import, export exclusion). Not yet run: sandbox has no `node_modules`/database; Fedora verification is batched with CLI-02.
+- **Limits**: No HR self-service or dispatcher roster projection (fail closed), no structured locations/shifts yet (RTE), no booking enforcement (BKG-02), archive only.
 
 Phase 1A remains complete: all 4 E2E specs pass against the cleaned test DB (1 company: Richie Transport Services), unit tests 337/337 pass, integration tests 51/51 pass, typecheck and build pass.
