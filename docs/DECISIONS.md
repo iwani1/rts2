@@ -1073,3 +1073,46 @@ Owner approved the Phase 5 build 2026-10-21 in the order 5A → 5B → 5C.
    ageing section bucketing ISSUED invoices by days past due
    (current, 1–30, 31–60, 61–90, over 90). Invoices without a recorded
    due date are counted separately and never folded into the buckets.
+
+## D-091 — Phase 6: rental revenue recognition (2026-10-21, owner-approved)
+
+**Context.** KPIS.md has defined rental revenue since Phase 0 as the
+sum of issued rental invoice totals for invoice issue dates in range —
+never quotation values or unverified payments. Phases 5A/5B made that
+computable (RentalInvoice ledger with an append-only payment record),
+and the Phase 5 riders aged both invoice families on the finance
+dashboard while leaving recognition corporate-only (FIN-07 / D-063),
+flagged honestly as an unavailable metric. The owner approved the
+Phase 6 recommendation on 2026-10-21.
+
+**Decision.**
+
+1. **Accrual on issue.** Rental revenue is recognised at the
+   `RentalInvoice` total (gross + configured tax − recorded deposit)
+   when the invoice reaches ISSUED; payments reduce outstanding, never
+   revenue; VOID reverses recognition — the exact corporate FIN-07
+   treatment. Credit notes are not modelled yet, so "net of credits"
+   in KPIS.md means the invoiced total today; no credit is invented.
+2. **Combined headline with per-stream proof.** The finance dashboard
+   reports one combined recognised-revenue / payments-received /
+   outstanding headline covering both corporate (CorporateInvoice)
+   and rental (RentalInvoice) streams, with each stream shown beneath
+   it. The identity revenue = payments + outstanding must hold per
+   stream and combined; the dashboard continues to expose `reconciles`
+   so every response proves its own tie-out (D-063 convention).
+   Client, status and payment-method breakdowns stay corporate —
+   rental customers are not corporate clients — and are labelled so.
+3. **Margin on the combined basis.** Approved expenses serve one
+   fleet and cannot be honestly attributed between corporate trips
+   and rentals, so the estimated margin uses combined recognised
+   revenue from Phase 6 onwards; it remains "estimated, never audited
+   profit" (KPIS.md), and the dashboard marks the basis change so
+   earlier-period figures are not compared naively. Cost per trip /
+   passenger stays corporate (rentals have no Trip records).
+4. **Reports follow the same identity.** RPT-03 gains a Rentals line
+   in revenue by service from the dashboard's rental stream; RPT-01's
+   revenue and outstanding rows on `/rentals/reports` read the real
+   RentalInvoice aggregates (this does not make the page RPT-01-
+   complete — it still has no date filter and says so).
+5. **No migration.** Recognition is computed from the existing
+   ledgers; the invoice-family ageing added in 5C is unchanged.
