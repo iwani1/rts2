@@ -9,7 +9,7 @@ const locationFieldsSchema = z.object({
   landmarkDescription: optionalText(500),
   ghanaDigitalAddress: optionalText(120),
   notes: optionalText(2000),
-}).superRefine((data, context) => {
+}).strict().superRefine((data, context) => {
   if ((data.latitude === null) !== (data.longitude === null)) {
     context.addIssue({
       code: z.ZodIssueCode.custom, path: ['latitude'],
@@ -18,7 +18,7 @@ const locationFieldsSchema = z.object({
   }
 });
 
-export const locationInputSchema = locationFieldsSchema.strict();
+export const locationInputSchema = locationFieldsSchema;
 export const locationRequestSchema = locationFieldsSchema.and(z.object({
   reason: z.string().trim().min(8).max(500),
 }).strict());

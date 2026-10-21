@@ -96,3 +96,7 @@ Until resolved, settings remain unset and dependent actions must be blocked with
 - Zod: refined field schemas composed with `.and(z.object({ reason }))` must not carry `.strict()`
   (strict rejects the other side's keys); strictness lives on the `InputSchema` and the reason side instead.
 - Tests must mirror service-level queries added to pages (home page HR-binding probe added `findUserRoleAssignment` mock).
+
+- Refinement: `.strict()` belongs on the underlying `ZodObject` *before* `superRefine`; `ZodEffects`
+  has no `.strict()` (TS2339 on Fedora run 6). Final shape: object `.strict().superRefine(...)` fields
+  schema, `.and(z.object({ reason }).strict())` for the request schema.

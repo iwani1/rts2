@@ -18,13 +18,13 @@ const contractFieldsSchema = z.object({
   paymentTerms: optionalText(2000),
   serviceLevelTargets: optionalText(2000),
   notes: optionalText(2000),
-}).superRefine((data, context) => {
+}).strict().superRefine((data, context) => {
   if (data.startDate && data.endDate && data.endDate < data.startDate) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['endDate'], message: 'The end date must be on or after the start date.' });
   }
 });
 
-export const contractInputSchema = contractFieldsSchema.strict();
+export const contractInputSchema = contractFieldsSchema;
 export const contractRequestSchema = contractFieldsSchema.and(z.object({
   reason: z.string().trim().min(8).max(500),
 }).strict());

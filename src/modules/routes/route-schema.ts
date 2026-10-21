@@ -18,13 +18,13 @@ const routeFieldsSchema = z.object({
   shift: optionalText(120),
   active: z.boolean(),
   notes: optionalText(2000),
-}).superRefine((data, context) => {
+}).strict().superRefine((data, context) => {
   if (new Set(data.operatingDays).size !== data.operatingDays.length) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['operatingDays'], message: 'Operating days must not repeat.' });
   }
 });
 
-export const routeInputSchema = routeFieldsSchema.strict();
+export const routeInputSchema = routeFieldsSchema;
 export const routeRequestSchema = routeFieldsSchema.and(z.object({
   reason: z.string().trim().min(8).max(500),
 }).strict());
