@@ -77,6 +77,7 @@ export default async function Home() {
         {canManageTrips && <Link className="header-link" href="/trips">Trips</Link>}
         {canManageTrips && <Link className="header-link" href="/operations">Operations dashboard</Link>}
         {canManageTrips && <Link className="header-link" href="/dispatch">Dispatch</Link>}
+        {canManageTrips && <Link className="header-link" href="/incidents">Incidents</Link>}
         {canManageInvoices && <Link className="header-link" href="/invoices">Invoices</Link>}
         {canManageInvoices && <Link className="header-link" href="/finance">Finance dashboard</Link>}
         {reportAccess.allowed && <Link className="header-link" href="/reports">Reports</Link>}

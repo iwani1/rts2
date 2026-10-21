@@ -21,6 +21,8 @@ model Company {
   customers       Customer[]
   notifications             Notification[]
   notificationPreferences   NotificationPreference[]
+  incidents                 Incident[]
+  incidentStatusHistory     IncidentStatusHistory[]
   rentalRequests  RentalRequest[]
   pricingWorksheets RentalPricingWorksheet[]
   maintenanceWorkOrders MaintenanceWorkOrder[]
@@ -276,6 +278,9 @@ model User {
   customerAccount   Customer?              @relation("CustomerAccount")
   notifications     Notification[]
   notificationPreferences NotificationPreference[]
+  incidentsReported  Incident[]            @relation("IncidentReporter")
+  incidentsAssigned  Incident[]            @relation("IncidentResponder")
+  incidentStatusChanges IncidentStatusHistory[]
   driverEvents      DriverEvent[]
   clientBindings    UserClientBinding[]    @relation("BindingUser")
   bindingsMade      UserClientBinding[]    @relation("BindingActor")
@@ -433,6 +438,7 @@ model Vehicle {
   usualDriver               Driver?   @relation("VehicleUsualDriver", fields: [usualDriverCompanyId, usualDriverId], references: [companyId, id], onDelete: Restrict)
   maintenanceWorkOrders     MaintenanceWorkOrder[]
   safetyBlocks              VehicleSafetyBlock[]
+  incidents                 Incident[]
   trips                     Trip[]
 
   @@unique([companyId, registrationNumber])
@@ -447,6 +453,7 @@ model Driver {
   companyId         String
   userId            String?   @unique
   linkedUser        User?     @relation("DriverAccount", fields: [userId], references: [id], onDelete: Restrict)
+  incidents          Incident[]
   fullName          String
   licenceClass      String?
   licenceExpiresAt  DateTime? @db.Date
@@ -859,6 +866,7 @@ model Trip {
   statusHistory          TripStatusHistory[]
   driverEvents           DriverEvent[]
   invoiceLines           CorporateInvoiceLine[]
+  incidents              Incident[]
 
   @@unique([companyId, id])
   @@unique([companyId, reference])
@@ -926,4 +934,58 @@ model NotificationPreference {
   user         User     @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@unique([companyId, userId])
+}
+
+model Incident {
+  id                  String    @id @default(cuid())
+  companyId           String
+  reference           String
+  incidentType        String    @db.VarChar(32)
+  severity            String    @db.VarChar(16)
+  status              String    @default("Open")
+  tripId              String?
+  vehicleId           String?
+  driverId            String?
+  occurredAt          DateTime  @db.Timestamptz(6)
+  locationText        String?   @db.VarChar(300)
+  description         String    @db.VarChar(2000)
+  peopleAffected      String?   @db.VarChar(1000)
+  immediateAction     String?   @db.VarChar(1000)
+  reportedById        String
+  assignedResponderId String?
+  resolutionNotes     String?   @db.VarChar(2000)
+  resolvedAt          DateTime? @db.Timestamptz(6)
+  createdAt           DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime  @updatedAt @db.Timestamptz(6)
+  company             Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  trip                Trip?     @relation(fields: [companyId, tripId], references: [companyId, id], onDelete: Restrict)
+  vehicle             Vehicle?  @relation(fields: [companyId, vehicleId], references: [companyId, id], onDelete: Restrict)
+  driver              Driver?   @relation(fields: [companyId, driverId], references: [companyId, id], onDelete: Restrict)
+  reportedBy          User      @relation("IncidentReporter", fields: [reportedById], references: [id], onDelete: Restrict)
+  assignedResponder   User?     @relation("IncidentResponder", fields: [assignedResponderId], references: [id], onDelete: Restrict)
+  statusHistory       IncidentStatusHistory[]
+
+  @@unique([companyId, id])
+  @@unique([companyId, reference])
+  @@index([companyId, status, occurredAt])
+  @@index([companyId, tripId])
+  @@index([companyId, vehicleId])
+}
+
+model IncidentStatusHistory {
+  id         String   @id @default(cuid())
+  companyId  String
+  incidentId String
+  sequence   Int
+  actorId    String
+  fromStatus String?
+  toStatus   String
+  reason     String   @db.VarChar(500)
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  incident   Incident @relation(fields: [companyId, incidentId], references: [companyId, id], onDelete: Restrict)
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, incidentId, sequence])
+  @@index([companyId, incidentId, sequence])
 }

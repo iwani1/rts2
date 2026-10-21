@@ -74,8 +74,8 @@ Phase 0 foundation and ongoing Phase 1A vertical slices. Backlog status is track
 | DRV-05 | Not Started | No feature implementation; Phase 1+ approval required. |
 | PAX-01 | In Progress | Passenger portal per D-065: audited passenger↔employee link (`Employee.userId`, link/unlink in the employee editor), own-profile projection, transport arrangements (active contracts + client routes), journey requests through the shared booking creation core, portal cancellation while Pending/Accepted, passenger-facing journey states, append-only feedback on Completed journeys (migration `20261021120000_passenger_portal`). Sandbox-verified 2026-10-21 (unit 390/390 incl. status-mapper suite; 24/24 migrations on PGlite with guard checks); Fedora verification pending. |
 | PAX-02 | Not Started | No feature implementation; Phase 1+ approval required. |
-| INC-01 | Not Started | No feature implementation; Phase 1+ approval required. |
-| INC-02 | Not Started | No feature implementation; Phase 1+ approval required. |
+| INC-01 | In Progress | Incident records per D-071: governed `Incident` + sequenced history (DB transition guard, append-only history), driver self-reporting against own active trips, dispatcher in-app alerts, restricted people-affected detail. Sandbox-verified 2026-10-21 (unit 412/412; PGlite 28/28 migrations + guard checks); Fedora verification pending. |
+| INC-02 | In Progress | Breakdown response flow (replacement suggestions/confirmation, safety block, work order, passenger notification) builds on INC-01 next; driver reporting and dispatcher alert entry points already landed with INC-01. |
 | FIN-01 | Not Started | No feature implementation; Phase 1+ approval required. |
 | FIN-02 | Tested | Corporate invoice generation per D-057/D-058 (DRAFT-only lifecycle confirmed at the Phase 1B gate, D-060); rates registry row approved (D-060). Fedora-verified 2026-10-21 in the Phase 1B run at commit 3e32798 (unit 373/373, integration 105/105; log verification-logs/phase1b-20261021011206.log). Phase 1C extends FIN-02 with the governed lifecycle per D-061, Fedora-verified 2026-10-21 at commit 51bfbd6 (unit 375/375, integration 111/111; log verification-logs/phase1c-20261021132250.log). |
 | FIN-03 | Tested | Manual invoice payments per D-062: append-only `InvoicePayment` records against ISSUED invoices, overpayment refused under the invoice row lock, outstanding derived (`total − Σ payments`), automatic PAID at full payment. Fedora-verified 2026-10-21 at commit 51bfbd6 (unit 375/375, integration 111/111 incl. lifecycle 6/6; log verification-logs/phase1c-20261021132250.log). See the Phase 1C section below. |
@@ -930,3 +930,31 @@ No new migration: the `Notification` channel CHECK already reserved `EMAIL`.
   SENT-not-DELIVERED, failure backoff, preference-off suppression). Fedora run pending.
 - **Next:** incidents and breakdown workflow (INC-01/02), boarding verification,
   driver offline queue, preventive-maintenance reminders, two-factor authentication.
+
+## Phase 2 — incident records (INC-01; D-071; 2026-10-21)
+
+Fourth Phase 2 slice; the breakdown *response* flow (INC-02) follows on this
+foundation. Migration 28 (`20261021160000_incidents`).
+
+- **Governed records:** `Incident` + sequenced `IncidentStatusHistory` with the house
+  DB guards (status/type/severity CHECKs, transition guard function, deferred
+  history-required trigger, append-only history). Lifecycle: Open → Acknowledged →
+  In Progress → Resolved → Closed (reopen Resolved → In Progress); resolution
+  requires notes. Types/severities per the standing brief.
+- **Access:** incident handling reuses `trip:manage` GLOBAL/COMPANY; drivers report
+  only against their own active trips through their linked driver identity.
+- **Alerts:** creation notifies every company login holding `trip:manage` (in-app,
+  with SMS/email fan-out where configured), never the reporter; the reporter is
+  notified of later status changes.
+- **Screens:** `/incidents` register + report form, `/incidents/[id]` detail
+  (affected passengers, restricted people-affected note, status history,
+  transition form), driver "Report a problem" form on **My trips**, home nav link.
+- **Tests:** transition-matrix unit tests and `incidents.integration.test.ts`
+  (driver report + alert fan-out, foreign-trip/unlinked refusals, lifecycle incl.
+  notes-required/reopen/terminal rules, restricted detail, access denial).
+  Sandbox: unit 412/412, PGlite 28/28 migrations with guard checks, build
+  compiled. Fedora run pending.
+- **Next:** INC-02 breakdown response (replacement suggestions and audited
+  confirmation on active trips, optional safety block + work order, passenger
+  notification), then boarding verification, driver offline queue,
+  preventive-maintenance reminders, two-factor authentication.

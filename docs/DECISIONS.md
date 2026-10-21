@@ -557,3 +557,28 @@ Date: 2026-10-21. Status: decided for Phase 2 construction; recorded for ratific
    addressed to their **login email** (notifications belong to the login), gated by their
    email preference, with its own dedupe key. Dispatch is explicit via a Super-Admin
    endpoint, exactly as for SMS.
+
+## D-071 — Incidents: governed records first, breakdown response on top (INC-01/02)
+
+Date: 2026-10-21. Status: decided for Phase 2 construction; recorded for ratification at the Phase 2 gate.
+
+1. **INC-01 (this slice).** `Incident` + sequenced `IncidentStatusHistory` with database guards in
+   the house pattern (status CHECK, transition guard function, history CHECK, deferred
+   history-required trigger, append-only history). Lifecycle: `Open → Acknowledged →
+   In Progress → Resolved → Closed`, with `Open → In Progress`, `Acknowledged → Resolved` and
+   `Resolved → In Progress` (reopen) also allowed; `Closed` is terminal. Types:
+   breakdown, accident, driver unavailable, traffic delay, missed pickup, complaint, vehicle
+   defect, safety concern, other. Severity: low, medium, high, critical. Resolution requires
+   recorded resolution notes.
+2. **Access.** Incident handling reuses `trip:manage` at GLOBAL/COMPANY scope (the people who
+   run trips); no new permission vocabulary is invented. Drivers report through their linked
+   driver identity, only against their own active trips. `peopleAffected` is restricted
+   information shown only on the incident-manager detail.
+3. **Dispatcher alert.** Creating an incident (either path) notifies every login holding
+   `trip:manage` at GLOBAL/COMPANY in the company, each exactly once (dedupe per incident and
+   recipient), never the reporter themselves.
+4. **INC-02 (next slice)** builds the breakdown response on top: affected passengers,
+   replacement vehicle/driver suggestions, audited replacement confirmation on active trips
+   (the Planned/Ready-only resource rule in dispatch stays untouched), optional safety block
+   and work order via the existing maintenance services, passenger notification, and
+   resolution through the same transition function.

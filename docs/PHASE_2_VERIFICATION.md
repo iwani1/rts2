@@ -79,3 +79,23 @@ Status: **SLICE BUILT — Fedora run required.** The verification script include
    `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, restart and
    dispatch: the row moves to "Sent to mail server" — never "Delivered" — and the
    message lands in the recipient's mailbox.
+
+# Phase 2 verification — incidents (INC-01; D-071)
+
+Status: **SLICE BUILT — Fedora run required.** The verification script includes
+`incidents/incidents.integration.test.ts` and applies migration 28
+(`20261021160000_incidents`).
+
+## Manual workflow (browser)
+
+1. As an operations/dispatch login, open **Incidents**: record an incident
+   (e.g. a complaint) — a second dispatcher login receives an in-app alert
+   (Notifications), the reporter does not.
+2. As a linked driver with an active trip, open **My trips** and use
+   **Report a problem**: the incident appears in the register with the trip,
+   vehicle and driver already attached.
+3. Open the incident: affected passengers are listed, restricted people
+   information is visible to incident managers, and status moves
+   Open → Acknowledged → In Progress → Resolved (resolution notes required)
+   → Closed, with every step in the status history. Trying to resolve without
+   notes is refused.
