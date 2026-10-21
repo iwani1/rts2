@@ -14,6 +14,7 @@ model Company {
   createdAt       DateTime             @default(now()) @db.Timestamptz(6)
   updatedAt       DateTime             @updatedAt @db.Timestamptz(6)
   settings        Setting[]
+  expenses        Expense[]
   auditEvents     AuditEvent[]
   roleAssignments UserRoleAssignment[]
   vehicles        Vehicle[]
@@ -272,6 +273,8 @@ model User {
   roleAssignments     UserRoleAssignment[] @relation("RoleAssignee")
   assignedRoleChanges UserRoleAssignment[] @relation("RoleAssignmentActor")
   rentalRequestStatusChanges RentalRequestStatusHistory[]
+  expensesRecorded             Expense[]                    @relation("ExpenseRecorder")
+  expenseStatusChanges         ExpenseStatusHistory[]
   contractStatusChanges ContractStatusHistory[]
   corporateInvoiceStatusChanges CorporateInvoiceStatusHistory[]
   invoicePaymentsRecorded InvoicePayment[]
@@ -444,6 +447,7 @@ model Vehicle {
   company                   Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
   usualDriver               Driver?   @relation("VehicleUsualDriver", fields: [usualDriverCompanyId, usualDriverId], references: [companyId, id], onDelete: Restrict)
   maintenanceWorkOrders     MaintenanceWorkOrder[]
+  expenses                  Expense[]
   servicePlan               VehicleServicePlan?
   locationReports           VehicleLocationReport[]
   safetyBlocks              VehicleSafetyBlock[]
@@ -812,6 +816,53 @@ model InvoicePayment {
   @@index([companyId, invoiceId, createdAt])
 }
 
+model Expense {
+  id               String   @id @default(cuid())
+  companyId        String
+  reference        String
+  expenseDate      DateTime @db.Date
+  category         String
+  description      String
+  supplier         String?
+  method           String?
+  receiptReference String?
+  amountPesewas    Int
+  vehicleId        String?
+  tripId           String?
+  status           String   @default("Pending")
+  recordedById     String
+  createdAt        DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @db.Timestamptz(6)
+  company          Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  vehicle          Vehicle? @relation(fields: [companyId, vehicleId], references: [companyId, id], onDelete: Restrict)
+  trip             Trip?    @relation(fields: [companyId, tripId], references: [companyId, id], onDelete: Restrict)
+  recordedBy       User     @relation("ExpenseRecorder", fields: [recordedById], references: [id], onDelete: Restrict)
+  statusHistory    ExpenseStatusHistory[]
+
+  @@unique([companyId, reference])
+  @@unique([companyId, id])
+  @@index([companyId, status, expenseDate])
+  @@index([companyId, vehicleId, expenseDate])
+  @@index([companyId, tripId])
+}
+
+model ExpenseStatusHistory {
+  id         String   @id @default(cuid())
+  companyId  String
+  expenseId  String
+  sequence   Int
+  actorId    String
+  fromStatus String?
+  toStatus   String
+  reason     String
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  expense    Expense  @relation(fields: [companyId, expenseId], references: [companyId, id], onDelete: Restrict)
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, expenseId, sequence])
+  @@index([companyId, expenseId, createdAt])
+}
+
 model PassengerFeedback {
   id        String   @id @default(cuid())
   companyId String
@@ -874,6 +925,7 @@ model Trip {
   vehicle                Vehicle?  @relation(fields: [companyId, vehicleId], references: [companyId, id], onDelete: Restrict)
   driver                 Driver?   @relation(fields: [companyId, driverId], references: [companyId, id], onDelete: Restrict)
   bookings               Booking[]
+  expenses               Expense[]
   statusHistory          TripStatusHistory[]
   driverEvents           DriverEvent[]
   invoiceLines           CorporateInvoiceLine[]

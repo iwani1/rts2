@@ -814,3 +814,35 @@ the `required` computation (global Super Administrator) in
 `src/modules/auth/two-factor-gate.ts`; all callers already honour it.
 Supersedes the enforcement posture of D-076 only; the recorded
 middleware limitation is unchanged.
+
+## D-081 — Expenses with independent approval (FIN-05; Phase 3 opens)
+
+Date: 2026-10-21. Status: decided for Phase 3 construction (owner: "continue
+building until next phase"). Phase 3 order follows
+`richie-tms-phase-prompts.md`: FIN-04, FIN-05, FIN-06, FIN-08, MNT-04,
+RTE-05 (interface only), RPT-05. GRA e-VAT is excluded: `docs/OPEN_QUESTIONS.md`
+still lists it as an unanswered question ("is GRA e-VAT required?"), and the
+phase prompt allows it only once confirmed required.
+
+1. **Record.** `Expense` (company-scoped): generated reference `EXP-` + 16
+   hex chars, expense date, category (`FUEL | MAINTENANCE | REPAIRS | TYRES |
+   TOLLS | OTHER` — exactly the standing-brief list), amount in pesewas
+   (integer > 0), free-text supplier, method, and optional links to a vehicle
+   and/or trip of the same company. A receipt is recorded as a
+   `receiptReference` text (no file store exists in the product yet; nothing
+   pretends an uploaded document). `recordedById` is stamped server-side.
+2. **Approval.** Lifecycle `Pending → Approved` and `Pending → Rejected`,
+   both terminal, through one transition function + table, sequenced
+   append-only history enforced by the same database guards as work
+   orders, and an audit event per change (the phase exit criterion:
+   "expense approvals leave an audit trail"). The decision-maker must
+   differ from the recorder (independent review, the work-order approval
+   rule). Rejection requires a reason ≥ 8 chars, as does approval.
+3. **Corrections.** While `Pending`, the recorder (or another manager) may
+   edit the record with a reason; once decided, an expense is immutable —
+   a mistake is corrected by a compensating record, never by rewriting
+   (money invariant §5.4).
+4. **Access.** New permission `expense:manage` (seeded: SUPER_ADMIN
+   GLOBAL, FINANCE_OFFICER COMPANY; OPS_MANAGER READ_ONLY reads). Only
+   GLOBAL/COMPANY may write or decide.
+
