@@ -825,7 +825,7 @@ Sixth Phase 1C slice. D-067 recorded in `docs/DECISIONS.md` for gate ratificatio
 - Role dashboards already existed for drivers, dispatchers, corporate HR, finance, passengers
   and rental customers. The gap — an Operations Manager landing page — is now `/operations`
   (`src/modules/operations/dashboard.ts`), linked from the workspace for trip managers.
-- Read-only snapshot, `trip:manage` or `booking:manage` at GLOBAL/COMPANY scope: today's trips
+- Read-only snapshot, `trip:dispatch` or `booking:manage` at GLOBAL/COMPANY scope: today's trips
   (Africa/Accra) by status with vehicle/driver resourcing flags and assigned-passenger counts,
   the pending-booking decision queue, accepted-but-unassigned bookings (oldest/next first,
   totals labelled), active vehicle safety blocks, and driver/vehicle documents expired or
@@ -941,9 +941,9 @@ foundation. Migration 28 (`20261021160000_incidents`).
   history-required trigger, append-only history). Lifecycle: Open → Acknowledged →
   In Progress → Resolved → Closed (reopen Resolved → In Progress); resolution
   requires notes. Types/severities per the standing brief.
-- **Access:** incident handling reuses `trip:manage` GLOBAL/COMPANY; drivers report
+- **Access:** incident handling reuses `trip:dispatch` GLOBAL/COMPANY; drivers report
   only against their own active trips through their linked driver identity.
-- **Alerts:** creation notifies every company login holding `trip:manage` (in-app,
+- **Alerts:** creation notifies every company login holding `trip:dispatch` (in-app,
   with SMS/email fan-out where configured), never the reporter; the reporter is
   notified of later status changes.
 - **Screens:** `/incidents` register + report form, `/incidents/[id]` detail
@@ -1099,3 +1099,27 @@ Tenth and final Phase 2 construction slice. Migration 32
 - **Phase 2 construction is complete.** Remaining before the gate: the Fedora
   run (`./scripts/verify-phase2.sh` + the manual workflows in
   `docs/PHASE_2_VERIFICATION.md`), then ratification of D-068–D-077.
+
+## Fedora verification findings — fix round (2026-10-21)
+
+First Fedora run of `verify-phase2.sh` (commit `5610bb3`): steps 1–6 passed
+(32/32 migrations, typecheck, lint 0 errors, unit 427/427). Integration:
+154 passed, 9 failed, 7 skipped — four root causes, all fixed here:
+
+1. **Wrong permission name (6 failures, INC-01/02):** incidents (and the
+   operations dashboard's trip leg and the GPS trip leg) checked a
+   `trip:manage` permission that does not exist in the seeded grants; the
+   real vocabulary is `trip:dispatch` (SUPER_ADMIN GLOBAL, OPS_MANAGER /
+   DISPATCHER COMPANY). Fixed in code and in D-067/D-071 records.
+2. **Reports suite setup (7 skipped):** the RPT fixture created a `Route`
+   without the required `operatingDays` — fixture now supplies it.
+3. **Passenger home classification (1 failure, PAX-01):** a completed
+   journey with a future date landed in *upcoming* instead of *history*;
+   `Completed` now classifies as history in both lists and counts.
+4. **Portal error leak (1 failure, RNT-09):** editing/submitting another
+   customer's request surfaced the staff `RentalRequestNotFoundError`; the
+   portal now maps it to `RentalPortalRequestNotFoundError` so it never
+   confirms another customer's request exists.
+
+Expected on re-run: 0 failures, 0 skipped in these suites. Integration
+remains Fedora-verified only — the sandbox has no PostgreSQL engine.

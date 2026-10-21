@@ -165,7 +165,7 @@ export function classifyFreshness(input: {
 }
 
 async function accessFor(actorId: string, companyId: string) {
-  for (const permission of ['fleet:manage', 'trip:manage'] as const) {
+  for (const permission of ['fleet:manage', 'trip:dispatch'] as const) {
     const access = await resolvePermission({ userId: actorId, companyId, permission });
     if (access.allowed && (access.scopes.includes('GLOBAL') || access.scopes.includes('COMPANY'))) {
       const company = await getPrisma().company.findUnique({

@@ -204,7 +204,7 @@ export async function getPassengerHome(input: {
     prisma.booking.findMany({
       where: {
         companyId, employeeId: employee.id,
-        journeyDate: { gte: today }, status: { notIn: ['Cancelled', 'Rejected'] },
+        journeyDate: { gte: today }, status: { notIn: ['Cancelled', 'Rejected', 'Completed'] },
       },
       include: journeyInclude,
       orderBy: [{ journeyDate: 'asc' }, { createdAt: 'asc' }],
@@ -213,7 +213,7 @@ export async function getPassengerHome(input: {
     prisma.booking.findMany({
       where: {
         companyId, employeeId: employee.id,
-        OR: [{ journeyDate: { lt: today } }, { status: { in: ['Cancelled', 'Rejected'] } }],
+        OR: [{ journeyDate: { lt: today } }, { status: { in: ['Cancelled', 'Rejected', 'Completed'] } }],
       },
       include: journeyInclude,
       orderBy: [{ journeyDate: 'desc' }, { createdAt: 'desc' }],
@@ -222,13 +222,13 @@ export async function getPassengerHome(input: {
     prisma.booking.count({
       where: {
         companyId, employeeId: employee.id,
-        journeyDate: { gte: today }, status: { notIn: ['Cancelled', 'Rejected'] },
+        journeyDate: { gte: today }, status: { notIn: ['Cancelled', 'Rejected', 'Completed'] },
       },
     }),
     prisma.booking.count({
       where: {
         companyId, employeeId: employee.id,
-        OR: [{ journeyDate: { lt: today } }, { status: { in: ['Cancelled', 'Rejected'] } }],
+        OR: [{ journeyDate: { lt: today } }, { status: { in: ['Cancelled', 'Rejected', 'Completed'] } }],
       },
     }),
   ]);

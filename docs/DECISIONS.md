@@ -490,7 +490,7 @@ Date: 2026-10-21. Status: decided for Phase 1C construction; recorded for ratifi
 1. Role dashboards already exist for drivers (`/driver`), dispatchers (`/dispatch`), corporate HR
    (`/corporate`), finance (`/finance`), passengers (`/passenger`) and rental customers
    (`/rentals/portal`). The remaining gap, an Operations Manager landing page, is `/operations`.
-2. Access requires `trip:manage` or `booking:manage` at GLOBAL or COMPANY scope, matching the
+2. Access requires `trip:dispatch` or `booking:manage` at GLOBAL or COMPANY scope, matching the
    staff surfaces it summarises; everything is company-scoped and read-only (no new write paths).
 3. The dashboard is a point-in-time snapshot, never an estimate: today's trips (Africa/Accra) by
    status with resourcing flags, the pending-booking decision queue, accepted-but-unassigned
@@ -570,12 +570,12 @@ Date: 2026-10-21. Status: decided for Phase 2 construction; recorded for ratific
    breakdown, accident, driver unavailable, traffic delay, missed pickup, complaint, vehicle
    defect, safety concern, other. Severity: low, medium, high, critical. Resolution requires
    recorded resolution notes.
-2. **Access.** Incident handling reuses `trip:manage` at GLOBAL/COMPANY scope (the people who
+2. **Access.** Incident handling reuses `trip:dispatch` at GLOBAL/COMPANY scope (the people who
    run trips); no new permission vocabulary is invented. Drivers report through their linked
    driver identity, only against their own active trips. `peopleAffected` is restricted
    information shown only on the incident-manager detail.
 3. **Dispatcher alert.** Creating an incident (either path) notifies every login holding
-   `trip:manage` at GLOBAL/COMPANY in the company, each exactly once (dedupe per incident and
+   `trip:dispatch` at GLOBAL/COMPANY in the company, each exactly once (dedupe per incident and
    recipient), never the reporter themselves.
 4. **INC-02 (next slice)** builds the breakdown response on top: affected passengers,
    replacement vehicle/driver suggestions, audited replacement confirmation on active trips

@@ -41,7 +41,7 @@ const companyIdSchema = z.string().trim().min(1).max(128);
 const idSchema = z.string().trim().min(1).max(128);
 
 export async function accessFor(actorId: string, companyId: string) {
-  const permission = await resolvePermission({ userId: actorId, companyId, permission: 'trip:manage' });
+  const permission = await resolvePermission({ userId: actorId, companyId, permission: 'trip:dispatch' });
   if (!permission.allowed) throw new PermissionDeniedError();
   if (!(permission.scopes.includes('GLOBAL') || permission.scopes.includes('COMPANY'))) {
     throw new PermissionDeniedError();
@@ -113,7 +113,7 @@ function presentIncident(row: IncidentRow): IncidentRecord {
 }
 
 /**
- * D-071: alerts every login holding trip:manage at GLOBAL/COMPANY scope in
+ * D-071: alerts every login holding trip:dispatch at GLOBAL/COMPANY scope in
  * the company. notifyUserInTransaction suppresses the reporter themselves
  * and honours each recipient's preferences; dedupe is per incident+user.
  */
@@ -127,7 +127,7 @@ async function alertDispatchers(
       revokedAt: null,
       role: {
         grants: {
-          some: { permission: 'trip:manage', scope: { in: ['GLOBAL', 'COMPANY'] } },
+          some: { permission: 'trip:dispatch', scope: { in: ['GLOBAL', 'COMPANY'] } },
         },
       },
     },

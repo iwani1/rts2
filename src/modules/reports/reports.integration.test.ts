@@ -131,6 +131,7 @@ describe('staff transport, fleet and financial reports with exports (RPT-02/03/0
       data: {
         companyId, clientId, reference: `RPT-R-${randomUUID().slice(0, 6).toUpperCase()}`,
         name: 'Depot to Office', originLocationId: origin.id, destinationLocationId: destination.id, active: true,
+        operatingDays: ['MON', 'TUE', 'WED', 'THU', 'FRI'],
       },
     });
 

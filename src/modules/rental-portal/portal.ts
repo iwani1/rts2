@@ -4,6 +4,7 @@ import { getPrisma } from '@/server/prisma';
 import { PermissionDeniedError, resolvePermission } from '@/modules/auth/permissions';
 import {
   createRentalRequestForLinkedCustomer,
+  RentalRequestNotFoundError,
   submitOwnRentalRequest,
   updateOwnRentalRequestDraft,
   type RentalRequestRecord,
@@ -197,7 +198,14 @@ export async function updateOwnRentalRequest(
 ): Promise<RentalRequestRecord> {
   const { companyId, customer } = await rentalContext({ actorId, companyId: companyIdInput });
   const data = ownRentalRequestSchema.parse(input);
-  return updateOwnRentalRequestDraft(data, actorId, companyId, requestIdInput, customer.id);
+  try {
+    return await updateOwnRentalRequestDraft(data, actorId, companyId, requestIdInput, customer.id);
+  } catch (error) {
+    // The shared draft service speaks in staff errors; the portal never
+    // confirms whether another customer's request exists.
+    if (error instanceof RentalRequestNotFoundError) throw new RentalPortalRequestNotFoundError();
+    throw error;
+  }
 }
 
 /** RNT-09: submit the linked customer's own Draft under the shared rules. */
@@ -205,7 +213,12 @@ export async function submitOwnRentalPortalRequest(
   input: unknown, actorId: string, companyIdInput: string, requestIdInput: string,
 ): Promise<RentalRequestRecord> {
   const { companyId, customer } = await rentalContext({ actorId, companyId: companyIdInput });
-  return submitOwnRentalRequest(input, actorId, companyId, requestIdInput, customer.id);
+  try {
+    return await submitOwnRentalRequest(input, actorId, companyId, requestIdInput, customer.id);
+  } catch (error) {
+    if (error instanceof RentalRequestNotFoundError) throw new RentalPortalRequestNotFoundError();
+    throw error;
+  }
 }
 
 /**

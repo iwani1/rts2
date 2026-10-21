@@ -91,7 +91,7 @@ export async function getOperationsDashboard(input: {
 }): Promise<OperationsDashboard> {
   const companyId = companyIdSchema.parse(input.companyId);
   const [tripPermission, bookingPermission] = await Promise.all([
-    resolvePermission({ userId: input.actorId, companyId, permission: 'trip:manage' }),
+    resolvePermission({ userId: input.actorId, companyId, permission: 'trip:dispatch' }),
     resolvePermission({ userId: input.actorId, companyId, permission: 'booking:manage' }),
   ]);
   const allowed = [tripPermission, bookingPermission].some(
