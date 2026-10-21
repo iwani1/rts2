@@ -4,8 +4,9 @@
 are implemented locally and pushed, but unverified until these commands run:
 CLI-02 (`6c2ba81`), EMP (`9520371`), RTE (`ef83d47`), BKG (`2e63cc8`), TRP
 (`d06532b`), DSP (`d2e9573`), DRV (`d54faaf`), BKG-05/06 (`aae103e`), FIN-02
-(`6bb733f`), CLI-03 (`f55be6f`). Do not treat any of them as working until
-this checklist passes.
+(`6bb733f`), CLI-03 (`f55be6f`), gate docs (`917e3b7`) and the end-to-end
+workflow evidence (`8347a7b`). A fresh database should apply 21 migrations.
+Do not treat any of them as working until this checklist passes.
 
 ## 0. Pull and generate
 
@@ -30,14 +31,18 @@ design — always start from a fresh one.
 ## 2. Migrate and run the suites
 
 ```bash
-npm run db:test:migrate        # expect: 20 migrations applied cleanly
+npm run db:test:migrate        # expect: 21 migrations applied cleanly
 npm run typecheck              # expect: no errors
 npm run lint                   # expect: no errors
 npm test                       # unit suite incl. full 7x7 booking and 8x8 trip state matrices
 npm run test:integration       # PostgreSQL-backed suites
 ```
 
-Expected integration highlights (each is an exit criterion in code form):
+Expected integration highlights (each is an exit criterion in code form),
+including `workflow.integration.test.ts`, which chains contract → bookings →
+schedule trip generation → dispatch resources → booking assignment → no-show →
+driver START/BOARD/COMPLETE → one-time invoice → bound corporate dashboard in
+a single database-backed run:
 
 - Trips: schedule generation creates 5 weekday trips, rerun skips 5; capacity-1
   assignment race — exactly one of two parallel assigns succeeds.
