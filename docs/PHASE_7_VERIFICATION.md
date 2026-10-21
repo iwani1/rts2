@@ -54,6 +54,22 @@ Expected:
 > `up` cannot leak containers. The image build itself, the
 > in-container `migrate deploy`, and the readiness/header checks
 > are still unproven on Fedora; full pass pending the rerun.
+>
+> Third Fedora run (2026-10-21, HEAD `4452215`): steps 1–7 PASSED
+> again (third consecutive time); step 8 got past the port fix —
+> the smoke database started — but `/api/health/ready` never
+> answered and podman-compose reported `missing services [app]`.
+> Root cause, proven with podman-compose 1.6.0's own parser
+> (`podman-compose config`): since 7A the `app:` block sat after
+> the top-level `volumes:` block at the same indent as
+> `postgres_data:`, so YAML parsed `app` as a **volume**, not a
+> service. podman-compose accepted the file silently, `up`
+> started the only real service (db) and exited 0; no image was
+> ever built. `docker-compose.yml` has been restructured with
+> `app` under `services:` and re-validated against that parser
+> (`services = {app, db}`, `volumes = {postgres_data}`). The
+> in-container build/boot/readiness checks remain unproven until
+> the next Fedora run.
 
 ## Manual deployment drill (after the automated run)
 

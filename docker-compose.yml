@@ -19,8 +19,6 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
-volumes:
-  postgres_data:
 
   # D-092/7A: production app (build first: `podman compose build app`).
   # The verify-phase*.sh scripts only ever start `db`, so this service
@@ -39,3 +37,6 @@ volumes:
       NODE_ENV: production
     ports:
       - "${APP_PORT:-3000}:3000"
+
+volumes:
+  postgres_data:

@@ -1353,3 +1353,13 @@ compose host ports parameterised (`DB_PORT`/`APP_PORT`, defaults
 unchanged), smoke stack on 5433, EXIT-trap teardown, failure log
 dump. Rerun pending; image build / in-container migrate deploy /
 readiness still to be proven on Fedora.
+
+**Phase 7 third Fedora run 2026-10-21 (`4452215`): steps 1–7 PASSED
+(3rd consecutive); step 8 progressed past the port fix but the app
+never started.** Root cause (proven via podman-compose's own
+`config` parse): since 7A the `app:` block was nested under the
+top-level `volumes:` block — YAML parsed it as a volume, not a
+service — so `up` started only db and exited 0. `docker-compose.yml`
+restructured (`app` under `services:`), re-validated with
+podman-compose 1.6.0 and strict YAML. Container build/boot/readiness
+still Fedora-pending.
