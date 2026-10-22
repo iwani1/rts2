@@ -28,10 +28,15 @@ Expected:
   CSP / `X-Frame-Options: DENY` / HSTS / `X-Robots-Tag` headers,
   and the project is torn down afterwards
 
-> Status: built in the sandbox (unit suite green; sandbox has no
-> container runtime, so step 8/8 exists precisely for Fedora).
-> Fedora automated verification is **outstanding**, as is the drill
-> below.
+> Status: **PASSED on Fedora 2026-10-22 at `b5010b7`** — 42/42
+> migrations on a fresh disposable database
+> (`richie_tms_p7_20261022000007_test`), typecheck and lint clean,
+> unit 495/495, integration 202/202, and the step 8/8 container
+> smoke: image built, app+db booted, `/api/health` ok,
+> `/api/health/ready` ready, production security headers present
+> on `/login`, stack torn down. The manual deployment drill
+> below (real boot, boot-guard refusal, backup/restore round
+> trip) is still owner-side.
 >
 > First Fedora run (2026-10-21, HEAD `33b4402`) stopped at step 4/7:
 > the real `@types/node` on Fedora declares `process.env.NODE_ENV`
@@ -98,6 +103,16 @@ Expected:
 > Fix: the builder stages those lock-pinned packages into
 > `/prisma-cli-deps` and the runner copies them into its
 > `node_modules`. Readiness/header checks still unproven.
+>
+> Sixth Fedora run (2026-10-22, HEAD `b5010b7`): **FULL PASS.**
+> Steps 1–7 green for the sixth consecutive time; step 8/8 built
+> the image, booted app+db on the throwaway project, answered
+> `/api/health` and `/api/health/ready` (so `migrate deploy` ran
+> against the fresh smoke database and the production env
+> validation passed), served the production CSP /
+> `X-Frame-Options: DENY` / HSTS / `X-Robots-Tag` headers on
+> `/login`, and tore the stack down. **Phase 7 (D-092) is
+> verified end-to-end**; what remains is the manual drill below.
 
 ## Manual deployment drill (after the automated run)
 

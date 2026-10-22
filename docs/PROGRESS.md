@@ -1382,3 +1382,15 @@ simulation (14 lock-pinned packages: c12, effect, jiti, …); with
 them the config loads and Prisma reaches engine acquisition.
 Fix: builder stages them to /prisma-cli-deps, runner copies them
 in. Readiness/headers still Fedora-pending.
+
+**Phase 7 Fedora gate PASSED 2026-10-22 at `b5010b7`:** 42/42
+migrations (disposable DB `richie_tms_p7_20261022000007_test`),
+typecheck+lint clean, unit 495/495, integration 202/202, and
+step 8/8 container smoke green — image built, app+db booted,
+`migrate deploy` on the fresh smoke database, `/api/health` and
+`/api/health/ready` ok, production security headers on `/login`,
+clean teardown. **D-092 verified end-to-end.** Still owner-side:
+the manual deployment drill in `docs/PHASE_7_VERIFICATION.md`
+(real boot, boot-guard refusal, backup/restore round trip),
+`docs/MANUAL_WALKTHROUGH.md` Parts 0–G, Paystack live test
+(Part H, owner test keys), GRA e-VAT (owner requirements).
